@@ -217,6 +217,7 @@ Surface → brain (intents):
 /gen/add             <type>             brain assigns the id
 /gen/remove          <id>
 /gen/set             <id> <param> <value>
+/gen/learn           <id> <param> 1|0   next key played sets param (the note's Set button)
 /dest/add            <name> <port> <channel> <instrument>     1-based port and channel
 /dest/remove         <id>
 /save                <path>   /load <path>
@@ -235,6 +236,8 @@ Brain → surface (state):
 /gen/schema          <type> <param> <kind> <default> <args>...
                      kind = range (min max [step]) | note | choice (options) | text
 /gen/show            <type> <param> <otherParam> <value>...   show param only for those values
+/gen/section         <type> <param>                   param starts a new group (separator)
+/gen/learn           <id> <param> 1|0                 learning started / ended
 /dest                <id> <name> <port> <channel> <instrument>
 /dest/removed        <id>
 /beat                <beat>                        (latency-aligned)

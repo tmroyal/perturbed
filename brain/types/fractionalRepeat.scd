@@ -27,6 +27,8 @@ showWhen: (
 	advance: [\source, "permute"],
 ) ++ ~velocityShow,
 
+sections: [\source, \num, \velMode],
+
 restartOn: [\num, \den],
 
 run: { |g, p|

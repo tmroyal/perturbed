@@ -156,7 +156,8 @@ function slider(min, max, onChange) {
 }
 
 // Returns { label, control, update(value) } for one param, or for num/den combined.
-function paramControl(spec, send) {
+// learn(on) asks the brain to set this param from the next key played (note params only).
+function paramControl(spec, send, learn) {
   const [min, max, step = 1] = spec.args;
   if (spec.kind === 'note') {
     // pitch class + octave -> MIDI note (capped at G9 = 127)
@@ -164,9 +165,13 @@ function paramControl(spec, send) {
     const setNote = () => send(Math.min(127, oct * 12 + pc));
     const name = selectInput(NOTE_NAMES.map((n, i) => [n, i]), (v) => { pc = +v; setNote(); });
     const octave = selectInput(OCTAVES.map((o, i) => [o, i]), (v) => { oct = +v; setNote(); });
+    let learning = false;
+    const setBtn = el('button', { className: 'learn', textContent: 'Set', title: 'Set from the next key played',
+      onclick: () => learn(!learning) });
     return {
-      label: 'note', control: el('div', { className: 'row' }, name, octave),
+      label: 'note', control: el('div', { className: 'row' }, name, octave, setBtn),
       update: (v) => { pc = v % 12; oct = Math.floor(v / 12); name.value = pc; octave.value = oct; },
+      learning: (on) => { learning = on; setBtn.classList.toggle('on', on); setBtn.textContent = on ? 'Play…' : 'Set'; },
     };
   }
   if (spec.kind === 'choice') {
@@ -213,7 +218,9 @@ function buildCard(gen) {
   });
   const specs = model.types.get(gen.type) ?? [];
   const byName = Object.fromEntries(specs.map((s) => [s.name, s]));
+  const learners = {};
   for (const spec of specs) {
+    if (spec.section) fields.push(el('hr', { className: 'sep' }));
     if (spec.name === 'den' && byName.num) continue;
     if (spec.name === 'num' && byName.den) {
       // duration as num / den beats, with the result shown
@@ -226,7 +233,8 @@ function buildCard(gen) {
       fields.push(el('label', { textContent: 'duration' }), el('div', { className: 'row' }, num.control, '/', den.control, beats));
       continue;
     }
-    const c = paramControl(spec, (v) => set(spec.name, v));
+    const c = paramControl(spec, (v) => set(spec.name, v), (on) => osc.send('/gen/learn', gen.id, spec.name, on ? 1 : 0));
+    if (c.learning) learners[spec.name] = c.learning;
     const label = el('label', { textContent: c.label });
     updaters[spec.name] = c.update;
     if (spec.show) conditional.push({ show: spec.show, els: [label, c.control] });
@@ -250,6 +258,7 @@ function buildCard(gen) {
       refreshDests();
     },
     param: (name, value) => { updaters[name]?.(value); applyShow(); },
+    learning: (name, on) => learners[name]?.(on),
     flash: () => led.animate([{ background: '#EBCB8B' }, { background: '#434C5E' }], { duration: 150 }),
   };
 }
@@ -340,6 +349,11 @@ const handlers = {
     model.chord = { mode, armed: !!armed, pitches };
     if (!inSnapshot) renderChord();
   },
+  '/gen/section': (type, name) => {
+    const spec = model.types.get(type)?.find((s) => s.name === name);
+    if (spec) spec.section = true;
+  },
+  '/gen/learn': (id, name, on) => model.gens.get(id)?.card?.learning(name, !!on),
   '/gen/show': (type, name, param, ...values) => {
     const spec = model.types.get(type)?.find((s) => s.name === name);
     if (spec) spec.show = { param, values: values.map(String) };

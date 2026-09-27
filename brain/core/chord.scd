@@ -29,9 +29,10 @@
 
 ~sendChord = { ~send.('/chord', ~chordMode, ~armed.binaryValue, *~chord) };
 
+// A key pressed while a generator param is learning sets that param instead of joining a chord.
 ~keyDown = { |note|
 	~held.add(note);
-	~gesture.add(note);
+	if(~learning.notNil) { ~learnNote.(note) } { ~gesture.add(note) };
 };
 
 ~keyUp = { |note|

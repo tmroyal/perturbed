@@ -24,6 +24,7 @@ out = MIDIOut.newByName("IAC Driver", "Bus 2");
 out.latency = 0;
 OSCdef(\chord, { |msg| chord = msg[1..] }, '/chord');
 OSCdef(\gen, { |msg| genId = msg[1] }, '/gen');
+OSCdef(\param, { |msg| if(msg[1] == genId and: { msg[2] == 'note' }) { ~noteParam = msg[3] } }, '/gen/param');
 OSCdef(\note, { |msg| if(msg[1] == genId) { notes.add(msg[2]); vels.add(msg[3]) } }, '/note');
 // plays n quarter-beat notes with the given params; returns the velocities
 ~vel = { |pairs, n = 8|
@@ -69,6 +70,13 @@ Routine {
 	0.1.wait;
 	[[\num, 1], [\den, 4], [\note, 48], [\active, 1]].do { |m| brain.sendMsg('/gen/set', genId, *m) };
 	check.(run.(\note).every(_ == 48), "note plays its note");
+	brain.sendMsg('/chord/mode', "auto");  // where a key would otherwise replace the chord
+	brain.sendMsg('/gen/learn', genId, \note, 1);
+	0.1.wait;
+	play.([61], [61]);
+	check.(~noteParam == 61 and: { chord == ['auto', 0, 57, 62, 65, 69] }, "Set: next key sets the note, chord untouched");
+	brain.sendMsg('/chord/mode', "arm");
+	brain.sendMsg('/gen/set', genId, \note, 48);
 	check.(run.(\index, -1).every(_ == 69), "index -1 plays the highest");
 	check.(run.(\index, 5).every(_ == 62), "index wraps (5 of 4 → 1)");
 	check.(run.(\lowest).every(_ == 57), "lowest");

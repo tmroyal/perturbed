@@ -74,6 +74,9 @@ input:focus, select:focus { outline: none; border-color: var(--nord8); }
 .fields > * { min-width: 0; }
 .fields > select, .fields > input[type=range] { width: 100%; }
 .fields label { color: var(--nord9); }
+.fields hr.sep { grid-column: 1 / -1; width: 100%; border: none; border-top: 1px solid var(--nord2); margin: 2px 0; }
+button.learn { padding: 3px 10px; font-size: 12px; }
+button.learn.on { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
 .fields .row { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .fields .row select { min-width: 0; text-overflow: ellipsis; }
 .hint { color: var(--nord3); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }

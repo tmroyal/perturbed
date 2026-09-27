@@ -5,6 +5,7 @@
 //   params:    [[name, default, kind, ...kind args], ...]  also the surface's schema;
 //              kind = range (min max [step]) | note | choice (options...) | text
 //   showWhen:  (param: [otherParam, value...]) the surface shows param only for those values
+//   sections:  params that start a new group on the surface (drawn with a separator)
 //   restartOn: params whose change restarts `run` (re-quantizes to the new grid)
 //   run:       { |g, p| } routine body on the transport clock; waits are in beats
 (
@@ -80,6 +81,22 @@
 	{ "gen %: unknown param %".format(g[\id], key).warn };
 };
 
+// Learn: the next key played sets a generator's (note) param.
+~learning = nil;  // [genId, param]
+
+~learnGen = { |id, param, on|
+	~learning !? { |l| ~send.('/gen/learn', l[0], l[1], 0) };
+	~learning = if(on and: { ~gens[id].notNil }) { [id, param.asSymbol] };
+	~learning !? { |l| ~send.('/gen/learn', l[0], l[1], 1) };
+};
+
+~learnNote = { |note|
+	var l = ~learning;
+	~learning = nil;
+	~send.('/gen/learn', l[0], l[1], 0);
+	~gens[l[0]] !? { |g| ~setGen.(g, l[1], note) };
+};
+
 ~sendGen = { |g| ~send.('/gen', g[\id], g[\typeName], g[\dest], g[\active].binaryValue) };
 
 ~sendParams = { |g|
@@ -90,6 +107,7 @@
 	~types.keysValuesDo { |name, type|
 		type[\params].do { |spec| ~send.('/gen/schema', name, spec[0], spec[2], spec[1], *spec[3..]) };
 		(type[\showWhen] ? ()).keysValuesDo { |param, cond| ~send.('/gen/show', name, param, *cond) };
+		(type[\sections] ? []).do { |param| ~send.('/gen/section', name, param) };
 	};
 };
 )

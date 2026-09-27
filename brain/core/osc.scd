@@ -14,6 +14,7 @@
 //   /gen/add          <type>                     brain assigns the id
 //   /gen/remove       <id>
 //   /gen/set          <id> <param> <value>       param = active | dest | a type param
+//   /gen/learn        <id> <param> 1|0           the next key played sets param
 //   /dest/add         <name> <port> <channel> <instrument>     port and channel are 1-based
 //   /dest/remove      <id>
 //   /save             <path>                     write the performance as JSON
@@ -27,6 +28,8 @@
 //   /chord            <mode> <armed> <pitch>...
 //   /gen/schema       <type> <param> <kind> <default> <kind args...>
 //   /gen/show         <type> <param> <otherParam> <value>...   show param only for those values
+//   /gen/section      <type> <param>             param starts a new group
+//   /gen/learn        <id> <param> 1|0           learning started / ended
 //   /dest             <id> <name> <port> <channel> <instrument>
 //   /dest/removed     <id>
 //   /gen              <id> <type> <dest> <active>
@@ -81,6 +84,7 @@
 
 	OSCdef(\genAdd, { |msg| ~addGen.(msg[1]) }, '/gen/add');
 	OSCdef(\genRemove, { |msg| ~removeGen.(msg[1].asInteger) }, '/gen/remove');
+	OSCdef(\genLearn, { |msg| ~learnGen.(msg[1].asInteger, msg[2], msg[3].asInteger == 1) }, '/gen/learn');
 	OSCdef(\genSet, { |msg| ~gens[msg[1].asInteger] !? { |g| ~setGen.(g, msg[2], msg[3]) } }, '/gen/set');
 
 	OSCdef(\destAdd, { |msg| ~addDest.(msg[1], msg[2], msg[3], msg[4] ? "") }, '/dest/add');

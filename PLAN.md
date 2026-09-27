@@ -195,8 +195,8 @@ start. Changing `num`/`den` restarts the routine at the next grid point of the n
 
 Plays the keyboard into its destination while active, with or without the transport running.
 `octave` + `semitone` transpose; only keys from `lo` to `hi` pass (a cheap MIDI zone, with Set
-buttons to pick the ends from the keyboard). Notes are sent immediately; each note-off goes to the
-pitch its note-on sounded. Types like this implement `key` instead of (or besides) `run`.
+buttons to pick the ends from the keyboard). Notes are sent immediately, or `delay` beats of the
+main tempo later (note-offs too); each note-off goes to the pitch its note-on sounded. Types like this implement `key` instead of (or besides) `run`.
 
 ### 3.5 Destinations
 

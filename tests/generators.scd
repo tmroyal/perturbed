@@ -184,6 +184,15 @@ Routine {
 	~midi.clear;
 	[60, 64].do { |n| out.noteOn(0, n, 90) }; 0.05.wait; [60, 64].do { |n| out.noteOff(0, n, 0) }; 0.1.wait;
 	check.(~midi.asArray == [[\on, 74], [\on, 78], [\off, 74], [\off, 78]], "passthrough: MIDI out on ch 3 (%)".format(~midi));
+	// delay: 1 beat at 240 bpm = 0.25 s, note-off delayed too
+	brain.sendMsg('/gen/set', genId, \delay, 1);
+	0.1.wait;
+	~midi.clear;
+	out.noteOn(0, 60, 90); 0.1.wait; out.noteOff(0, 60, 0);
+	0.1.wait;
+	check.(~midi.isEmpty, "passthrough delay: nothing yet after 0.1 s");
+	0.25.wait;
+	check.(~midi.asArray == [[\on, 74], [\off, 74]], "passthrough delay: note and note-off after 1 beat (%)".format(~midi));
 	brain.sendMsg('/dest/remove', ~destId);
 	brain.sendMsg('/gen/remove', genId);
 	brain.sendMsg('/chord/mode', "auto");

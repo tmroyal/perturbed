@@ -191,7 +191,7 @@ Plays the keyboard into its destination while active, with or without the transp
 buttons to pick the ends from the keyboard). Notes are sent immediately; each note-off goes to the
 pitch its note-on sounded. Types like this implement `key` instead of (or besides) `run`.
 
-### 3.4 Destinations
+### 3.5 Destinations
 
 `(port, channel)` with a display name and the intended REAPER instrument. Ports and channels are
 1-based everywhere (protocol, JSON). Each IAC bus gives 16 destinations.

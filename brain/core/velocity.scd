@@ -1,5 +1,5 @@
 // velocity.scd — how loud; shared by generator types. A type adds ~velocityParams to its params
-// and ~velocityShow to its showWhen, then calls ~velocity.(g, p, k) for each note
+// (with ~velocityShow and ~velocityLabels), then calls ~velocity.(g, p, k) for each note
 // (k = the note's grid index since transport start).
 //   set     velocity
 //   accent  accent on every `every`th grid step (k = 0, every, 2·every, ...), velocity otherwise
@@ -33,6 +33,11 @@
 	attack: [\velMode, "ramp"],
 	decay: [\velMode, "ramp"],
 	pattern: [\velMode, "pattern"],
+);
+
+~velocityLabels = (
+	velMode: "mode", velocity: "value", every: "every", rate: "rate / beat",
+	attack: "rise beats", decay: "fall beats", pattern: "values", humanize: "humanize ±",
 );
 
 ~velocity = { |g, p, k|

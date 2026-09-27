@@ -10,7 +10,7 @@ var root = thisProcess.nowExecutingPath.dirname;
 ~config = (root +/+ "config.scd").load;
 if(~testMode) { ~config[\inputs] = [["IAC Driver", "Bus 2"]] };
 
-["midi", "clock", "chord", "destinations", "generators", "pitch", "rhythm", "velocity", "persist", "osc"].do { |name|
+["json", "midi", "keyboard", "clock", "chord", "destinations", "generators", "pitch", "rhythm", "velocity", "persist", "osc"].do { |name|
 	(root +/+ "core" +/+ name ++ ".scd").load;
 };
 
@@ -20,6 +20,7 @@ if(~testMode) { ~config[\inputs] = [["IAC Driver", "Bus 2"]] };
 };
 
 ~midiInit.();
+~keyboardInit.();
 if(~testMode.not) { ~config[\destinations].do { |d| ~addDest.(*d) } };
 ~oscInit.();
 

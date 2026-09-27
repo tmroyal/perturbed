@@ -1,12 +1,15 @@
-// rhythm.scd — which grid steps play; shared by generator types. A type adds ~rhythmParams to its
-// params and ~rhythmShow to its showWhen, then plays grid step k (counted from transport start)
-// when ~rhythmGate.(p, k) is true. A skipped step lets the previous note ring on.
+// rhythm.scd — the grid and which of its steps play; shared by generator types. A type adds
+// ~rhythmParams to its params (with ~rhythmShow and ~rhythmLabels), runs with grid steps of num/den
+// beats (of its clock, see ~clockParam in core/clock.scd), and plays step k (counted from transport
+// start) when ~rhythmGate.(p, k) is true. A skipped step lets the previous note ring on.
 //   every   every `interval`th step, starting at `offset`
 //   euclid  `pulses` spread evenly over `steps`, rotated by `offset`
 //   random  each step plays with probability `prob` %
 //   phrase  gaps between notes in steps, typed as "1 2 1 1 2", cycling; invalid → every 1
 (
 ~rhythmParams = [
+	[\num, 1, \range, 1, 32],
+	[\den, 1, \range, 1, 32],
 	[\rhythm, "every", \choice, "every", "euclid", "random", "phrase"],
 	[\interval, 1, \range, 1, 32],
 	[\pulses, 3, \range, 1, 19],
@@ -24,6 +27,8 @@
 	prob: [\rhythm, "random"],
 	phrase: [\rhythm, "phrase"],
 );
+
+~rhythmLabels = (rhythm: "play", interval: "every", steps: "of", prob: "chance %", phrase: "gaps");
 
 // Onset positions within one cycle of a phrase, and the cycle length: "1 2" → [[0, 1], 3].
 ~phraseCycle = { |text|

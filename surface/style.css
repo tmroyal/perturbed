@@ -12,6 +12,8 @@ body {
   font: 14px/1.4 -apple-system, "SF Pro Text", sans-serif; user-select: none;
 }
 body.offline #main { opacity: .4; pointer-events: none; }
+
+/* --- controls --- */
 button, input, select { font: inherit; color: var(--nord6); }
 button {
   background: var(--nord2); border: 1px solid var(--nord3); border-radius: 6px;
@@ -25,93 +27,89 @@ input[type=number], input[type=text], select {
 input[type=number] { width: 52px; font-variant-numeric: tabular-nums; }
 input[type=text] { width: 100%; user-select: text; }
 input:focus, select:focus { outline: none; border-color: var(--nord8); }
-
-/* --- transport --- */
-#transport {
-  display: flex; align-items: center; gap: 16px; padding: 14px 24px;
-  background: var(--nord1); border-bottom: 1px solid var(--nord2);
-}
-#play { width: 84px; }
-.tempo { display: flex; align-items: center; gap: 10px; }
-.tempo label { color: var(--nord9); }
-.rotary { display: flex; align-items: center; gap: 6px; }
-.rotary svg { cursor: ns-resize; touch-action: none; flex: none; }
-.rotary input[type=number] { text-align: right; }
-#tempo input[type=number] { width: 64px; }
-.mod { display: flex; align-items: center; gap: 6px; color: var(--nord9); }
-.mod input { width: 44px; text-align: right; }
-#mod-swap { padding: 6px 8px; }
-#mod-apply { min-width: 84px; font-variant-numeric: tabular-nums; }
-#beats { display: flex; gap: 6px; }
-#beats span { width: 10px; height: 10px; border-radius: 50%; background: var(--nord2); }
-#beats span.lit { background: var(--nord8); }
-#beats span.lit:first-child { background: var(--nord13); }
-.spacer { flex: 1; }
-#status { color: var(--nord12); }
-
-/* --- layout: generators | destinations --- */
-#main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; min-height: calc(100vh - 77px); }
-.pane-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px; }
-.pane-head h1 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--nord9); }
-#add-gen { display: flex; gap: 8px; }
-#gens-pane { padding: 24px; }
-#dests-pane { padding: 24px; background: var(--nord1); border-left: 1px solid var(--nord2); }
-#grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-#grid:empty::before { content: 'Add a generator to begin.'; color: var(--nord3); }
-#dests { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-#dests:empty::before { content: 'No destinations yet.'; color: var(--nord3); }
-
-/* --- cards --- */
-.card { background: var(--nord1); border-radius: 8px; padding: 14px 16px; border-top: 3px solid var(--nord3); }
-.gen.active { border-top-color: var(--nord8); }
-.card header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-.card h2 { margin: 0; font-size: 14px; font-weight: 600; color: var(--nord6); margin-right: auto; }
-.led { width: 10px; height: 10px; border-radius: 50%; background: var(--nord2); }
-.close { background: none; border: none; color: var(--nord3); padding: 0 4px; font-size: 18px; line-height: 1; }
-.close:hover { background: none; color: var(--nord11); }
-.card .buttons { display: flex; gap: 8px; margin-bottom: 14px; }
-.card .buttons button { flex: 1; }
-/* minmax(0, …) lets the value column shrink below its content (long names) instead of overflowing */
-.fields { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 10px 12px; align-items: center; }
-.fields > * { min-width: 0; }
-.fields > select, .fields > input[type=range] { width: 100%; }
-.fields label { color: var(--nord9); }
-.fields hr.sep { grid-column: 1 / -1; width: 100%; border: none; border-top: 1px solid var(--nord2); margin: 2px 0; }
-button.learn { padding: 3px 10px; font-size: 12px; }
-button.learn.on { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
-.fields .row { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.fields .row select { min-width: 0; text-overflow: ellipsis; }
-.hint { color: var(--nord3); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.hint.value { width: 28px; text-align: right; flex: none; }
-#dests-pane > .hint { white-space: normal; }
 input[type=range] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 0; height: 6px; background: var(--nord2); border-radius: 3px; }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--nord8); cursor: pointer;
 }
+.rotary { display: flex; align-items: center; gap: 6px; }
+.rotary svg { cursor: ns-resize; touch-action: none; flex: none; }
+.rotary input[type=number] { text-align: right; width: 68px; }
+.segmented { display: flex; }
+.segmented button { border-radius: 0; }
+.segmented button:first-child { border-radius: 6px 0 0 6px; }
+.segmented button:last-child { border-radius: 0 6px 6px 0; border-left: none; }
+.segmented button.on { background: var(--nord7); border-color: var(--nord7); color: var(--nord0); }
+.close { background: none; border: none; color: var(--nord3); padding: 0 4px; font-size: 18px; line-height: 1; }
+.close:hover { background: none; color: var(--nord11); }
+.hint { color: var(--nord3); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hint.value { width: 28px; text-align: right; flex: none; }
+.unit { color: var(--nord9); font-size: 12px; letter-spacing: .04em; }
+
+/* --- transport --- */
+#transport {
+  display: flex; align-items: center; gap: 24px; padding: 12px 24px;
+  background: var(--nord1); border-bottom: 1px solid var(--nord2);
+}
+#transport .group { display: flex; align-items: center; gap: 8px; }
+#play { width: 80px; }
+#tempo input[type=number] { width: 64px; }
+#mod input { width: 44px; text-align: right; }
+#mod-swap { padding: 6px 8px; }
+#mod-apply { min-width: 80px; font-variant-numeric: tabular-nums; }
+#pulse { width: 12px; height: 12px; border-radius: 50%; background: var(--nord2); }
+#beat { min-width: 32px; color: var(--nord4); font-variant-numeric: tabular-nums; }
+.spacer { flex: 1; }
+#status { color: var(--nord12); }
+
+/* --- layout: chord + generators | sidebar --- */
+#main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; min-height: calc(100vh - 69px); }
+.pane-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.pane-head h1 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--nord9); }
+#add-gen { display: flex; gap: 8px; }
+#gens-pane { padding: 24px; }
+#sidebar { padding: 24px; background: var(--nord1); border-left: 1px solid var(--nord2); }
+#grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+#grid:empty::before { content: 'Add a generator to begin.'; color: var(--nord3); }
+
+/* --- cards --- */
+.card { background: var(--nord1); border-radius: 8px; padding: 14px 16px; border-top: 3px solid var(--nord3); }
+.gen.active { border-top-color: var(--nord8); }
+.card header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.card h2 { margin: 0; font-size: 14px; font-weight: 600; color: var(--nord6); margin-right: auto; }
+.led { width: 10px; height: 10px; border-radius: 50%; background: var(--nord2); flex: none; }
+button.power { padding: 3px 12px; font-size: 12px; min-width: 48px; }
+/* minmax(0, …) lets the value column shrink below its content (long names) instead of overflowing */
+.fields { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 10px 12px; align-items: center; }
+.fields > * { min-width: 0; }
+.fields > select, .fields > input[type=range] { width: 100%; }
+.fields label { color: var(--nord9); }
+.fields .row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.fields .row select { min-width: 0; text-overflow: ellipsis; }
+.fields .section {
+  grid-column: 1 / -1; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--nord2);
+  font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--nord3);
+}
+button.learn { padding: 3px 10px; font-size: 12px; }
+button.learn.on { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
 
 /* --- chord --- */
 #chord { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; border-top-color: var(--nord7); }
-#chord-mode { display: flex; }
-#chord-mode button { border-radius: 0; }
-#chord-mode button:first-child { border-radius: 6px 0 0 6px; }
-#chord-mode button:last-child { border-radius: 0 6px 6px 0; border-left: none; }
-#chord-mode button.on { background: var(--nord7); border-color: var(--nord7); color: var(--nord0); }
 #chord-arm.on { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
 #chord-notes { flex: 1; color: var(--nord6); font-size: 16px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-#chord-notes:empty::before { content: 'play a chord'; color: var(--nord3); font-size: 14px; }
+#chord-notes:empty::before { content: 'no chord yet: play one'; color: var(--nord3); font-size: 14px; }
 
-/* --- clocks --- */
-#clocks { display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px; }
-#clocks:empty::before { content: 'Only the main clock. Add one to run generators at another tempo.'; color: var(--nord3); font-size: 12px; }
-.clock { display: flex; align-items: center; gap: 6px; background: var(--nord2); border-radius: 6px; padding: 6px 8px 6px 12px; flex-wrap: wrap; }
-.clock .name { color: var(--nord6); font-weight: 600; width: 16px; }
+/* --- sidebar: clocks and outputs --- */
+#clocks, #outputs { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+#clocks { margin-bottom: 28px; }
+.clock, .output { display: flex; align-items: center; gap: 8px; background: var(--nord2); border-radius: 6px; padding: 6px 8px 6px 12px; min-height: 42px; }
+.clock { flex-wrap: wrap; }
+.clock .name, .output .name { color: var(--nord6); font-weight: 600; flex: none; }
+.clock .name { width: 14px; }
 .clock input[type=number] { width: 48px; }
-.clock .rotary input[type=number] { width: 68px; }
 .clock .tempo { color: var(--nord8); font-variant-numeric: tabular-nums; margin-left: auto; }
-
-/* --- destinations --- */
-.dest { display: flex; align-items: center; gap: 10px; background: var(--nord2); border-radius: 6px; padding: 8px 10px 8px 12px; }
-.dest .name { color: var(--nord6); font-weight: 600; flex: none; }
-.dest .route { color: var(--nord4); opacity: .7; font-size: 12px; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#dest-form { border-top-color: var(--nord15); }
-#dest-form button { margin-top: 12px; width: 100%; }
+.clock.main .tempo { margin-right: 26px; }
+.output .route { color: var(--nord4); opacity: .7; font-size: 12px; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#outputs:empty::before { content: 'No outputs yet.'; color: var(--nord3); }
+#output-form { border-top-color: var(--nord15); }
+#output-form button { margin-top: 12px; width: 100%; }
+#sidebar > .hint { white-space: normal; }

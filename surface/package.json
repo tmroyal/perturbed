@@ -1,5 +1,5 @@
 {
-  "name": "performed",
+  "name": "perturbed",
   "version": "0.0.1",
   "private": true,
   "main": "main.js",
@@ -8,5 +8,7 @@
   },
   "devDependencies": {
     "electron": "^44.4.5"
-  }
+  },
+  "productName": "Perturbed",
+  "description": "Perturbed: the performance surface"
 }

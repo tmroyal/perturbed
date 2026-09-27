@@ -42,6 +42,9 @@
 
 // --- extra clocks ---
 
+// The param a clock-driven generator type adds to choose its clock (0 = main).
+~clockParam = [\clock, 0, \clock];
+
 ~clockTempo = { |c|
 	switch(c[\mode],
 		\factor, { ~bpm * c[\factor] },

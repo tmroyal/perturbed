@@ -31,7 +31,8 @@
 //   /chord            <mode> <armed> <pitch>...
 //   /gen/schema       <type> <param> <kind> <default> <kind args...>
 //   /gen/show         <type> <param> <otherParam> <value>...   show param only for those values
-//   /gen/section      <type> <param>             param starts a new group
+//   /gen/label        <type> <param> <label>     display name
+//   /gen/section      <type> <param> <title>     param starts a new titled group
 //   /gen/learn        <id> <param> 1|0           learning started / ended
 //   /clock            <id> <name> <mode> <num> <den> <factor> <bpm> <tempo>   tempo = effective bpm
 //   /clock/removed    <id>

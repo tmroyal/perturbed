@@ -11,7 +11,8 @@
 //              whether or not the transport runs; notes it holds go in g[\held] (see passthrough)
 // and optionally:
 //   showWhen:  (param: [otherParam, value...]) the surface shows param only for those values
-//   sections:  params that start a new group on the surface (drawn with a separator)
+//   labels:    (param: "label") display names; the param name is shown otherwise
+//   sections:  (param: "Title") params that start a new titled group on the surface
 //   restartOn: params whose change restarts `run` (re-quantizes to the new grid)
 // Shared building blocks: core/pitch.scd (which note), core/rhythm.scd (which grid steps play),
 // core/velocity.scd (how loud).
@@ -99,22 +100,6 @@
 	{ "gen %: unknown param %".format(g[\id], key).warn };
 };
 
-// Learn: the next key played sets a generator's (note) param.
-~learning = nil;  // [genId, param]
-
-~learnGen = { |id, param, on|
-	~learning !? { |l| ~send.('/gen/learn', l[0], l[1], 0) };
-	~learning = if(on and: { ~gens[id].notNil }) { [id, param.asSymbol] };
-	~learning !? { |l| ~send.('/gen/learn', l[0], l[1], 1) };
-};
-
-~learnNote = { |note|
-	var l = ~learning;
-	~learning = nil;
-	~send.('/gen/learn', l[0], l[1], 0);
-	~gens[l[0]] !? { |g| ~setGen.(g, l[1], note) };
-};
-
 ~sendGen = { |g| ~send.('/gen', g[\id], g[\typeName], g[\dest], g[\active].binaryValue) };
 
 ~sendParams = { |g|
@@ -125,7 +110,8 @@
 	~types.keysValuesDo { |name, type|
 		type[\params].do { |spec| ~send.('/gen/schema', name, spec[0], spec[2], spec[1], *spec[3..]) };
 		(type[\showWhen] ? ()).keysValuesDo { |param, cond| ~send.('/gen/show', name, param, *cond) };
-		(type[\sections] ? []).do { |param| ~send.('/gen/section', name, param) };
+		(type[\labels] ? ()).keysValuesDo { |param, label| ~send.('/gen/label', name, param, label) };
+		(type[\sections] ? ()).keysValuesDo { |param, title| ~send.('/gen/section', name, param, title) };
 	};
 };
 )

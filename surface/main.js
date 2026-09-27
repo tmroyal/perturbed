@@ -22,6 +22,11 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
   });
   win.loadFile('index.html');
+  // renderer errors go to the terminal too
+  win.webContents.on('console-message', (e, ...old) => {
+    const { level, message, sourceId, lineNumber } = e.message !== undefined ? e : { level: old[0], message: old[1], lineNumber: old[2], sourceId: old[3] };
+    if (level === 'error' || level === 3) console.error(`[surface] ${message} (${sourceId}:${lineNumber})`);
+  });
 }
 
 // Save/load dialogs; the brain reads and writes the file, the surface only picks the path.
@@ -41,6 +46,7 @@ sock.on('message', (msg) => {
 });
 sock.bind(LISTEN_PORT);
 
+app.setName('Perturbed');
 app.whenReady().then(() => {
   app.dock?.setIcon(ICON);  // macOS: otherwise the dock shows Electron's icon
   createWindow();

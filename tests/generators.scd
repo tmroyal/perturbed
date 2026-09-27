@@ -107,7 +107,7 @@ Routine {
 	check.(run.(\arpeggio) == [57, 62, 65, 69, 57, 62], "arpeggio up (%)".format(notes));
 	brain.sendMsg('/gen/set', genId, \direction, "down");
 	check.(run.(\arpeggio) == [69, 65, 62, 57, 69, 65], "arpeggio down (%)".format(notes));
-	brain.sendMsg('/gen/set', genId, \direction, "updown");
+	brain.sendMsg('/gen/set', genId, \direction, "up-down");
 	check.(run.(\arpeggio, 0, 8) == [57, 62, 65, 69, 65, 62, 57, 62], "arpeggio updown (%)".format(notes));
 	brain.sendMsg('/gen/set', genId, \permutation, 5);
 	brain.sendMsg('/gen/set', genId, \advance, 2);

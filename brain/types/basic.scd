@@ -3,21 +3,14 @@
 // core/pitch.scd (a set note or the current chord), the velocity from core/velocity.scd. When the
 // chord source is empty it rests (the previous note is released) and keeps its place on the grid.
 //
-// Beats are those of its clock (main by default). Onsets sit on multiples of num/den beats
-// counted from transport start, so generators keep
-// their ratios with each other (3/4 and 1/1 meet every 3 beats). Changing num/den restarts on
-// the next point of the new grid.
+// Beats are those of its clock (main by default). Onsets sit on multiples of num/den beats counted
+// from transport start, so generators keep their ratios with each other (3/4 and 1/1 meet every
+// 3 beats). Changing clock or num/den restarts on the next point of the new grid.
 (
-params: ~pitchParams ++ [
-	[\clock, 0, \clock],
-	[\num, 1, \range, 1, 32],
-	[\den, 1, \range, 1, 32],
-] ++ ~rhythmParams ++ ~velocityParams,
-
+params: ~pitchParams ++ ~rhythmParams ++ ~velocityParams ++ [~clockParam],
 showWhen: ~pitchShow ++ ~rhythmShow ++ ~velocityShow,
-
-sections: [\source, \clock, \velMode],
-
+labels: ~pitchLabels ++ ~rhythmLabels ++ ~velocityLabels,
+sections: (source: "Pitch", num: "Rhythm", velMode: "Velocity", clock: "Clock"),
 restartOn: [\clock, \num, \den],
 
 run: { |g, p|

@@ -2,22 +2,6 @@
 // Plugin state lives in the REAPER project, not here. Loading replaces everything and stops the
 // transport; generators keep their active flag, so pressing play resumes the piece.
 (
-~toJSON = { |x|
-	case
-	{ x.isKindOf(Dictionary) } {
-		"{" ++ x.keys.asArray.sort.collect { |k| ~toJSON.(k.asString) ++ ": " ++ ~toJSON.(x[k]) }.join(", ") ++ "}"
-	}
-	{ x.isKindOf(String) or: { x.isKindOf(Symbol) } } {
-		"\"" ++ x.asString.replace("\\", "\\\\").replace("\"", "\\\"") ++ "\""
-	}
-	{ x.isKindOf(SequenceableCollection) } { "[" ++ x.collect(~toJSON).join(", ") ++ "]" }
-	{ x.isKindOf(Boolean) } { x.asString }
-	{ x.isNil } { "null" }
-	{ x.asString };
-};
-
-~writeJSON = { |path, x| File.use(path, "w", { |f| f.write(~toJSON.(x) ++ "\n") }) };
-
 ~savePerformance = { |path|
 	~writeJSON.(path.standardizePath, (
 		tempo: ~bpm,
@@ -34,14 +18,6 @@
 		},
 	));
 	"saved %".format(path).postln;
-};
-
-// JSON scalars arrive as strings; convert each param to the type of its default.
-~fromJSON = { |value, default|
-	case
-	{ default.isKindOf(Integer) } { value.asFloat.round.asInteger }
-	{ default.isKindOf(Float) } { value.asFloat }
-	{ value.asString };
 };
 
 ~loadPerformance = { |path|

@@ -1,12 +1,13 @@
-# performed
+# Perturbed
 
-An algorithmic performance toolbox: generators on a shared clock read the chord you play and
-send MIDI to instruments in REAPER, played from an Electron surface. Design and protocol: [PLAN.md](PLAN.md).
+An algorithmic performance toolbox: generators on shared clocks read the chord you play and send
+MIDI to instruments in REAPER, played from the Perturbed surface. Design and protocol: [PLAN.md](PLAN.md).
 
 ```
 brain/     SuperCollider: clock, current chord, generators, MIDI out, OSC (the authority)
-surface/   Electron UI; renders what the brain reports, sends intents over OSC
-           (icon: node surface/icon/make-icon.js regenerates surface/icon/)
+surface/   the Perturbed app (Electron): renders what the brain reports, sends intents over OSC
+             ui.js · transport.js · generators.js · sidebar.js · app.js (state + protocol)
+             build-app.sh makes build/Perturbed.app; icon/make-icon.js regenerates the icon
 reaper/    setup.lua builds monitor-only tracks from destinations.json (written by the brain)
 tests/     run.sh: timing, generator and OSC protocol tests against a test brain
 archive/   the first proof of concept
@@ -15,7 +16,7 @@ archive/   the first proof of concept
 ## Run
 
 ```
-./run.sh            # brain + surface; quitting the surface stops the brain
+./run.sh            # brain + Perturbed; quitting Perturbed stops the brain
 ./tests/run.sh      # ~30 s; plays MIDI on IAC Bus 1 ch 1–2 (REAPER will sound it)
 ```
 

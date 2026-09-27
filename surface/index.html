@@ -3,35 +3,41 @@
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
-<title>performed</title>
+<title>Perturbed</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="transport">
+  <header id="transport">
     <button id="play">Play</button>
-    <div class="tempo">
+    <div class="group" title="Tempo of the main clock">
       <div id="tempo"></div>
-      <label>BPM</label>
+      <span class="unit">BPM</span>
     </div>
-    <div class="mod" title="Metric modulation: multiply the tempo by num/den">
-      <span>×</span>
+    <div class="group" id="mod" title="Metric modulation: multiply the tempo by a fraction">
+      <span class="unit">Modulate</span>
       <input id="mod-num" type="number" min="1" max="32" step="1" value="3">
       <span>/</span>
       <input id="mod-den" type="number" min="1" max="32" step="1" value="2">
-      <button id="mod-swap" title="Reciprocal">⇅</button>
-      <button id="mod-apply"></button>
+      <button id="mod-swap" title="Swap to the reciprocal">⇅</button>
+      <button id="mod-apply" title="Apply"></button>
     </div>
-    <div id="beats"><span></span><span></span><span></span><span></span></div>
+    <div class="group" title="Beats since play (main clock)">
+      <span id="pulse"></span>
+      <span id="beat"></span>
+    </div>
     <div class="spacer"></div>
-    <span id="status">waiting for brain…</span>
+    <span id="status">waiting for the brain…</span>
     <button id="save">Save…</button>
-    <button id="load">Load…</button>
-  </div>
+    <button id="load">Open…</button>
+  </header>
+
   <div id="main">
     <section id="gens-pane">
       <div class="pane-head"><h1>Chord</h1></div>
       <div id="chord" class="card">
-        <div id="chord-mode"><button data-mode="auto">Auto</button><button data-mode="arm">Arm</button></div>
+        <div class="segmented" id="chord-mode" title="Auto: every chord you play replaces the current one. Arm: only the next chord after pressing Arm.">
+          <button data-mode="auto">Auto</button><button data-mode="arm">Arm</button>
+        </div>
         <button id="chord-arm">Arm</button>
         <div id="chord-notes"></div>
         <button id="chord-clear">Clear</button>
@@ -39,23 +45,30 @@
       <div class="pane-head"><h1>Generators</h1><div id="add-gen"></div></div>
       <div id="grid"></div>
     </section>
-    <aside id="dests-pane">
+
+    <aside id="sidebar">
       <div class="pane-head"><h1>Clocks</h1><button id="add-clock">+ Clock</button></div>
       <div id="clocks"></div>
-      <div class="pane-head"><h1>Destinations</h1></div>
-      <div id="dests"></div>
-      <form id="dest-form" class="card">
+
+      <div class="pane-head"><h1>Outputs</h1></div>
+      <div id="outputs"></div>
+      <form id="output-form" class="card">
         <div class="fields">
-          <label for="dest-name">name</label><input id="dest-name" type="text" placeholder="Piano 3">
-          <label>route</label>
-          <div class="row"><select id="dest-port"></select><select id="dest-channel"></select></div>
-          <label for="dest-inst">instrument</label><input id="dest-inst" type="text" value="Pianoteq 9">
+          <label for="output-name">name</label><input id="output-name" type="text" placeholder="Piano 3">
+          <label>MIDI</label>
+          <div class="row"><select id="output-port"></select><select id="output-channel"></select></div>
+          <label for="output-inst">instrument</label><input id="output-inst" type="text" value="Pianoteq 9">
         </div>
-        <button type="submit">+ Destination</button>
+        <button type="submit">+ Output</button>
       </form>
-      <p class="hint">After adding or removing destinations, run <b>setup.lua</b> in REAPER.</p>
+      <p class="hint">Each output is a REAPER track. After adding or removing outputs, run <b>setup.lua</b> in REAPER.</p>
     </aside>
   </div>
-  <script src="renderer.js"></script>
+
+  <script src="ui.js"></script>
+  <script src="transport.js"></script>
+  <script src="generators.js"></script>
+  <script src="sidebar.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

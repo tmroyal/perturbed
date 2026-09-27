@@ -77,7 +77,9 @@ brain/
     pitch.scd         which note: set note or from the current chord (shared by types)
     rhythm.scd        which grid steps play: every, euclid, random, phrase (shared by types)
     velocity.scd      how loud: velocity modes (shared by types)
-    midi.scd          outputs (IAC buses), note on/off with timestamps, input handling
+    midi.scd          outputs (IAC buses), note on/off with timestamps
+    keyboard.scd      MIDI input: which devices, where each key goes, learn
+    json.scd          JSON writer (sclang only parses) and typed reading
     osc.scd           surface protocol (§5)
     persist.scd       save/load performance JSON
     destinations.scd  destination store; writes reaper/destinations.json
@@ -104,7 +106,7 @@ REAPER is used as a live instrument rack; its own timeline/transport does not ne
 - **One-time setup:** enable the brain's virtual MIDI ports as inputs in
   Preferences → Audio → MIDI Inputs (REAPER only discovers new devices on restart).
 
-### 2.3 Surface — Electron (`surface/`)
+### 2.3 Surface — the Perturbed app, Electron (`surface/`)
 
 Carries forward from the POC: Nord theme, Electron main process speaking OSC over UDP
 (no bridge), renderer builds UI from state reported by the brain.
@@ -112,13 +114,17 @@ Carries forward from the POC: Nord theme, Electron main process speaking OSC ove
 Layout:
 
 - **Transport bar:** play/stop (space bar), tempo dial (drag, shift for fine, scroll, double-click
-  to type) plus a numeric BPM field, beat indicator, metric modulation (tempo × num/den, with a
-  swap button for the reciprocal).
+  to type) plus a numeric BPM field, metric modulation (tempo × num/den, with a swap button for
+  the reciprocal), beat pulse and count (no bar grouping: there is no metre), save/open.
 - **Chord bar:** mode (Auto / Arm), Arm button, the current chord's notes, Clear.
-- **Generator grid:** one card per generator: active toggle (inactive by default), destination
+- **Generator grid:** one card per generator: on/off (off by default), output
   select, type-specific parameters (including where the note comes from), activity LED.
-- **Destinations pane:** list of destinations (name, port/channel); "sync to REAPER"
-  regenerates the REAPER setup (§6).
+- **Clocks pane:** A (main) and extra clocks, with dials for factor and free tempo.
+- **Outputs pane:** the destinations (name, port/channel, instrument), called outputs in the UI;
+  run `setup.lua` in REAPER after changes (§6).
+- Cards are built from the type schema: param labels (`labels`) and titled groups (`sections`)
+  come from the type file. `run.sh` launches `build/Perturbed.app` (Electron's bundle renamed by
+  `surface/build-app.sh`, so macOS shows the app's name and icon).
 
 A Max/jsui surface remains an option later: the OSC protocol is the contract, so any surface
 that speaks it works (also TouchOSC or a browser on an iPad).
@@ -257,7 +263,8 @@ Brain → surface (state):
 /gen/schema          <type> <param> <kind> <default> <args>...
                      kind = range (min max [step]) | note | choice (options) | text
 /gen/show            <type> <param> <otherParam> <value>...   show param only for those values
-/gen/section         <type> <param>                   param starts a new group (separator)
+/gen/label           <type> <param> <label>           display name
+/gen/section         <type> <param> <title>           param starts a new titled group
 /gen/learn           <id> <param> 1|0                 learning started / ended
 /clock               <id> <name> <mode> <num> <den> <factor> <bpm> <tempo>
 /clock/removed       <id>

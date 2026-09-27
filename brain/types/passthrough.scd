@@ -10,7 +10,8 @@ params: [
 	[\hi, 127, \note],
 ],
 
-sections: [\octave, \lo],
+labels: (octave: "octaves", semitone: "semitones", lo: "lowest", hi: "highest"),
+sections: (octave: "Transpose", lo: "Zone"),
 
 key: { |g, p, note, vel|
 	var d = ~dests[g[\dest]], out = note + (12 * p[\octave].asInteger) + p[\semitone].asInteger;

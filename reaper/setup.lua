@@ -110,13 +110,16 @@ for _, d in ipairs(cfg.destinations) do
   if dev then
     -- MIDI input: 4096 flag | device index << 5 | channel (1-16, 0 = all)
     reaper.SetMediaTrackInfo_Value(tr, "I_RECINPUT", 4096 + (dev << 5) + d.channel)
+    reaper.SetMediaTrackInfo_Value(tr, "I_RECMODE", 2) -- none: monitor only
+    reaper.SetMediaTrackInfo_Value(tr, "I_RECMON", 1)
+    reaper.SetMediaTrackInfo_Value(tr, "I_RECARM", 1)
   else
-    problems[#problems + 1] = ("%s: MIDI input '%s' not found (enable it in Preferences → MIDI Inputs, then restart REAPER)")
-      :format(d.name, tostring(portName))
+    -- Never arm with REAPER's default input (audio in 1): monitoring it feeds back.
+    reaper.SetMediaTrackInfo_Value(tr, "I_RECARM", 0)
+    reaper.SetMediaTrackInfo_Value(tr, "I_RECMON", 0)
+    reaper.SetMediaTrackInfo_Value(tr, "I_RECINPUT", -1)
+    problems[#problems + 1] = ("%s: MIDI input '%s' not found; track left unarmed"):format(d.name, tostring(portName))
   end
-  reaper.SetMediaTrackInfo_Value(tr, "I_RECMODE", 2) -- none: monitor only
-  reaper.SetMediaTrackInfo_Value(tr, "I_RECMON", 1)
-  reaper.SetMediaTrackInfo_Value(tr, "I_RECARM", 1)
 
   if d.instrument ~= "" and d.instrument ~= "none" and reaper.TrackFX_GetInstrument(tr) < 0 then
     if reaper.TrackFX_AddByName(tr, d.instrument, false, -1) < 0 then
@@ -129,4 +132,13 @@ reaper.PreventUIRefresh(-1)
 reaper.TrackList_AdjustWindows(false)
 reaper.Undo_EndBlock("performed: set up destination tracks", -1)
 
-if #problems > 0 then reaper.MB(table.concat(problems, "\n"), "performed setup", 0) end
+if #problems > 0 then
+  local inputs = {}
+  for i = 0, reaper.GetNumMIDIInputs() - 1 do
+    local ok, name = reaper.GetMIDIInputName(i, "")
+    if ok then inputs[#inputs + 1] = ("  %d: %s"):format(i, name) end
+  end
+  reaper.MB(table.concat(problems, "\n") .. "\n\nMIDI inputs REAPER reports (enable in Preferences → MIDI Inputs; "
+    .. "new devices need a restart):\n" .. (#inputs > 0 and table.concat(inputs, "\n") or "  (none)"),
+    "performed setup", 0)
+end

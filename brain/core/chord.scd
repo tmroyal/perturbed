@@ -45,15 +45,29 @@
 	};
 };
 
-// Note for a generator's `source` choice, or nil (rest) when the chord is empty.
-// step counts the generator's strikes, for arpeggio.
-~chordNote = { |source, index, step|
-	if(~chord.notEmpty) {
-		switch(source.asSymbol,
-			\index, { ~chord.wrapAt(index.asInteger) },
-			\arpeggio, { ~chord.wrapAt(step) },
-			\lowest, { ~chord.first },
-			\highest, { ~chord.last },
+// Note for a generator's `source` from the current chord, or nil (rest) when it is empty.
+// p holds the source's params; step counts the generator's strikes (for arpeggio and permute).
+//   index     chord[index], wrapping; -1 = highest
+//   lowest, highest
+//   arpeggio  one chord note per strike: direction up, down or updown
+//   permute   one note per strike through chord.permute(n); n starts at `permutation` and moves
+//             ahead by `advance` after each pass through the chord
+~chordNote = { |p, step|
+	var c = ~chord, n = ~chord.size;
+	if(n > 0) {
+		switch(p[\source].asSymbol,
+			\index, { c.wrapAt(p[\index].asInteger) },
+			\lowest, { c.first },
+			\highest, { c.last },
+			\arpeggio, {
+				switch(p[\direction].asSymbol,
+					\down, { c.reverse.wrapAt(step) },
+					\updown, { c.foldAt(step) },
+					{ c.wrapAt(step) });
+			},
+			\permute, {
+				c.permute(p[\permutation].asInteger + (step div: n * p[\advance].asInteger)).wrapAt(step);
+			},
 		);
 	};
 };

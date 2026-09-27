@@ -10,7 +10,7 @@ const el = (tag, props = {}, ...children) => {
 // --- mirror of the brain's state ---
 const model = {
   playing: false, bpm: 120, ports: [],
-  types: new Map(),  // name -> [{ name, kind, def, args }]
+  types: new Map(),  // name -> [{ name, kind, def, args, show: { param, values } }]
   chord: { mode: 'auto', armed: false, pitches: [] },
   dests: new Map(),  // id -> { id, name, port, channel, instrument }
   gens: new Map(),   // id -> { id, type, dest, active, params, card }
@@ -189,6 +189,11 @@ function buildCard(gen) {
 
   const fields = [el('label', { textContent: 'dest' }), destSel];
   const updaters = {};
+  const conditional = [];  // rows shown only for some values of another param
+  const applyShow = () => conditional.forEach(({ show, els }) => {
+    const visible = show.values.includes(String(gen.params[show.param]));
+    els.forEach((e) => { e.hidden = !visible; });
+  });
   const specs = model.types.get(gen.type) ?? [];
   const byName = Object.fromEntries(specs.map((s) => [s.name, s]));
   for (const spec of specs) {
@@ -205,8 +210,10 @@ function buildCard(gen) {
       continue;
     }
     const c = paramControl(spec, (v) => set(spec.name, v));
+    const label = el('label', { textContent: c.label });
     updaters[spec.name] = c.update;
-    fields.push(el('label', { textContent: c.label }), c.control);
+    if (spec.show) conditional.push({ show: spec.show, els: [label, c.control] });
+    fields.push(label, c.control);
   }
 
   const root = el('section', { className: 'card gen' },
@@ -225,7 +232,7 @@ function buildCard(gen) {
       root.classList.toggle('active', gen.active);
       refreshDests();
     },
-    param: (name, value) => updaters[name]?.(value),
+    param: (name, value) => { updaters[name]?.(value); applyShow(); },
     flash: () => led.animate([{ background: '#EBCB8B' }, { background: '#434C5E' }], { duration: 150 }),
   };
 }
@@ -315,6 +322,10 @@ const handlers = {
   '/chord': (mode, armed, ...pitches) => {
     model.chord = { mode, armed: !!armed, pitches };
     if (!inSnapshot) renderChord();
+  },
+  '/gen/show': (type, name, param, ...values) => {
+    const spec = model.types.get(type)?.find((s) => s.name === name);
+    if (spec) spec.show = { param, values: values.map(String) };
   },
   '/gen/schema': (type, name, kind, def, ...args) => {
     if (!model.types.has(type)) model.types.set(type, []);

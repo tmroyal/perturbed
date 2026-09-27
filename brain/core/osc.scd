@@ -25,6 +25,7 @@
 //   /ports            <name>...                  MIDI outputs; destination port n = nth name
 //   /chord            <mode> <armed> <pitch>...
 //   /gen/schema       <type> <param> <kind> <default> <kind args...>
+//   /gen/show         <type> <param> <otherParam> <value>...   show param only for those values
 //   /dest             <id> <name> <port> <channel> <instrument>
 //   /dest/removed     <id>
 //   /gen              <id> <type> <dest> <active>

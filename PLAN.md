@@ -156,9 +156,13 @@ Repeats one note; each note lasts `num/den` beats and is released by the next.
 
 | Param | Meaning |
 |---|---|
-| `note` | explicit pitch (name + octave in the UI), used by the `preset` source |
-| `source` | `preset` (the note above), or from the current chord: `index`, `arpeggio` (steps through it), `lowest`, `highest` |
-| `index` | for `index`: which chord note (0 = lowest; negative counts from the top; wraps) |
+| `source` | `note`, or from the current chord: `index`, `lowest`, `highest`, `arpeggio`, `permute` |
+| `note` | (note) explicit pitch, name + octave in the UI |
+| `index` | (index) which chord note: 0 = lowest, negative counts from the top, wraps |
+| `direction` | (arpeggio) up, down, updown |
+| `permutation`, `advance` | (permute) plays `chord.permute(n)`; n starts at `permutation` and moves ahead by `advance` after each pass through the chord |
+
+The surface shows each of these only for the source it applies to (`showWhen` in the type file).
 | `velocity` | 1–127 |
 | `num`, `den` | duration in beats = num/den |
 | `active` | on/off (off by default) |
@@ -225,6 +229,7 @@ Brain → surface (state):
 /gen/removed         <id>
 /gen/schema          <type> <param> <kind> <default> <args>...
                      kind = range (min max) | note | choice (options)
+/gen/show            <type> <param> <otherParam> <value>...   show param only for those values
 /dest                <id> <name> <port> <channel> <instrument>
 /dest/removed        <id>
 /beat                <beat>                        (latency-aligned)

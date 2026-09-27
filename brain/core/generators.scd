@@ -4,6 +4,7 @@
 // Types live in brain/types/, one file each, evaluating to:
 //   params:    [[name, default, kind, ...kind args], ...]  also the surface's schema;
 //              kind = range (min max) | note | choice (options...)
+//   showWhen:  (param: [otherParam, value...]) the surface shows param only for those values
 //   restartOn: params whose change restarts `run` (re-quantizes to the new grid)
 //   run:       { |g, p| } routine body on the transport clock; waits are in beats
 (
@@ -88,6 +89,7 @@
 ~sendSchema = {
 	~types.keysValuesDo { |name, type|
 		type[\params].do { |spec| ~send.('/gen/schema', name, spec[0], spec[2], spec[1], *spec[3..]) };
+		(type[\showWhen] ? ()).keysValuesDo { |param, cond| ~send.('/gen/show', name, param, *cond) };
 	};
 };
 )

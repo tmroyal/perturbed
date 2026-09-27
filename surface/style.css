@@ -6,6 +6,7 @@
   --nord11: #BF616A; --nord12: #D08770; --nord13: #EBCB8B; --nord14: #A3BE8C; --nord15: #B48EAD;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   margin: 0; background: var(--nord0); color: var(--nord4);
   font: 14px/1.4 -apple-system, "SF Pro Text", sans-serif; user-select: none;

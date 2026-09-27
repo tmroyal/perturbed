@@ -56,12 +56,20 @@ Routine {
 	brain.sendMsg('/gen/add', "fractionalRepeat");
 	0.1.wait;
 	[[\num, 1], [\den, 4], [\note, 48], [\active, 1]].do { |m| brain.sendMsg('/gen/set', genId, *m) };
-	check.(run.(\preset).every(_ == 48), "preset plays its note");
+	check.(run.(\note).every(_ == 48), "note plays its note");
 	check.(run.(\index, -1).every(_ == 69), "index -1 plays the highest");
 	check.(run.(\index, 5).every(_ == 62), "index wraps (5 of 4 → 1)");
 	check.(run.(\lowest).every(_ == 57), "lowest");
 	check.(run.(\highest).every(_ == 69), "highest");
-	check.(run.(\arpeggio) == [57, 62, 65, 69, 57, 62], "arpeggio steps through the chord (%)".format(notes));
+	check.(run.(\arpeggio) == [57, 62, 65, 69, 57, 62], "arpeggio up (%)".format(notes));
+	brain.sendMsg('/gen/set', genId, \direction, "down");
+	check.(run.(\arpeggio) == [69, 65, 62, 57, 69, 65], "arpeggio down (%)".format(notes));
+	brain.sendMsg('/gen/set', genId, \direction, "updown");
+	check.(run.(\arpeggio, 0, 8) == [57, 62, 65, 69, 65, 62, 57, 62], "arpeggio updown (%)".format(notes));
+	brain.sendMsg('/gen/set', genId, \permutation, 5);
+	brain.sendMsg('/gen/set', genId, \advance, 2);
+	check.(run.(\permute, 0, 12) == ([57, 62, 65, 69].permute(5) ++ [57, 62, 65, 69].permute(7) ++ [57, 62, 65, 69].permute(9)),
+		"permute: permutation 5, advancing by 2 each pass (%)".format(notes));
 
 	brain.sendMsg('/chord/clear');
 	0.1.wait;

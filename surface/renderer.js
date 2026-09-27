@@ -11,6 +11,7 @@ const el = (tag, props = {}, ...children) => {
 const model = {
   playing: false, bpm: 120, ports: [],
   types: new Map(),  // name -> [{ name, kind, def, args }]
+  sources: new Map(), // slot -> { slot, armed, pitches }
   dests: new Map(),  // id -> { id, name, port, channel, instrument }
   gens: new Map(),   // id -> { id, type, dest, active, params, card }
 };
@@ -103,6 +104,7 @@ $('bpm').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('bpm').bl
 // --- generator controls, built from the type's schema ---
 const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 const OCTAVES = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];  // MIDI 60 = C4
+const noteName = (p) => `${NOTE_NAMES[p % 12]}${Math.floor(p / 12) - 1}`;
 const typeLabel = (name) => name.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
 const editing = (input) => document.activeElement === input || input.dataset.dragging;
 
@@ -146,6 +148,10 @@ function paramControl(spec, send) {
       label: 'note', control: el('div', { className: 'row' }, name, octave),
       update: (v) => { pc = v % 12; oct = Math.floor(v / 12); name.value = pc; octave.value = oct; },
     };
+  }
+  if (spec.kind === 'source') {
+    const sel = selectInput([['—', 'none'], ...[...model.sources.keys()].map((s) => [s, s])], send);
+    return { label: 'source', control: sel, update: (v) => { sel.value = model.sources.has(v) ? v : 'none'; } };
   }
   if (spec.kind === 'range' && max - min > 32) {
     const { input, out } = slider(min, max, send);
@@ -235,6 +241,16 @@ function renderTypes() {
     el('button', { textContent: `+ ${typeLabel(type)}`, onclick: () => osc.send('/gen/add', type) })));
 }
 
+// --- sources ---
+function renderSources() {
+  $('sources').replaceChildren(...[...model.sources.values()].map((s) => el('section', { className: `card slot${s.armed ? ' armed' : ''}` },
+    el('header', {},
+      el('h2', { textContent: s.slot }),
+      el('button', { className: 'arm', textContent: s.armed ? 'Play a chord…' : 'Arm', onclick: () => osc.send('/source/arm', s.slot, s.armed ? 0 : 1) }),
+      el('button', { className: 'close', textContent: '×', title: 'Clear', onclick: () => osc.send('/source/clear', s.slot) })),
+    el('div', { className: 'notes', textContent: s.pitches.map(noteName).join(' ') }))));
+}
+
 // --- destinations ---
 function renderDests() {
   $('dests').replaceChildren(...[...model.dests.values()].map((d) => el('div', { className: 'dest' },
@@ -262,6 +278,7 @@ function renderAll() {
   renderTransport();
   renderTypes();
   renderPorts();
+  renderSources();
   renderDests();
   renderGens();
 }
@@ -275,7 +292,7 @@ const handlers = {
   },
   '/state/begin': () => {
     inSnapshot = true;
-    model.types.clear(); model.dests.clear(); model.gens.clear();
+    model.types.clear(); model.sources.clear(); model.dests.clear(); model.gens.clear();
   },
   '/state/end': () => {
     inSnapshot = false;
@@ -289,6 +306,10 @@ const handlers = {
     if (!inSnapshot) renderTransport();
   },
   '/ports': (...names) => { model.ports = names; if (!inSnapshot) renderPorts(); },
+  '/source': (slot, armed, ...pitches) => {
+    model.sources.set(slot, { slot, armed: !!armed, pitches });
+    if (!inSnapshot) renderSources();
+  },
   '/gen/schema': (type, name, kind, def, ...args) => {
     if (!model.types.has(type)) model.types.set(type, []);
     model.types.get(type).push({ name, kind, def, args });

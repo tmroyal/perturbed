@@ -1,5 +1,5 @@
 #!/bin/sh
-# Starts the brain in test mode, runs the timing and protocol tests against it, stops the brain.
+# Starts the brain in test mode, runs the timing, capture and protocol tests against it, stops the brain.
 # Sends MIDI on IAC Bus 1 channels 1–2: anything listening there (REAPER) will play it.
 cd "$(dirname "$0")/.."
 SCLANG=/Applications/SuperCollider.app/Contents/MacOS/sclang
@@ -18,6 +18,10 @@ OUT=$(limit 20 "$SCLANG" tests/timing.scd 2>&1)
 echo "$OUT" | grep -E "^(ok|FAIL|gen |TIMING|ERROR)"
 echo "$OUT" | grep -q "TIMING PASSED"
 status=$?
+
+OUT=$(limit 10 "$SCLANG" tests/capture.scd 2>&1)
+echo "$OUT" | grep -E "^(ok|FAIL|CAPTURE|ERROR)"
+echo "$OUT" | grep -q "CAPTURE PASSED" || status=1
 
 limit 10 node tests/protocol.js || status=1
 

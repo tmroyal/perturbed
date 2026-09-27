@@ -199,6 +199,7 @@ Surface → brain (intents):
 /transport/play      1|0
 /transport/tempo     <bpm>
 /source/arm          <slot> 1|0         next captured chord goes into slot
+/source/set          <slot> <pitch>...  set a slot directly
 /source/clear        <slot>
 /gen/add             <type>             brain assigns the id
 /gen/remove          <id>
@@ -250,10 +251,10 @@ Any address that sends `/hello` is registered as a surface and receives all stat
 1. ✅ **Brain skeleton, headless.** (`tests/timing.sh`: onsets within ~1.3 ms of the grid.) Clock, virtual MIDI outputs, FractionalRepeat with explicit note,
    OSC transport/tempo/gen control. Verified by a test harness that captures the MIDI output
    (loop the brain's port back into a MIDI listener) and checks onset times against the grid.
-2. **REAPER rack.** `setup.lua` builds tracks from `destinations.json`; confirm Pianoteq 9 plays
+2. ✅ **REAPER rack.** `setup.lua` builds tracks from `destinations.json`; confirm Pianoteq 9 plays
    from the brain on two destinations.
-3. **Surface v1.** Transport bar, generator grid, destinations pane; brain-authoritative state sync.
-4. **Sources.** Chord capture from the keyboard into slots; FractionalRepeat `source` + `index`;
+3. ✅ **Surface v1.** Transport bar, generator grid, destinations pane; brain-authoritative state sync.
+4. ✅ **Sources.** (Inputs: every MIDI device except the IAC Driver, or `inputs` in config.scd.) Chord capture from the keyboard into slots; FractionalRepeat `source` + `index`;
    sources pane in the surface.
 5. **Persistence.** Save/load performance JSON; REAPER project alongside.
 6. **More generator types** (e.g. euclidean, arpeggiator over a source, probability gates) and
@@ -272,8 +273,8 @@ Any address that sends `/hello` is registered as a surface and receives all stat
 - **REAPER headless/scripted testing:** whether REAPER can run a setup script and render from the
   command line well enough for automated checks. Nice to have, not required: the brain is
   verified on its own and REAPER only has to receive MIDI.
-- **Capture gesture:** "notes held at release of the last key" vs. pedal-triggered vs. timed
-  window. Start with last-release, revisit after playing with it.
+- **Capture gesture:** implemented as "every note pressed until all keys are up" (overlapping
+  releases count). Pedal-triggered or timed window: revisit after playing with it.
 - **Multiple notes per generator** (chords from a source) vs. one note per generator. Start with
   one; chord-playing generator types can come later.
 

@@ -6,6 +6,9 @@
 //   /ping                                        brain replies /pong to the sender only
 //   /transport/play   1|0                        play restarts at beat 0
 //   /transport/tempo  <bpm>
+//   /source/arm       <slot> 1|0                 the next chord played goes into slot
+//   /source/set       <slot> <pitch>...          set a slot's pitches directly
+//   /source/clear     <slot>
 //   /gen/add          <type>                     brain assigns the id
 //   /gen/remove       <id>
 //   /gen/set          <id> <param> <value>       param = active | dest | a type param
@@ -17,6 +20,7 @@
 //   /pong             <bootId>                   bootId changes when the brain restarts: re-/hello
 //   /transport        <playing> <bpm>
 //   /ports            <name>...                  MIDI outputs; destination port n = nth name
+//   /source           <slot> <armed> <pitch>...
 //   /gen/schema       <type> <param> <kind> <default> <kind args...>
 //   /dest             <id> <name> <port> <channel> <instrument>
 //   /dest/removed     <id>
@@ -38,6 +42,7 @@
 	~send.('/state/begin');
 	~sendTransport.();
 	~send.('/ports', *~config[\ports].collect(_.join(" ")));
+	~config[\slots].do { |name| ~sendSource.(~sources[name.asSymbol]) };
 	~sendSchema.();
 	~dests.keys.asArray.sort.do { |id| ~sendDest.(~dests[id]) };
 	~gens.keys.asArray.sort.do { |id| ~sendGen.(~gens[id]); ~sendParams.(~gens[id]) };
@@ -60,6 +65,10 @@
 
 	OSCdef(\play, { |msg| ~setPlaying.(msg[1].asInteger == 1) }, '/transport/play');
 	OSCdef(\tempo, { |msg| ~setTempo.(msg[1]) }, '/transport/tempo');
+
+	OSCdef(\sourceArm, { |msg| ~armSource.(msg[1], msg[2].asInteger == 1) }, '/source/arm');
+	OSCdef(\sourceSet, { |msg| ~setSource.(msg[1], msg[2..]) }, '/source/set');
+	OSCdef(\sourceClear, { |msg| ~setSource.(msg[1], []) }, '/source/clear');
 
 	OSCdef(\genAdd, { |msg| ~addGen.(msg[1]) }, '/gen/add');
 	OSCdef(\genRemove, { |msg| ~removeGen.(msg[1].asInteger) }, '/gen/remove');

@@ -79,6 +79,16 @@ input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--nord8); cursor: pointer;
 }
 
+/* --- sources --- */
+#sources { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 28px; }
+.slot { padding: 10px 12px; border-top-color: var(--nord7); }
+.slot header { margin-bottom: 8px; }
+.slot.armed { border-top-color: var(--nord12); }
+.slot button.arm { padding: 2px 10px; font-size: 12px; }
+.slot.armed button.arm { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
+.slot .notes { color: var(--nord6); font-variant-numeric: tabular-nums; min-height: 20px; overflow-wrap: anywhere; }
+.slot .notes:empty::before { content: 'empty'; color: var(--nord3); }
+
 /* --- destinations --- */
 .dest { display: flex; align-items: center; gap: 10px; background: var(--nord2); border-radius: 6px; padding: 8px 10px 8px 12px; }
 .dest .name { color: var(--nord6); font-weight: 600; flex: none; }

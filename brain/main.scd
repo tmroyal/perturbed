@@ -1,6 +1,6 @@
 // main.scd — the brain: clock, destinations and generators; MIDI out, OSC to/from surfaces.
 // Run headless:  sclang brain/main.scd      (PERFORMED_TEST=1 for test mode)
-//   test mode: no default destinations, and reaper/destinations.json is left untouched
+//   test mode: no default destinations, reaper/destinations.json untouched, MIDI input = IAC Bus 2
 // The OSC protocol is documented in core/osc.scd and PLAN.md §5.
 (
 var root = thisProcess.nowExecutingPath.dirname;
@@ -8,8 +8,9 @@ var root = thisProcess.nowExecutingPath.dirname;
 ~root = root;
 ~testMode = "PERFORMED_TEST".getenv.notNil;
 ~config = (root +/+ "config.scd").load;
+if(~testMode) { ~config[\inputs] = [["IAC Driver", "Bus 2"]] };
 
-["midi", "clock", "destinations", "generators", "osc"].do { |name|
+["midi", "clock", "sources", "destinations", "generators", "osc"].do { |name|
 	(root +/+ "core" +/+ name ++ ".scd").load;
 };
 

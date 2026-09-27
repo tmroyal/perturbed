@@ -186,6 +186,7 @@ function paramControl(spec, send) {
   }
   const input = el('input', { type: 'text' });
   input.addEventListener('change', () => send(input.value));
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
   return { label: spec.name, control: input, update: (v) => { if (!editing(input)) input.value = v; } };
 }
 

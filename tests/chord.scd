@@ -93,6 +93,10 @@ Routine {
 	check.(v.every(_.inclusivelyBetween(20, 110)) and: { v.asSet.size > 1 }, "velocity drift in range (%)".format(v));
 	v = ~vel.([[\velMode, "ramp"], [\low, 20], [\high, 100], [\attack, 1], [\decay, 1]], 9);
 	check.(v == [20, 40, 60, 80, 100, 80, 60, 40, 20], "velocity ramp (%)".format(v));
+	v = ~vel.([[\velMode, "pattern"], [\pattern, "100 50  70"]], 7);
+	check.(v == [100, 50, 70, 100, 50, 70, 100], "velocity pattern (%)".format(v));
+	v = ~vel.([[\velMode, "set"], [\velocity, 64], [\humanize, 5]], 16);
+	check.(v.every(_.inclusivelyBetween(59, 69)) and: { v.asSet.size > 1 }, "humanize ±5 (%)".format(v));
 
 	brain.sendMsg('/chord/clear');
 	0.1.wait;

@@ -163,7 +163,8 @@ Repeats one note; each note lasts `num/den` beats and is released by the next.
 | `direction` | (arpeggio) up, down, updown |
 | `permutation`, `advance` | (permute) plays `chord.permute(n)`; n starts at `permutation` and moves ahead by `advance` after each pass through the chord |
 
-| `velMode` | set, accent, random, drift, ramp (see `brain/core/velocity.scd`), each with its own params |
+| `velMode` | set, accent, random, drift, ramp, pattern (see `brain/core/velocity.scd`), each with its own params |
+| `humanize` | random ± on top of any velocity mode |
 
 The surface shows each of these only for the mode it applies to (`showWhen` in the type file).
 | `velocity` | 1–127 |
@@ -232,7 +233,7 @@ Brain → surface (state):
 /gen/param           <id> <param> <value>
 /gen/removed         <id>
 /gen/schema          <type> <param> <kind> <default> <args>...
-                     kind = range (min max [step]) | note | choice (options)
+                     kind = range (min max [step]) | note | choice (options) | text
 /gen/show            <type> <param> <otherParam> <value>...   show param only for those values
 /dest                <id> <name> <port> <channel> <instrument>
 /dest/removed        <id>

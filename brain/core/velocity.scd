@@ -6,9 +6,11 @@
 //   random  uniform in low..high, per note
 //   drift   smooth random wander in low..high; `rate` new targets per beat
 //   ramp    low→high over `attack` beats, high→low over `decay` beats, repeating from beat 0
+//   pattern velocities typed as "110 60 80 60", one per grid step, cycling from k = 0
+// humanize adds a random ±amount on top of any mode.
 (
 ~velocityParams = [
-	[\velMode, "set", \choice, "set", "accent", "random", "drift", "ramp"],
+	[\velMode, "set", \choice, "set", "accent", "random", "drift", "ramp", "pattern"],
 	[\velocity, 80, \range, 1, 127],
 	[\accent, 110, \range, 1, 127],
 	[\every, 4, \range, 1, 32],
@@ -17,6 +19,8 @@
 	[\rate, 0.5, \range, 0.05, 8, 0.05],
 	[\attack, 4, \range, 0, 64],
 	[\decay, 4, \range, 0, 64],
+	[\pattern, "110 60 80 60", \text],
+	[\humanize, 0, \range, 0, 32],
 ];
 
 ~velocityShow = (
@@ -28,6 +32,7 @@
 	rate: [\velMode, "drift"],
 	attack: [\velMode, "ramp"],
 	decay: [\velMode, "ramp"],
+	pattern: [\velMode, "pattern"],
 );
 
 ~velocity = { |g, p, k|
@@ -49,7 +54,11 @@
 			var a = p[\attack].asFloat, d = p[\decay].asFloat, pos = beats % (a + d).max(0.001);
 			if(pos < a) { low + ((high - low) * pos / a) } { high - ((high - low) * (pos - a) / d.max(0.001)) };
 		},
+		\pattern, {
+			var steps = p[\pattern].asString.split($ ).reject(_.isEmpty).collect(_.asInteger);
+			if(steps.notEmpty) { steps.wrapAt(k) } { p[\velocity] };
+		},
 		{ p[\velocity] });
-	vel.asFloat.round.asInteger.clip(1, 127);
+	(vel.asFloat + p[\humanize].asFloat.rand2).round.asInteger.clip(1, 127);
 };
 )

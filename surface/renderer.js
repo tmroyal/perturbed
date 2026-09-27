@@ -14,6 +14,7 @@ const model = {
   playing: false, bpm: 120, ports: [],
   types: new Map(),  // name -> [{ name, kind, def, args, show?: { param, values }, section? }]
   chord: { mode: 'auto', armed: false, pitches: [] },
+  clocks: new Map(), // id -> { id, name, mode, num, den, factor, bpm, tempo }  (0 = main, implicit)
   dests: new Map(),  // id -> { id, name, port, channel, instrument }
   gens: new Map(),   // id -> { id, type, dest, active, params, card }
 };
@@ -46,7 +47,7 @@ function renderTransport() {
   $('play').classList.toggle('on', model.playing);
   $('play').textContent = model.playing ? 'Stop' : 'Play';
   if (!model.playing) showBeat(-1);
-  if (!dialDragging) showTempo(model.bpm);
+  tempoDial.set(model.bpm);
   renderMod();
 }
 
@@ -71,55 +72,9 @@ $('mod-apply').onclick = () => osc.send('/transport/scale', ...modFraction());
 $('save').onclick = async () => { const p = await files.pick('save'); if (p) osc.send('/save', p); };
 $('load').onclick = async () => { const p = await files.pick('load'); if (p) osc.send('/load', p); };
 
-// --- tempo dial: drag vertically (shift = fine), scroll, or double-click to type ---
-const BPM_MIN = 20, BPM_MAX = 400, SWEEP = 270;
-const polar = (deg) => {
-  const r = (deg - 90) * Math.PI / 180;
-  return [24 + 18 * Math.cos(r), 24 + 18 * Math.sin(r)];
-};
-const arc = (from, to) => {
-  const [x1, y1] = polar(from), [x2, y2] = polar(to);
-  return `M${x1} ${y1} A18 18 0 ${to - from > 180 ? 1 : 0} 1 ${x2} ${y2}`;
-};
-$('dial-track').setAttribute('d', arc(-SWEEP / 2, SWEEP / 2));
-
-const clampBpm = (bpm) => Math.round(Math.min(BPM_MAX, Math.max(BPM_MIN, bpm)) * 10) / 10;
-let dialDragging = false, localBpm = 120;
-
-function showTempo(bpm) {
-  localBpm = bpm;
-  if (document.activeElement !== $('bpm')) $('bpm').value = bpm;
-  const angle = -SWEEP / 2 + SWEEP * (bpm - BPM_MIN) / (BPM_MAX - BPM_MIN);
-  $('dial-value').setAttribute('d', arc(-SWEEP / 2, Math.max(angle, -SWEEP / 2 + 0.01)));
-  const [px, py] = polar(angle), [cx, cy] = [24 + (px - 24) * 0.45, 24 + (py - 24) * 0.45];
-  Object.entries({ x1: cx, y1: cy, x2: px, y2: py }).forEach(([k, v]) => $('dial-pointer').setAttribute(k, v));
-}
-
-function sendTempo(bpm) {
-  bpm = clampBpm(bpm);
-  showTempo(bpm);
-  osc.send('/transport/tempo', bpm);
-}
-
-const dial = $('dial');
-dial.addEventListener('pointerdown', (e) => {
-  dial.setPointerCapture(e.pointerId);
-  dialDragging = true;
-  let lastY = e.clientY;
-  const move = (m) => {
-    sendTempo(localBpm + (lastY - m.clientY) * (m.shiftKey ? 0.1 : 1));
-    lastY = m.clientY;
-  };
-  dial.addEventListener('pointermove', move);
-  dial.addEventListener('pointerup', () => {
-    dial.removeEventListener('pointermove', move);
-    dialDragging = false;
-  }, { once: true });
-});
-dial.addEventListener('wheel', (e) => { e.preventDefault(); sendTempo(localBpm - Math.sign(e.deltaY)); });
-dial.addEventListener('dblclick', () => $('bpm').select());
-$('bpm').addEventListener('change', () => sendTempo(parseFloat($('bpm').value) || model.bpm));
-blurOnEnter($('bpm'));
+// --- main tempo ---
+const tempoDial = rotary({ min: 20, max: 400, step: 0.1, size: 48, onChange: (bpm) => osc.send('/transport/tempo', bpm) });
+$('tempo').append(tempoDial.root);
 
 // --- generator controls, built from the type's schema ---
 const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
@@ -155,6 +110,62 @@ function slider(min, max, onChange) {
   return { input, out };
 }
 
+// Rotary dial with a typed field: drag vertically (shift = fine), scroll, or double-click to type.
+// log: the dial is logarithmic (for factors). set(v) shows a value unless the user is using the dial.
+function rotary({ min, max, step, log = false, size = 32, onChange }) {
+  const SWEEP = 270, R = size * 0.375, W = size * 0.09, c = size / 2;
+  const norm = (v) => (log ? Math.log(v / min) / Math.log(max / min) : (v - min) / (max - min));
+  const polar = (deg, r = R) => { const a = (deg - 90) * Math.PI / 180; return [c + r * Math.cos(a), c + r * Math.sin(a)]; };
+  const arc = (from, to) => {
+    const [x1, y1] = polar(from), [x2, y2] = polar(to);
+    return `M${x1} ${y1} A${R} ${R} 0 ${to - from > 180 ? 1 : 0} 1 ${x2} ${y2}`;
+  };
+  const svgEl = (tag, attrs) => {
+    const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v));
+    return e;
+  };
+  const svg = svgEl('svg', { width: size, height: size, viewBox: `0 0 ${size} ${size}` });
+  const stroke = { fill: 'none', 'stroke-width': W, 'stroke-linecap': 'round' };
+  const track = svgEl('path', { ...stroke, stroke: '#434C5E', d: arc(-SWEEP / 2, SWEEP / 2) });
+  const valueArc = svgEl('path', { ...stroke, stroke: '#88C0D0' });
+  const pointer = svgEl('line', { stroke: '#ECEFF4', 'stroke-width': W / 2, 'stroke-linecap': 'round' });
+  svg.append(track, valueArc, pointer);
+
+  let value = min, dragging = false;
+  const clamp = (v) => Math.min(max, Math.max(min, v));
+  const round = (v) => +(Math.round(v / step) * step).toFixed(6);
+  const field = numberInput(min, max, (v) => { draw(v); onChange(v); }, step);
+
+  function draw(v) {
+    value = v;
+    const angle = -SWEEP / 2 + SWEEP * Math.min(1, Math.max(0, norm(v)));
+    valueArc.setAttribute('d', arc(-SWEEP / 2, Math.max(angle, -SWEEP / 2 + 0.01)));
+    const [px, py] = polar(angle), [cx, cy] = polar(angle, R * 0.45);
+    Object.entries({ x1: cx, y1: cy, x2: px, y2: py }).forEach(([k, val]) => pointer.setAttribute(k, val));
+    if (!editing(field)) field.value = round(v);
+  }
+  // move by dy pixels (up = positive); keeps the unrounded value while dragging for smooth fine moves
+  const nudge = (dy, fine) => {
+    const v = clamp(log ? value * Math.exp(dy * (fine ? 0.0005 : 0.005)) : value + dy * step * (fine ? 1 : 10));
+    draw(v);
+    onChange(round(v));
+  };
+
+  svg.addEventListener('pointerdown', (e) => {
+    svg.setPointerCapture(e.pointerId);
+    dragging = true;
+    let lastY = e.clientY;
+    const move = (m) => { nudge(lastY - m.clientY, m.shiftKey); lastY = m.clientY; };
+    svg.addEventListener('pointermove', move);
+    svg.addEventListener('pointerup', () => { svg.removeEventListener('pointermove', move); dragging = false; }, { once: true });
+  });
+  svg.addEventListener('wheel', (e) => { e.preventDefault(); nudge(-Math.sign(e.deltaY) * (log ? 4 : 1), e.shiftKey); });
+  svg.addEventListener('dblclick', () => field.select());
+
+  return { root: el('div', { className: 'rotary' }, svg, field), set: (v) => { if (!dragging) draw(v); } };
+}
+
 // One param's control: { label, control, update(value), learning?(on) }.
 // learn(on) asks the brain to set the param from the next key played (note params only).
 function paramControl(spec, send, learn) {
@@ -173,6 +184,17 @@ function paramControl(spec, send, learn) {
       update: (v) => { pc = v % 12; oct = Math.floor(v / 12); name.value = pc; octave.value = oct; },
       learning: (on) => { learning = on; setBtn.classList.toggle('on', on); setBtn.textContent = on ? 'Play…' : 'Set'; },
     };
+  }
+  if (spec.kind === 'clock') {
+    const sel = el('select');
+    sel.addEventListener('change', () => send(parseInt(sel.value)));
+    let value = 0;
+    const refresh = () => {
+      sel.replaceChildren(new Option('main', 0), ...[...model.clocks.values()].map((c) => new Option(c.name, c.id)));
+      sel.value = model.clocks.has(value) ? value : 0;
+    };
+    refresh();
+    return { label: spec.name, control: sel, update: (v) => { value = v; refresh(); }, refresh };
   }
   if (spec.kind === 'choice') {
     const sel = selectInput(spec.args.map((o) => [o, o]), send);
@@ -203,6 +225,7 @@ function buildCard(gen) {
 
   const destSel = el('select');
   destSel.addEventListener('change', () => set('dest', parseInt(destSel.value)));
+  const refreshers = [];  // controls listing clocks
   const refreshDests = () => {
     destSel.replaceChildren(new Option('—', 0),
       ...[...model.dests.values()].map((d) => new Option(d.name, d.id)));
@@ -235,6 +258,7 @@ function buildCard(gen) {
     }
     const c = paramControl(spec, (v) => set(spec.name, v), (on) => osc.send('/gen/learn', gen.id, spec.name, on ? 1 : 0));
     if (c.learning) learners[spec.name] = c.learning;
+    if (c.refresh) refreshers.push(c.refresh);
     const label = el('label', { textContent: c.label });
     updaters[spec.name] = c.update;
     if (spec.show) conditional.push({ show: spec.show, els: [label, c.control] });
@@ -251,6 +275,7 @@ function buildCard(gen) {
   return {
     root,
     refreshDests,
+    refreshClocks: () => refreshers.forEach((f) => f()),
     render() {
       active.classList.toggle('on', gen.active);
       active.textContent = gen.active ? 'Active' : 'Inactive';
@@ -292,6 +317,45 @@ $('chord-arm').onclick = () => osc.send('/chord/arm', model.chord.armed ? 0 : 1)
 [...$('chord-mode').children].forEach((b) => { b.onclick = () => osc.send('/chord/mode', b.dataset.mode); });
 $('chord-clear').onclick = () => osc.send('/chord/clear');
 
+// --- clocks: ratio or factor × main tempo, or free. Rows update in place (so a dial keeps its
+// drag); the pane is rebuilt only when clocks are added or removed or a mode changes. ---
+const clockRows = new Map();  // id -> { mode, root, update(c) }
+
+function clockRow(c) {
+  const set = (param, value) => osc.send('/clock/set', c.id, param, value);
+  const mode = selectInput([['ratio', 'ratio'], ['factor', 'factor'], ['free', 'free']], (v) => set('mode', v));
+  const tempo = el('span', { className: 'tempo' });
+  let controls, show;
+  if (c.mode === 'ratio') {
+    const num = numberInput(1, 32, (v) => set('num', v)), den = numberInput(1, 32, (v) => set('den', v));
+    controls = [num, '/', den];
+    show = (c) => { if (!editing(num)) num.value = c.num; if (!editing(den)) den.value = c.den; };
+  } else {
+    const dial = c.mode === 'factor'
+      ? rotary({ min: 0.25, max: 4, step: 0.0001, log: true, onChange: (v) => set('factor', v) })
+      : rotary({ min: 20, max: 400, step: 0.1, onChange: (v) => set('bpm', v) });
+    controls = [c.mode === 'factor' ? '×' : '', dial.root];
+    show = (c) => dial.set(c.mode === 'factor' ? c.factor : c.bpm);
+  }
+  const root = el('div', { className: 'clock' },
+    el('span', { className: 'name', textContent: c.name }), mode, ...controls, tempo,
+    el('button', { className: 'close', textContent: '×', title: 'Remove', onclick: () => osc.send('/clock/remove', c.id) }));
+  const update = (c) => { mode.value = c.mode; show(c); tempo.textContent = `${+c.tempo.toFixed(2)}`; };
+  update(c);
+  return { mode: c.mode, root, update };
+}
+
+function renderClocks() {
+  clockRows.clear();
+  $('clocks').replaceChildren(...[...model.clocks.values()].map((c) => {
+    const row = clockRow(c);
+    clockRows.set(c.id, row);
+    return row.root;
+  }));
+  model.gens.forEach((g) => g.card?.refreshClocks());
+}
+$('add-clock').onclick = () => osc.send('/clock/add');
+
 // --- destinations ---
 function renderDests() {
   $('dests').replaceChildren(...[...model.dests.values()].map((d) => el('div', { className: 'dest' },
@@ -320,6 +384,7 @@ function renderAll() {
   renderTypes();
   renderPorts();
   renderChord();
+  renderClocks();
   renderDests();
   renderGens();
 }
@@ -335,7 +400,7 @@ const handlers = {
   },
   '/state/begin': () => {
     inSnapshot = true;
-    model.types.clear(); model.dests.clear(); model.gens.clear();
+    model.types.clear(); model.clocks.clear(); model.dests.clear(); model.gens.clear();
   },
   '/state/end': () => {
     inSnapshot = false;
@@ -363,6 +428,14 @@ const handlers = {
     if (!model.types.has(type)) model.types.set(type, []);
     model.types.get(type).push({ name, kind, def, args });
   },
+  '/clock': (id, name, mode, num, den, factor, bpm, tempo) => {
+    const c = { id, name, mode, num, den, factor, bpm, tempo };
+    model.clocks.set(id, c);
+    if (inSnapshot) return;
+    const row = clockRows.get(id);
+    if (row && row.mode === mode) row.update(c); else renderClocks();
+  },
+  '/clock/removed': (id) => { model.clocks.delete(id); renderClocks(); },
   '/dest': (id, name, port, channel, instrument) => {
     model.dests.set(id, { id, name, port, channel, instrument });
     if (!inSnapshot) renderDests();
@@ -391,5 +464,5 @@ const handlers = {
 osc.on(({ addr, args }) => handlers[addr]?.(...args));
 
 setConnected(false);
-showTempo(model.bpm);
+tempoDial.set(model.bpm);
 osc.send('/hello');

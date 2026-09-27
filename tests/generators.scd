@@ -28,6 +28,7 @@ out.latency = 0;
 OSCdef(\chord, { |msg| chord = msg[1..] }, '/chord');
 OSCdef(\gen, { |msg| genId = msg[1] }, '/gen');
 OSCdef(\dest, { |msg| ~destId = msg[1] }, '/dest');
+OSCdef(\clock, { |msg| ~clockId = msg[1] }, '/clock');
 ~midi = List[];
 MIDIClient.sources.select { |e| e.device == "IAC Driver" and: { e.name == "Bus 1" } }.do { |e| MIDIIn.connect(0, e) };
 MIDIdef.noteOn(\passOn, { |vel, note, ch| if(ch == 2) { ~midi.add([\on, note]) } });
@@ -143,6 +144,21 @@ Routine {
 	check.(~hits.([[\rhythm, "phrase"], [\phrase, "1 x"]], 6) == (0..5), "invalid phrase → every 1");
 	brain.sendMsg('/gen/set', genId, \rhythm, "every");
 	brain.sendMsg('/gen/set', genId, \interval, 1);
+
+	// clocks: at half the main tempo, 1/4-beat notes land on every other main step
+	brain.sendMsg('/clock/add');
+	0.1.wait;
+	brain.sendMsg('/clock/set', ~clockId, \num, 1); brain.sendMsg('/clock/set', ~clockId, \den, 2);
+	v = ~hits.([[\clock, ~clockId]], 8);
+	check.(v == [0, 2, 4, 6], "clock ratio 1/2 (%)".format(v));
+	brain.sendMsg('/clock/set', ~clockId, \mode, "factor"); brain.sendMsg('/clock/set', ~clockId, \factor, 0.5);
+	v = ~hits.([], 8);
+	check.(v == [0, 2, 4, 6], "clock factor 0.5 (%)".format(v));
+	brain.sendMsg('/clock/set', ~clockId, \mode, "free"); brain.sendMsg('/clock/set', ~clockId, \bpm, 120);
+	v = ~hits.([], 8);
+	check.(v == [0, 2, 4, 6], "clock free 120 bpm (%)".format(v));
+	brain.sendMsg('/clock/remove', ~clockId);
+	0.1.wait;
 
 	brain.sendMsg('/chord/clear');
 	0.1.wait;

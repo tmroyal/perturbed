@@ -3,7 +3,8 @@
 // A generator: (id, typeName, type, p: params, active, dest: dest id or 0, task, sounding, held).
 // Types live in brain/types/, one file each (filename = type name), evaluating to:
 //   params:    [[name, default, kind, ...kind args], ...]  also the surface's schema;
-//              kind = range (min max [step]) | note | choice (options...) | text
+//              kind = range (min max [step]) | note | choice (options...) | text | clock
+//              (a `clock` param picks the clock `run` plays on; 0 = main, see core/clock.scd)
 // and one or both of:
 //   run:       { |g, p| } routine body on the transport clock; waits are in beats
 //   key:       { |g, p, note, vel| } called for each keyboard note while active (vel 0 = up),
@@ -48,7 +49,7 @@
 	g[\task].stop;
 	g[\task] = nil;
 	if(~playing and: { g[\active] } and: { g[\type][\run].notNil }) {
-		g[\task] = Routine { g[\type][\run].value(g, g[\p]) }.play(~clock);
+		g[\task] = Routine { g[\type][\run].value(g, g[\p]) }.play(~clockOf.(g[\p][\clock] ? 0));
 	};
 };
 

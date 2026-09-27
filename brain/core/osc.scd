@@ -15,6 +15,9 @@
 //   /gen/remove       <id>
 //   /gen/set          <id> <param> <value>       param = active | dest | a type param
 //   /gen/learn        <id> <param> 1|0           the next key played sets param
+//   /clock/add                                   brain assigns the id and name (B, C, ...)
+//   /clock/set        <id> mode|num|den|factor|bpm <value>     see core/clock.scd
+//   /clock/remove     <id>
 //   /dest/add         <name> <port> <channel> <instrument>     port and channel are 1-based
 //   /dest/remove      <id>
 //   /save             <path>                     write the performance as JSON
@@ -30,6 +33,8 @@
 //   /gen/show         <type> <param> <otherParam> <value>...   show param only for those values
 //   /gen/section      <type> <param>             param starts a new group
 //   /gen/learn        <id> <param> 1|0           learning started / ended
+//   /clock            <id> <name> <mode> <num> <den> <factor> <bpm> <tempo>   tempo = effective bpm
+//   /clock/removed    <id>
 //   /dest             <id> <name> <port> <channel> <instrument>
 //   /dest/removed     <id>
 //   /gen              <id> <type> <dest> <active>
@@ -52,6 +57,7 @@
 	~send.('/ports', *~config[\ports].collect(_.join(" ")));
 	~sendChord.();
 	~sendSchema.();
+	~clocks.keys.asArray.sort.do { |id| ~sendClock.(~clocks[id]) };
 	~dests.keys.asArray.sort.do { |id| ~sendDest.(~dests[id]) };
 	~gens.keys.asArray.sort.do { |id| ~sendGen.(~gens[id]); ~sendParams.(~gens[id]) };
 	~send.('/state/end');
@@ -86,6 +92,10 @@
 	OSCdef(\genRemove, { |msg| ~removeGen.(msg[1].asInteger) }, '/gen/remove');
 	OSCdef(\genLearn, { |msg| ~learnGen.(msg[1].asInteger, msg[2], msg[3].asInteger == 1) }, '/gen/learn');
 	OSCdef(\genSet, { |msg| ~gens[msg[1].asInteger] !? { |g| ~setGen.(g, msg[2], msg[3]) } }, '/gen/set');
+
+	OSCdef(\clockAdd, { ~addClock.() }, '/clock/add');
+	OSCdef(\clockSet, { |msg| ~clocks[msg[1].asInteger] !? { |c| ~setClock.(c, msg[2], msg[3]) } }, '/clock/set');
+	OSCdef(\clockRemove, { |msg| ~removeClock.(msg[1].asInteger) }, '/clock/remove');
 
 	OSCdef(\destAdd, { |msg| ~addDest.(msg[1], msg[2], msg[3], msg[4] ? "") }, '/dest/add');
 	OSCdef(\destRemove, { |msg| ~removeDest.(msg[1].asInteger) }, '/dest/remove');

@@ -75,6 +75,34 @@ sock.bind(0, async () => {
     await back;
     check(true, 'scale 3/2 then 2/3 returns to the same tempo');
 
+    // clocks: ratio and factor follow main tempo changes, free doesn't
+    const [ratioId] = await (() => { const c = next('/clock'); send('/clock/add'); return c; })();
+    const [freeId] = await (() => { const c = next('/clock'); send('/clock/add'); return c; })();
+    send('/clock/set', ratioId, 'num', 3);
+    send('/clock/set', ratioId, 'den', 2);
+    send('/clock/set', freeId, 'mode', 'free');
+    send('/clock/set', freeId, 'bpm', 77);
+    await new Promise((r) => setTimeout(r, 100));
+    const ratioFollows = next('/clock', (id, n, mode, num, den, f, b, tempo) => id === ratioId && Math.abs(tempo - 150) < 1e-3);
+    const freeStays = next('/clock', (id, n, mode, num, den, f, b, tempo) => id === freeId && Math.abs(tempo - 77) < 1e-3);
+    send('/transport/tempo', 100);
+    await Promise.all([ratioFollows, freeStays]);
+    check(true, 'clock ratio 3/2 follows main tempo; free clock stays');
+    const factorFollows = next('/clock', (id, n, mode, num, den, f, b, tempo) => id === ratioId && Math.abs(tempo - 125) < 1e-2);
+    send('/clock/set', ratioId, 'mode', 'factor');
+    send('/clock/set', ratioId, 'factor', 1.25);
+    await factorFollows;
+    check(true, 'clock factor 1.25');
+    const onClock = next('/gen');
+    send('/gen/add', 'basic');
+    const [clockGen] = await onClock;
+    send('/gen/set', clockGen, 'clock', freeId);
+    const backToMain = next('/gen/param', (id, p, v) => id === clockGen && p === 'clock' && v === 0);
+    send('/clock/remove', freeId);
+    await backToMain;
+    check(true, 'removing a clock moves its generators to main');
+    send('/gen/remove', clockGen);
+
     const noteMsg = next('/note', (id) => id === genId, 1500);
     const beat = next('/beat', () => true, 1500);
     send('/gen/set', genId, 'active', 1);
@@ -124,6 +152,7 @@ sock.bind(0, async () => {
     await loaded;
     const has = (addr, pred) => inbox.some((m) => m.addr === addr && pred(...m.args));
     check(has('/transport', (p, bpm) => bpm === 111), 'load restores tempo');
+    check(has('/clock', (id, n, mode, num, den, factor) => id === ratioId && mode === 'factor' && Math.abs(factor - 1.25) < 1e-3), 'load restores clocks');
     check(has('/chord', (mode, armed, ...ps) => mode === 'arm' && ps.join() === '62,65,69'), 'load restores chord and mode');
     check(has('/dest', (id, name, port, ch, inst) => id === savedDest && name === 'saved' && ch === 3 && inst === 'Pianoteq 9'), 'load restores destinations');
     check(has('/gen', (id, t, d) => id === savedGen && d === savedDest), 'load restores generators with their dest');

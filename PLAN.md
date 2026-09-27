@@ -71,7 +71,7 @@ Code layout:
 brain/
   main.scd            boot, load modules, OSC + MIDI setup
   core/
-    clock.scd         transport, tempo, grid helpers
+    clock.scd         transport, tempo, extra clocks (ratio / factor / free)
     chord.scd         current chord from the keyboard (auto/arm modes)
     generators.scd    lifecycle (add/remove/start/stop/restart), params, learn
     pitch.scd         which note: set note or from the current chord (shared by types)
@@ -171,6 +171,7 @@ One note at a time on a grid of `num/den` beats; each note is released by the ne
 | `index` | (index) which chord note: 0 = lowest, negative counts from the top, wraps |
 | `direction` | (arpeggio) up, down, updown |
 | `permutation`, `advance` | (permute) plays `chord.permute(n)`; n starts at `permutation` and moves ahead by `advance` after each pass through the chord |
+| `clock` | which clock's beats it runs on: main (default) or an extra clock (§4) |
 | `num`, `den` | grid step in beats = num/den |
 | `rhythm` | which steps play: every (interval, offset), euclid (pulses, steps 2–19, offset), random (prob %), phrase ("1 2 1 1 2": gaps in steps; invalid → every 1). A skipped step lets the previous note ring on. |
 | `velMode` | set, accent, random, drift, ramp, pattern (see `brain/core/velocity.scd`), each with its own params |
@@ -200,6 +201,9 @@ pitch its note-on sounded. Types like this implement `key` instead of (or beside
 
 ## 4. Timing
 
+- **Clocks.** The main clock is the transport tempo. Extra clocks (B, C, ...) run at main × num/den
+  (ratio), main × a real factor (factor; e.g. 1.01 for phasing), or their own bpm (free). All start
+  together at play, so they share beat 0; ratio and factor clocks follow main tempo changes.
 - All scheduling happens on the brain's `TempoClock` using logical time (`thisThread.beats`), so
   waits don't accumulate drift.
 - MIDI is sent with a fixed latency (`MIDIOut.latency`, e.g. 0.05 s). On macOS, CoreMIDI
@@ -232,6 +236,9 @@ Surface → brain (intents):
 /gen/remove          <id>
 /gen/set             <id> <param> <value>
 /gen/learn           <id> <param> 1|0   next key played sets param (the note's Set button)
+/clock/add                              brain assigns id and name (B, C, ...)
+/clock/set           <id> mode|num|den|factor|bpm <value>
+/clock/remove        <id>
 /dest/add            <name> <port> <channel> <instrument>     1-based port and channel
 /dest/remove         <id>
 /save                <path>   /load <path>
@@ -252,6 +259,8 @@ Brain → surface (state):
 /gen/show            <type> <param> <otherParam> <value>...   show param only for those values
 /gen/section         <type> <param>                   param starts a new group (separator)
 /gen/learn           <id> <param> 1|0                 learning started / ended
+/clock               <id> <name> <mode> <num> <den> <factor> <bpm> <tempo>
+/clock/removed       <id>
 /dest                <id> <name> <port> <channel> <instrument>
 /dest/removed        <id>
 /beat                <beat>                        (latency-aligned)

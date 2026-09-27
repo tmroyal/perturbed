@@ -10,13 +10,8 @@
   <div id="transport">
     <button id="play">Play</button>
     <div class="tempo">
-      <svg id="dial" viewBox="0 0 48 48">
-        <path id="dial-track" fill="none" stroke="#434C5E" stroke-width="4" stroke-linecap="round"/>
-        <path id="dial-value" fill="none" stroke="#88C0D0" stroke-width="4" stroke-linecap="round"/>
-        <line id="dial-pointer" stroke="#ECEFF4" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-      <input id="bpm" type="number" min="20" max="400" step="1">
-      <label for="bpm">BPM</label>
+      <div id="tempo"></div>
+      <label>BPM</label>
     </div>
     <div class="mod" title="Metric modulation: multiply the tempo by num/den">
       <span>×</span>
@@ -45,6 +40,8 @@
       <div id="grid"></div>
     </section>
     <aside id="dests-pane">
+      <div class="pane-head"><h1>Clocks</h1><button id="add-clock">+ Clock</button></div>
+      <div id="clocks"></div>
       <div class="pane-head"><h1>Destinations</h1></div>
       <div id="dests"></div>
       <form id="dest-form" class="card">

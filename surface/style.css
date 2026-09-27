@@ -34,8 +34,10 @@ input:focus, select:focus { outline: none; border-color: var(--nord8); }
 #play { width: 84px; }
 .tempo { display: flex; align-items: center; gap: 10px; }
 .tempo label { color: var(--nord9); }
-#dial { width: 48px; height: 48px; cursor: ns-resize; touch-action: none; }
-#bpm { width: 64px; text-align: right; }
+.rotary { display: flex; align-items: center; gap: 6px; }
+.rotary svg { cursor: ns-resize; touch-action: none; flex: none; }
+.rotary input[type=number] { text-align: right; }
+#tempo input[type=number] { width: 64px; }
 .mod { display: flex; align-items: center; gap: 6px; color: var(--nord9); }
 .mod input { width: 44px; text-align: right; }
 #mod-swap { padding: 6px 8px; }
@@ -97,6 +99,15 @@ input[type=range]::-webkit-slider-thumb {
 #chord-arm.on { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
 #chord-notes { flex: 1; color: var(--nord6); font-size: 16px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 #chord-notes:empty::before { content: 'play a chord'; color: var(--nord3); font-size: 14px; }
+
+/* --- clocks --- */
+#clocks { display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px; }
+#clocks:empty::before { content: 'Only the main clock. Add one to run generators at another tempo.'; color: var(--nord3); font-size: 12px; }
+.clock { display: flex; align-items: center; gap: 6px; background: var(--nord2); border-radius: 6px; padding: 6px 8px 6px 12px; flex-wrap: wrap; }
+.clock .name { color: var(--nord6); font-weight: 600; width: 16px; }
+.clock input[type=number] { width: 48px; }
+.clock .rotary input[type=number] { width: 68px; }
+.clock .tempo { color: var(--nord8); font-variant-numeric: tabular-nums; margin-left: auto; }
 
 /* --- destinations --- */
 .dest { display: flex; align-items: center; gap: 10px; background: var(--nord2); border-radius: 6px; padding: 8px 10px 8px 12px; }

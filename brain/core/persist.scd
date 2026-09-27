@@ -1,4 +1,4 @@
-// persist.scd — save/load a performance as JSON: tempo, chord, destinations, generators.
+// persist.scd — save/load a performance as JSON: tempo, clocks, chord, destinations, generators.
 // Plugin state lives in the REAPER project, not here. Loading replaces everything and stops the
 // transport; generators keep their active flag, so pressing play resumes the piece.
 (
@@ -23,6 +23,10 @@
 		tempo: ~bpm,
 		chord: ~chord,
 		chordMode: ~chordMode,
+		clocks: ~clocks.keys.asArray.sort.collect { |id|
+			var c = ~clocks[id];
+			(id: id, mode: c[\mode], num: c[\num], den: c[\den], factor: c[\factor], bpm: c[\bpm])
+		},
 		destinations: ~dests.keys.asArray.sort.collect(~dests[_]),
 		generators: ~gens.keys.asArray.sort.collect { |id|
 			var g = ~gens[id];
@@ -45,8 +49,14 @@
 	~setPlaying.(false);
 	~gens.keys.copy.do { |id| ~removeGen.(id) };
 	~dests.keys.copy.do { |id| ~removeDest.(id) };
+	~clocks.keys.copy.do { |id| ~removeClock.(id) };
 
 	~bpm = perf["tempo"].asFloat;
+	~nextClockId = 1;
+	(perf["clocks"] ? []).do { |saved|
+		var c = ~addClock.(saved["id"].asInteger);
+		[\mode, \num, \den, \factor, \bpm].do { |k| saved[k.asString] !? { |v| ~setClock.(c, k, v) } };
+	};
 	~chordMode = if(perf["chordMode"] == "arm") { \arm } { \auto };
 	~armed = false;
 	~chord = (perf["chord"] ? []).collect(_.asInteger);

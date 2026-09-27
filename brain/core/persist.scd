@@ -47,7 +47,8 @@
 	~dests.keys.copy.do { |id| ~removeDest.(id) };
 
 	~bpm = perf["tempo"].asFloat;
-	~chordMode = (perf["chordMode"] ? "auto").asSymbol;
+	~chordMode = if(perf["chordMode"] == "arm") { \arm } { \auto };
+	~armed = false;
 	~chord = (perf["chord"] ? []).collect(_.asInteger);
 	perf["destinations"].do { |d|
 		~nextDestId = d["id"].asInteger;

@@ -72,7 +72,7 @@ brain/
   main.scd            boot, load modules, OSC + MIDI setup
   core/
     clock.scd         transport, tempo, grid helpers
-    chord.scd         current chord from the keyboard (auto/add modes)
+    chord.scd         current chord from the keyboard (auto/arm modes)
     generators.scd    lifecycle (add/remove/start/stop/restart), param handling
     midi.scd          outputs (IAC buses), note on/off with timestamps, input handling
     osc.scd           surface protocol (§5)
@@ -109,7 +109,7 @@ Layout:
 
 - **Transport bar:** play/stop (space bar), tempo dial (drag, shift for fine, scroll, double-click
   to type) plus a numeric BPM field, beat indicator.
-- **Chord bar:** mode (Auto / Add), the current chord's notes, Clear.
+- **Chord bar:** mode (Auto / Arm), Arm button, the current chord's notes, Clear.
 - **Generator grid:** one card per generator: active toggle (inactive by default), destination
   select, type-specific parameters (including where the note comes from), activity LED.
 - **Destinations pane:** list of destinations (name, port/channel); "sync to REAPER"
@@ -124,11 +124,12 @@ that speaks it works (also TouchOSC or a browser on an iPad).
 
 ### 3.1 The current chord
 
-There is one current chord: the pitches played on the keyboard, sorted low→high. It is latched
-(it stays after the keys are released). Two modes:
+There is one current chord, sorted low→high. A chord played on the keyboard (every note pressed
+until all keys are up again) replaces it when the last key is released, if armed. It stays until
+replaced or cleared (**Clear**). Two modes:
 
-- **Auto:** a new chord (the first key pressed after all keys were up) replaces the current one.
-- **Add:** notes played are added to the current chord; **Clear** empties it (Clear works in both).
+- **Auto:** always armed.
+- **Arm:** the **Arm** button arms for one chord, then disarms; playing while disarmed changes nothing.
 
 Generators read the chord on every note, so changes are heard on their next note. With an empty
 chord, generators that read it rest. Later: scales, sequences, transforms as other note sources.
@@ -200,7 +201,8 @@ Surface → brain (intents):
 /ping                                   brain replies /pong <bootId> (changes on restart → re-/hello)
 /transport/play      1|0
 /transport/tempo     <bpm>
-/chord/mode          auto|add
+/chord/mode          auto|arm
+/chord/arm           1|0                arm mode: next chord played replaces the current one
 /chord/set           <pitch>...         set the current chord directly
 /chord/clear
 /gen/add             <type>             brain assigns the id
@@ -217,7 +219,7 @@ Brain → surface (state):
 /state/begin | /state/end               full snapshot framing (on /hello, load)
 /transport           <playing> <bpm>
 /ports               <name>...                     MIDI outputs; destination port n = nth name
-/chord               <mode> <pitch>...
+/chord               <mode> <armed> <pitch>...
 /gen                 <id> <type> <dest> <active>
 /gen/param           <id> <param> <value>
 /gen/removed         <id>
@@ -257,7 +259,7 @@ The authoritative list is the header of `brain/core/osc.scd`.
    from the brain on two destinations.
 3. ✅ **Surface v1.** Transport bar, generator grid, destinations pane; brain-authoritative state sync.
 4. ✅ **Current chord.** (Inputs: every MIDI device except the IAC Driver, or `inputs` in config.scd.)
-   Latched chord with auto/add modes; FractionalRepeat `source` (preset, index, arpeggio, lowest,
+   Latched chord with auto/arm modes; FractionalRepeat `source` (preset, index, arpeggio, lowest,
    highest); chord bar in the surface.
 5. ✅ **Persistence.** (Save…/Load… in the surface; files in `performances/`.) Save/load performance JSON; REAPER project alongside.
 6. **More generator types** (e.g. euclidean, probability gates) and other note sources
@@ -276,7 +278,7 @@ The authoritative list is the header of `brain/core/osc.scd`.
 - **REAPER headless/scripted testing:** whether REAPER can run a setup script and render from the
   command line well enough for automated checks. Nice to have, not required: the brain is
   verified on its own and REAPER only has to receive MIDI.
-- **Chord input:** latched, auto/add modes (decided 2026-09-27). Pedal gestures: revisit later.
+- **Chord input:** latched, replaced on release; auto/arm modes (decided 2026-09-27). Pedal gestures: revisit later.
 - **Multiple notes per generator** (playing the whole chord) vs. one note per generator. Start with
   one; chord-playing generator types can come later.
 

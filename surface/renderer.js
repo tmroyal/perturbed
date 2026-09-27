@@ -11,7 +11,7 @@ const el = (tag, props = {}, ...children) => {
 const model = {
   playing: false, bpm: 120, ports: [],
   types: new Map(),  // name -> [{ name, kind, def, args }]
-  chord: { mode: 'auto', pitches: [] },
+  chord: { mode: 'auto', armed: false, pitches: [] },
   dests: new Map(),  // id -> { id, name, port, channel, instrument }
   gens: new Map(),   // id -> { id, type, dest, active, params, card }
 };
@@ -248,8 +248,12 @@ function renderTypes() {
 // --- chord ---
 function renderChord() {
   [...$('chord-mode').children].forEach((b) => b.classList.toggle('on', b.dataset.mode === model.chord.mode));
+  $('chord-arm').hidden = model.chord.mode !== 'arm';
+  $('chord-arm').classList.toggle('on', model.chord.armed);
+  $('chord-arm').textContent = model.chord.armed ? 'Play a chord…' : 'Arm';
   $('chord-notes').textContent = model.chord.pitches.map(noteName).join(' ');
 }
+$('chord-arm').onclick = () => osc.send('/chord/arm', model.chord.armed ? 0 : 1);
 [...$('chord-mode').children].forEach((b) => { b.onclick = () => osc.send('/chord/mode', b.dataset.mode); });
 $('chord-clear').onclick = () => osc.send('/chord/clear');
 
@@ -308,8 +312,8 @@ const handlers = {
     if (!inSnapshot) renderTransport();
   },
   '/ports': (...names) => { model.ports = names; if (!inSnapshot) renderPorts(); },
-  '/chord': (mode, ...pitches) => {
-    model.chord = { mode, pitches };
+  '/chord': (mode, armed, ...pitches) => {
+    model.chord = { mode, armed: !!armed, pitches };
     if (!inSnapshot) renderChord();
   },
   '/gen/schema': (type, name, kind, def, ...args) => {

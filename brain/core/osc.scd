@@ -6,7 +6,8 @@
 //   /ping                                        brain replies /pong to the sender only
 //   /transport/play   1|0                        play restarts at beat 0
 //   /transport/tempo  <bpm>
-//   /chord/mode       auto|add                   see core/chord.scd
+//   /chord/mode       auto|arm                   see core/chord.scd
+//   /chord/arm        1|0                        in arm mode: the next chord played replaces the current one
 //   /chord/set        <pitch>...                 set the current chord directly
 //   /chord/clear
 //   /gen/add          <type>                     brain assigns the id
@@ -22,7 +23,7 @@
 //   /pong             <bootId>                   bootId changes when the brain restarts: re-/hello
 //   /transport        <playing> <bpm>
 //   /ports            <name>...                  MIDI outputs; destination port n = nth name
-//   /chord            <mode> <pitch>...
+//   /chord            <mode> <armed> <pitch>...
 //   /gen/schema       <type> <param> <kind> <default> <kind args...>
 //   /dest             <id> <name> <port> <channel> <instrument>
 //   /dest/removed     <id>
@@ -71,6 +72,7 @@
 	OSCdef(\tempo, { |msg| ~setTempo.(msg[1]) }, '/transport/tempo');
 
 	OSCdef(\chordMode, { |msg| ~setChordMode.(msg[1]) }, '/chord/mode');
+	OSCdef(\chordArm, { |msg| ~arm.(msg[1].asInteger == 1) }, '/chord/arm');
 	OSCdef(\chordSet, { |msg| ~setChord.(msg[1..]) }, '/chord/set');
 	OSCdef(\chordClear, { ~setChord.([]) }, '/chord/clear');
 

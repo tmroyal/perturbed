@@ -1,5 +1,5 @@
 // chord.scd — plays into a running test-mode brain (its input is IAC Bus 2) and checks the current
-// chord (auto and add modes, clear) and the generator source choices. Run via tests/run.sh.
+// chord (auto and arm modes, clear) and the generator source choices. Run via tests/run.sh.
 (
 var brain = NetAddr("127.0.0.1", "PERFORMED_PORT".getenv.asInteger);
 var out, chord, genId, notes = List[];
@@ -28,18 +28,30 @@ Routine {
 	brain.sendMsg('/hello');
 	brain.sendMsg('/transport/tempo', 120);
 	0.3.wait;
-	check.(chord == ['auto'], "starts empty in auto mode (%)".format(chord));
+	check.(chord == ['auto', 0], "starts empty in auto mode (%)".format(chord));
 
-	// overlapping presses and releases are one chord
-	play.([64, 60], [60]); play.([67], [64, 67]);
-	check.(chord == ['auto', 60, 64, 67], "auto: chord latched (%)".format(chord));
-	play.([62, 65], [62, 65]);
-	check.(chord == ['auto', 62, 65], "auto: new chord replaces (%)".format(chord));
+	// overlapping presses and releases are one chord, taken when the last key is released
+	[64, 60].do { |n| out.noteOn(0, n, 90); 0.02.wait };
+	out.noteOff(0, 60, 0); out.noteOn(0, 67, 90); 0.1.wait;
+	check.(chord == ['auto', 0], "auto: unchanged while keys are down");
+	[64, 67].do { |n| out.noteOff(0, n, 0) }; 0.1.wait;
+	check.(chord == ['auto', 0, 60, 64, 67], "auto: chord taken on release (%)".format(chord));
+	play.([62, 65, 69, 57], [62, 65, 69, 57]);
+	check.(chord == ['auto', 0, 57, 62, 65, 69], "auto: next chord replaces (%)".format(chord));
 
-	brain.sendMsg('/chord/mode', "add");
+	brain.sendMsg('/chord/mode', "arm");
 	0.1.wait;
-	play.([69], [69]); play.([57], [57]);
-	check.(chord == ['add', 57, 62, 65, 69], "add: notes accumulate (%)".format(chord));
+	play.([48, 52], [48, 52]);
+	check.(chord == ['arm', 0, 57, 62, 65, 69], "arm: disarmed playing ignored");
+	brain.sendMsg('/chord/arm', 1);
+	0.1.wait;
+	check.(chord[1] == 1, "arm: armed");
+	play.([50, 53], [50, 53]);
+	check.(chord == ['arm', 0, 50, 53], "arm: chord taken, disarmed (%)".format(chord));
+	play.([60], [60]);
+	check.(chord == ['arm', 0, 50, 53], "arm: next chord ignored");
+	brain.sendMsg('/chord/set', 57, 62, 65, 69);
+	0.1.wait;
 
 	brain.sendMsg('/gen/add', "fractionalRepeat");
 	0.1.wait;
@@ -53,7 +65,7 @@ Routine {
 
 	brain.sendMsg('/chord/clear');
 	0.1.wait;
-	check.(chord == ['add'], "clear");
+	check.(chord == ['arm', 0], "clear");
 	check.(run.(\lowest).isEmpty, "empty chord rests");
 
 	brain.sendMsg('/gen/remove', genId);

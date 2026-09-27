@@ -97,7 +97,7 @@ sock.bind(0, async () => {
     send('/gen/set', savedGen, 'dest', savedDest);
     send('/gen/set', savedGen, 'num', 5);
     send('/gen/set', savedGen, 'source', 'arpeggio');
-    send('/chord/mode', 'add');
+    send('/chord/mode', 'arm');
     send('/chord/set', 62, 65, 69);
     const tempo2 = next('/transport', (p, bpm) => bpm === 111);
     send('/transport/tempo', 111);
@@ -116,7 +116,7 @@ sock.bind(0, async () => {
     await loaded;
     const has = (addr, pred) => inbox.some((m) => m.addr === addr && pred(...m.args));
     check(has('/transport', (p, bpm) => bpm === 111), 'load restores tempo');
-    check(has('/chord', (mode, ...ps) => mode === 'add' && ps.join() === '62,65,69'), 'load restores chord and mode');
+    check(has('/chord', (mode, armed, ...ps) => mode === 'arm' && ps.join() === '62,65,69'), 'load restores chord and mode');
     check(has('/dest', (id, name, port, ch, inst) => id === savedDest && name === 'saved' && ch === 3 && inst === 'Pianoteq 9'), 'load restores destinations');
     check(has('/gen', (id, t, d) => id === savedGen && d === savedDest), 'load restores generators with their dest');
     check(has('/gen/param', (id, p, v) => id === savedGen && p === 'num' && v === 5)

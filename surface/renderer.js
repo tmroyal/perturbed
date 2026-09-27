@@ -11,7 +11,7 @@ const el = (tag, props = {}, ...children) => {
 const model = {
   playing: false, bpm: 120, ports: [],
   types: new Map(),  // name -> [{ name, kind, def, args }]
-  sources: new Map(), // slot -> { slot, armed, pitches }
+  chord: { mode: 'auto', pitches: [] },
   dests: new Map(),  // id -> { id, name, port, channel, instrument }
   gens: new Map(),   // id -> { id, type, dest, active, params, card }
 };
@@ -153,9 +153,9 @@ function paramControl(spec, send) {
       update: (v) => { pc = v % 12; oct = Math.floor(v / 12); name.value = pc; octave.value = oct; },
     };
   }
-  if (spec.kind === 'source') {
-    const sel = selectInput([['—', 'none'], ...[...model.sources.keys()].map((s) => [s, s])], send);
-    return { label: 'source', control: sel, update: (v) => { sel.value = model.sources.has(v) ? v : 'none'; } };
+  if (spec.kind === 'choice') {
+    const sel = selectInput(spec.args.map((o) => [o, o]), send);
+    return { label: spec.name, control: sel, update: (v) => { sel.value = v; } };
   }
   if (spec.kind === 'range' && max - min > 32) {
     const { input, out } = slider(min, max, send);
@@ -245,15 +245,13 @@ function renderTypes() {
     el('button', { textContent: `+ ${typeLabel(type)}`, onclick: () => osc.send('/gen/add', type) })));
 }
 
-// --- sources ---
-function renderSources() {
-  $('sources').replaceChildren(...[...model.sources.values()].map((s) => el('section', { className: `card slot${s.armed ? ' armed' : ''}` },
-    el('header', {},
-      el('h2', { textContent: s.slot }),
-      el('button', { className: 'arm', textContent: s.armed ? 'Play a chord…' : 'Arm', onclick: () => osc.send('/source/arm', s.slot, s.armed ? 0 : 1) }),
-      el('button', { className: 'close', textContent: '×', title: 'Clear', onclick: () => osc.send('/source/clear', s.slot) })),
-    el('div', { className: 'notes', textContent: s.pitches.map(noteName).join(' ') }))));
+// --- chord ---
+function renderChord() {
+  [...$('chord-mode').children].forEach((b) => b.classList.toggle('on', b.dataset.mode === model.chord.mode));
+  $('chord-notes').textContent = model.chord.pitches.map(noteName).join(' ');
 }
+[...$('chord-mode').children].forEach((b) => { b.onclick = () => osc.send('/chord/mode', b.dataset.mode); });
+$('chord-clear').onclick = () => osc.send('/chord/clear');
 
 // --- destinations ---
 function renderDests() {
@@ -282,7 +280,7 @@ function renderAll() {
   renderTransport();
   renderTypes();
   renderPorts();
-  renderSources();
+  renderChord();
   renderDests();
   renderGens();
 }
@@ -296,7 +294,7 @@ const handlers = {
   },
   '/state/begin': () => {
     inSnapshot = true;
-    model.types.clear(); model.sources.clear(); model.dests.clear(); model.gens.clear();
+    model.types.clear(); model.dests.clear(); model.gens.clear();
   },
   '/state/end': () => {
     inSnapshot = false;
@@ -310,9 +308,9 @@ const handlers = {
     if (!inSnapshot) renderTransport();
   },
   '/ports': (...names) => { model.ports = names; if (!inSnapshot) renderPorts(); },
-  '/source': (slot, armed, ...pitches) => {
-    model.sources.set(slot, { slot, armed: !!armed, pitches });
-    if (!inSnapshot) renderSources();
+  '/chord': (mode, ...pitches) => {
+    model.chord = { mode, pitches };
+    if (!inSnapshot) renderChord();
   },
   '/gen/schema': (type, name, kind, def, ...args) => {
     if (!model.types.has(type)) model.types.set(type, []);

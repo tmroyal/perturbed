@@ -1,4 +1,4 @@
-// persist.scd — save/load a performance as JSON: tempo, sources, destinations, generators.
+// persist.scd — save/load a performance as JSON: tempo, chord, destinations, generators.
 // Plugin state lives in the REAPER project, not here. Loading replaces everything and stops the
 // transport; generators keep their active flag, so pressing play resumes the piece.
 (
@@ -21,7 +21,8 @@
 ~savePerformance = { |path|
 	~writeJSON.(path.standardizePath, (
 		tempo: ~bpm,
-		sources: ~sources.collect(_[\pitches]),
+		chord: ~chord,
+		chordMode: ~chordMode,
 		destinations: ~dests.keys.asArray.sort.collect(~dests[_]),
 		generators: ~gens.keys.asArray.sort.collect { |id|
 			var g = ~gens[id];
@@ -46,7 +47,8 @@
 	~dests.keys.copy.do { |id| ~removeDest.(id) };
 
 	~bpm = perf["tempo"].asFloat;
-	perf["sources"].keysValuesDo { |slot, pitches| ~setSource.(slot, pitches) };
+	~chordMode = (perf["chordMode"] ? "auto").asSymbol;
+	~chord = (perf["chord"] ? []).collect(_.asInteger);
 	perf["destinations"].do { |d|
 		~nextDestId = d["id"].asInteger;
 		~addDest.(d["name"], d["port"], d["channel"], d["instrument"]);

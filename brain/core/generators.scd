@@ -3,7 +3,7 @@
 // A generator: (id, typeName, type, p: params, active, dest: dest id or 0, task, sounding).
 // Types live in brain/types/, one file each, evaluating to:
 //   params:    [[name, default, kind, ...kind args], ...]  also the surface's schema;
-//              kind = range (min max) | note | choice (options...) | source | dest
+//              kind = range (min max) | note | choice (options...)
 //   restartOn: params whose change restarts `run` (re-quantizes to the new grid)
 //   run:       { |g, p| } routine body on the transport clock; waits are in beats
 (

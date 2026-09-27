@@ -96,8 +96,9 @@ sock.bind(0, async () => {
     const [savedGen] = await g2;
     send('/gen/set', savedGen, 'dest', savedDest);
     send('/gen/set', savedGen, 'num', 5);
-    send('/gen/set', savedGen, 'source', 'B');
-    send('/source/set', 'B', 62, 65, 69);
+    send('/gen/set', savedGen, 'source', 'arpeggio');
+    send('/chord/mode', 'add');
+    send('/chord/set', 62, 65, 69);
     const tempo2 = next('/transport', (p, bpm) => bpm === 111);
     send('/transport/tempo', 111);
     await tempo2;
@@ -105,7 +106,8 @@ sock.bind(0, async () => {
     await new Promise((r) => setTimeout(r, 200));
     send('/gen/remove', savedGen);
     send('/dest/remove', savedDest);
-    send('/source/clear', 'B');
+    send('/chord/clear');
+    send('/chord/mode', 'auto');
     send('/transport/tempo', 90);
     await new Promise((r) => setTimeout(r, 200));
     inbox.length = 0;
@@ -114,11 +116,11 @@ sock.bind(0, async () => {
     await loaded;
     const has = (addr, pred) => inbox.some((m) => m.addr === addr && pred(...m.args));
     check(has('/transport', (p, bpm) => bpm === 111), 'load restores tempo');
-    check(has('/source', (slot, armed, ...ps) => slot === 'B' && ps.join() === '62,65,69'), 'load restores sources');
+    check(has('/chord', (mode, ...ps) => mode === 'add' && ps.join() === '62,65,69'), 'load restores chord and mode');
     check(has('/dest', (id, name, port, ch, inst) => id === savedDest && name === 'saved' && ch === 3 && inst === 'Pianoteq 9'), 'load restores destinations');
     check(has('/gen', (id, t, d) => id === savedGen && d === savedDest), 'load restores generators with their dest');
     check(has('/gen/param', (id, p, v) => id === savedGen && p === 'num' && v === 5)
-      && has('/gen/param', (id, p, v) => id === savedGen && p === 'source' && v === 'B'), 'load restores params');
+      && has('/gen/param', (id, p, v) => id === savedGen && p === 'source' && v === 'arpeggio'), 'load restores params');
     require('fs').unlinkSync(file);
   } catch (e) {
     check(false, e.message);

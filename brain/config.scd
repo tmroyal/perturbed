@@ -5,7 +5,6 @@
 //        is the first entry, and so on. REAPER tracks listen to the same buses.
 // inputs: MIDI inputs to listen to (keyboard, controllers), as [device, name]; nil = every input
 //         except the IAC Driver, whose buses carry the brain's own output.
-// slots: source slot names.
 // latency: seconds between logical time and when notes sound; MIDI is timestamped this far ahead.
 // destinations: created at boot (not in test mode): [name, port, channel, instrument].
 (
@@ -14,7 +13,6 @@ ports: [
 	["IAC Driver", "Bus 2"],
 ],
 inputs: nil,
-slots: ["A", "B", "C", "D"],
 latency: 0.05,
 destinations: [
 	["Piano 1", 1, 1, "Pianoteq 9"],

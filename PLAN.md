@@ -1,7 +1,7 @@
 # performed — plan
 
 An algorithmic performance toolbox: a set of generators that share musical material
-(captured chords, scales, pools of notes), run on a common clock, and are played from a
+(the chord being played, and later scales and pools of notes), run on a common clock, and are played from a
 custom surface, with the sound produced by instruments and effects in REAPER.
 
 This document describes the architecture we settled on after the first proof of concept
@@ -34,7 +34,7 @@ side. So we split the system:
 ```
  MIDI keyboard ──MIDI──▶ ┌───────────────────────────────┐
                          │ BRAIN  (sclang + TempoClock)  │ ──MIDI──▶ REAPER
- SURFACE (Electron) ◀OSC▶│  clock · sources · generators │  virtual   tracks: instrument,
+ SURFACE (Electron) ◀OSC▶│  clock · chord · generators   │  virtual   tracks: instrument,
                          │  destinations · state         │  ports     effects, mixer,
                          └───────────────────────────────┘  (port,ch) recording
 ```
@@ -53,16 +53,16 @@ Responsibilities:
 
 - **Clock / transport.** A `TempoClock` is the single time source. Play restarts at beat 0,
   which is the grid origin for all generators. Tempo changes apply to the running clock.
-- **Sources.** Named containers of musical material that generators read from (see §3).
-- **Generators.** Routines on the clock that read sources and parameters and emit notes (§3).
+- **Current chord.** The chord played on the keyboard, which generators read from (see §3).
+- **Generators.** Routines on the clock that read the chord and parameters and emit notes (§3).
 - **Destinations.** A destination is a `(port, channel)` pair on one of the brain's MIDI
   outputs (IAC buses, see §8). Each REAPER track listens to exactly one destination.
 - **MIDI input.** Receives the performer's keyboard (and controllers) for capturing chords
-  into sources and for mapping CCs to parameters.
+  as the current chord and for mapping CCs to parameters.
 - **State authority.** The brain is authoritative. The surface sends *intents* ("set param",
-  "capture into slot A") and renders what the brain reports back. Rationale: state also
-  changes from the keyboard (captures, CCs), so the brain is the only place that sees everything.
-- **Persistence.** The brain saves/loads a performance file (JSON: sources, generators,
+  "clear the chord") and renders what the brain reports back. Rationale: state also
+  changes from the keyboard (chords, CCs), so the brain is the only place that sees everything.
+- **Persistence.** The brain saves/loads a performance file (JSON: chord, generators,
   destinations, tempo). Plugin state lives in the REAPER project, not here.
 
 Code layout (proposed):
@@ -72,7 +72,7 @@ brain/
   main.scd            boot, load modules, OSC + MIDI setup
   core/
     clock.scd         transport, tempo, grid helpers
-    sources.scd       slot store, capture logic
+    chord.scd         current chord from the keyboard (auto/add modes)
     generators.scd    lifecycle (add/remove/start/stop/restart), param handling
     midi.scd          outputs (IAC buses), note on/off with timestamps, input handling
     osc.scd           surface protocol (§5)
@@ -109,9 +109,9 @@ Layout:
 
 - **Transport bar:** play/stop (space bar), tempo dial (drag, shift for fine, scroll, double-click
   to type) plus a numeric BPM field, beat indicator.
-- **Sources pane:** slots (A, B, C, ...) showing their notes; "capture" arm buttons; clear.
+- **Chord bar:** mode (Auto / Add), the current chord's notes, Clear.
 - **Generator grid:** one card per generator: active toggle (inactive by default), destination
-  select, source reference, type-specific parameters, activity LED.
+  select, type-specific parameters (including where the note comes from), activity LED.
 - **Destinations pane:** list of destinations (name, port/channel); "sync to REAPER"
   regenerates the REAPER setup (§6).
 
@@ -122,19 +122,20 @@ that speaks it works (also TouchOSC or a browser on an iPad).
 
 ## 3. Core concepts
 
-### 3.1 Sources
+### 3.1 The current chord
 
-A source is a named slot holding an ordered list of MIDI pitches (and optionally velocities).
+There is one current chord: the pitches played on the keyboard, sorted low→high. It is latched
+(it stays after the keys are released). Two modes:
 
-- **Capture:** arm a slot (from the surface or a keyboard key/pedal), play a chord; the set of
-  notes held at the moment the last key is released (or at a pedal press) is stored, sorted
-  low→high. Re-capturing replaces the contents; generators pick it up on their next note.
-- **Other source kinds (later):** scale (root + scale → pitches over a range), sequence
-  (ordered, may contain repeats), transforms (transpose, invert, subset) of another source.
+- **Auto:** a new chord (the first key pressed after all keys were up) replaces the current one.
+- **Add:** notes played are added to the current chord; **Clear** empties it (Clear works in both).
+
+Generators read the chord on every note, so changes are heard on their next note. With an empty
+chord, generators that read it rest. Later: scales, sequences, transforms as other note sources.
 
 ### 3.2 Generators
 
-A generator = a type + parameters + a destination + (optionally) a source reference.
+A generator = a type + parameters + a destination.
 Each type is a file evaluating to an Event:
 
 ```supercollider
@@ -154,9 +155,9 @@ Repeats one note; each note lasts `num/den` beats and is released by the next.
 
 | Param | Meaning |
 |---|---|
-| `note` | explicit pitch (name + octave in the UI), used when no source is set |
-| `source` | slot name or none |
-| `index` | which note of the source (0 = lowest; negative counts from the top; wraps) |
+| `note` | explicit pitch (name + octave in the UI), used by the `preset` source |
+| `source` | `preset` (the note above), or from the current chord: `index`, `arpeggio` (steps through it), `lowest`, `highest` |
+| `index` | for `index`: which chord note (0 = lowest; negative counts from the top; wraps) |
 | `velocity` | 1–127 |
 | `num`, `den` | duration in beats = num/den |
 | `active` | on/off (off by default) |
@@ -181,7 +182,7 @@ start. Changing `num`/`den` restarts the routine at the next grid point of the n
 - MIDI is sent with a fixed latency (`MIDIOut.latency`, e.g. 0.05 s). On macOS, CoreMIDI
   delivers timestamped packets, so notes should land at logical time + latency regardless of
   sclang jitter.
-- Live keyboard input used for *capture* needs no latency; keyboard input *played through* to
+- Live keyboard input used for the *chord* needs no latency; keyboard input *played through* to
   REAPER should go directly (REAPER track listening to the keyboard), not via the brain.
 - UI feedback (note LEDs, beat indicator) is scheduled `latency` later so it lines up with the sound.
 
@@ -199,9 +200,9 @@ Surface → brain (intents):
 /ping                                   brain replies /pong <bootId> (changes on restart → re-/hello)
 /transport/play      1|0
 /transport/tempo     <bpm>
-/source/arm          <slot> 1|0         next captured chord goes into slot
-/source/set          <slot> <pitch>...  set a slot directly
-/source/clear        <slot>
+/chord/mode          auto|add
+/chord/set           <pitch>...         set the current chord directly
+/chord/clear
 /gen/add             <type>             brain assigns the id
 /gen/remove          <id>
 /gen/set             <id> <param> <value>
@@ -216,12 +217,12 @@ Brain → surface (state):
 /state/begin | /state/end               full snapshot framing (on /hello, load)
 /transport           <playing> <bpm>
 /ports               <name>...                     MIDI outputs; destination port n = nth name
-/source              <slot> <armed> <pitch>...
+/chord               <mode> <pitch>...
 /gen                 <id> <type> <dest> <active>
 /gen/param           <id> <param> <value>
 /gen/removed         <id>
 /gen/schema          <type> <param> <kind> <default> <args>...
-                     kind = range (min max) | note | choice (options) | source | dest
+                     kind = range (min max) | note | choice (options)
 /dest                <id> <name> <port> <channel> <instrument>
 /dest/removed        <id>
 /beat                <beat>                        (latency-aligned)
@@ -255,11 +256,12 @@ The authoritative list is the header of `brain/core/osc.scd`.
 2. ✅ **REAPER rack.** `setup.lua` builds tracks from `destinations.json`; confirm Pianoteq 9 plays
    from the brain on two destinations.
 3. ✅ **Surface v1.** Transport bar, generator grid, destinations pane; brain-authoritative state sync.
-4. ✅ **Sources.** (Inputs: every MIDI device except the IAC Driver, or `inputs` in config.scd.) Chord capture from the keyboard into slots; FractionalRepeat `source` + `index`;
-   sources pane in the surface.
+4. ✅ **Current chord.** (Inputs: every MIDI device except the IAC Driver, or `inputs` in config.scd.)
+   Latched chord with auto/add modes; FractionalRepeat `source` (preset, index, arpeggio, lowest,
+   highest); chord bar in the surface.
 5. ✅ **Persistence.** (Save…/Load… in the surface; files in `performances/`.) Save/load performance JSON; REAPER project alongside.
-6. **More generator types** (e.g. euclidean, arpeggiator over a source, probability gates) and
-   source kinds (scale, sequence, transforms).
+6. **More generator types** (e.g. euclidean, probability gates) and other note sources
+   (scale, sequence, transforms).
 7. **Modulation / controllers.** CC mapping to any generator parameter; generator-to-generator
    modulation.
 
@@ -274,9 +276,8 @@ The authoritative list is the header of `brain/core/osc.scd`.
 - **REAPER headless/scripted testing:** whether REAPER can run a setup script and render from the
   command line well enough for automated checks. Nice to have, not required: the brain is
   verified on its own and REAPER only has to receive MIDI.
-- **Capture gesture:** implemented as "every note pressed until all keys are up" (overlapping
-  releases count). Pedal-triggered or timed window: revisit after playing with it.
-- **Multiple notes per generator** (chords from a source) vs. one note per generator. Start with
+- **Chord input:** latched, auto/add modes (decided 2026-09-27). Pedal gestures: revisit later.
+- **Multiple notes per generator** (playing the whole chord) vs. one note per generator. Start with
   one; chord-playing generator types can come later.
 
 ---

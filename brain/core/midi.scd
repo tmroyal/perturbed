@@ -15,7 +15,7 @@
 		out;
 	};
 
-	// Inputs: connect everything, keep only the chosen sources' messages.
+	// Inputs: connect everything, keep only the chosen inputs' messages.
 	~inputUids = MIDIClient.sources.select { |e|
 		~config[\inputs] !? { |ins| ins.any { |pair| e.device == pair[0] and: { e.name == pair[1] } } }
 		?? { e.device != "IAC Driver" };

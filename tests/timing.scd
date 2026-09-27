@@ -5,7 +5,7 @@
 //   gen 1: note 60, 1/1 on dest 1 (port 1 ch 1)
 //   gen 2: note 64, 3/4 on dest 2 (port 1 ch 2); after ~4 s switched to 1/3
 // Checks: every onset lies on its grid (beat 0 = first onset), 3/4 and 1/1 coincide every 3 beats,
-// every note-on is balanced by a note-off after stop.
+// every note-on is balanced by a note-off after stop, and repeated pitches never overlap.
 (
 var brain = NetAddr("127.0.0.1", 57120);
 var log = List[];      // [time, \on|\off, chan, note]
@@ -53,6 +53,7 @@ Routine {
 		var bAfter = b.select { |t| t >= (changeAt + 0.05) };
 		var errA = a.collect { |t| resid.(t, 1) };
 		var errB = bBefore.collect { |t| resid.(t, 0.75) } ++ bAfter.collect { |t| resid.(t, 1/3) };
+		var alternates;
 		var meets = a.select { |t| (beat.(t).round % 3) == 0 }
 			.collect { |t| b.collect { |u| (u - t).abs }.minItem };
 
@@ -67,6 +68,15 @@ Routine {
 		check.(meets.size >= 4 and: { meets.maxItem < tol },
 			"1/1 and 3/4 meet every 3 beats (% meetings, max gap % ms)".format(meets.size, (meets.maxItem * 1000).round(0.1)));
 		check.(ons.size == offs.size, "note-ons balanced by note-offs (% / %)".format(ons.size, offs.size));
+		// per channel and pitch, events must alternate on, off, on, ... (a late off would cut the next note)
+		alternates = log.collect { |e| [e[2], e[3]] }.asSet.every { |key|
+			log.select { |e| [e[2], e[3]] == key }.collect(_[1]).every { |kind, i| kind == [\on, \off].wrapAt(i) }
+		};
+		check.(alternates, "each note-off arrives before the next note-on of that pitch");
+		if(alternates.not) { log.collect { |e| [e[2], e[3]] }.asSet.do { |key|
+			"  ch % note %: %".format(key[0], key[1], log.select { |e| [e[2], e[3]] == key }
+				.collect { |e| "%@%".format(e[1], ((e[0] - t0) * 1000).round(0.1)) }).postln;
+		} };
 		if(fail) { "TIMING FAILED".postln; 1.exit } { "TIMING PASSED".postln; 0.exit };
 	}.try { |err| err.reportError; "TIMING FAILED".postln; 1.exit };
 }.play(SystemClock);

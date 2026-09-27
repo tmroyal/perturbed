@@ -18,6 +18,14 @@
       <input id="bpm" type="number" min="20" max="400" step="1">
       <label for="bpm">BPM</label>
     </div>
+    <div class="mod" title="Metric modulation: multiply the tempo by num/den">
+      <span>×</span>
+      <input id="mod-num" type="number" min="1" max="32" step="1" value="3">
+      <span>/</span>
+      <input id="mod-den" type="number" min="1" max="32" step="1" value="2">
+      <button id="mod-swap" title="Reciprocal">⇅</button>
+      <button id="mod-apply"></button>
+    </div>
     <div id="beats"><span></span><span></span><span></span><span></span></div>
     <div class="spacer"></div>
     <span id="status">waiting for brain…</span>

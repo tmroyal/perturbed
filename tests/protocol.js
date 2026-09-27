@@ -67,6 +67,14 @@ sock.bind(0, async () => {
     await tempo;
     check(true, 'tempo echoed');
 
+    const up = next('/transport', (p, bpm) => Math.abs(bpm - 146.25) < 1e-3);
+    send('/transport/scale', 3, 2);
+    await up;
+    const back = next('/transport', (p, bpm) => Math.abs(bpm - 97.5) < 1e-3);
+    send('/transport/scale', 2, 3);
+    await back;
+    check(true, 'scale 3/2 then 2/3 returns to the same tempo');
+
     const noteMsg = next('/note', (id) => id === genId, 1500);
     const beat = next('/beat', () => true, 1500);
     send('/gen/set', genId, 'active', 1);

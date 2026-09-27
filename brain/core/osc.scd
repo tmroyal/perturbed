@@ -6,6 +6,7 @@
 //   /ping                                        brain replies /pong to the sender only
 //   /transport/play   1|0                        play restarts at beat 0
 //   /transport/tempo  <bpm>
+//   /transport/scale  <num> <den>                tempo × num/den (metric modulation)
 //   /chord/mode       auto|arm                   see core/chord.scd
 //   /chord/arm        1|0                        in arm mode: the next chord played replaces the current one
 //   /chord/set        <pitch>...                 set the current chord directly
@@ -71,6 +72,7 @@
 
 	OSCdef(\play, { |msg| ~setPlaying.(msg[1].asInteger == 1) }, '/transport/play');
 	OSCdef(\tempo, { |msg| ~setTempo.(msg[1]) }, '/transport/tempo');
+	OSCdef(\scale, { |msg| ~scaleTempo.(msg[1], msg[2]) }, '/transport/scale');
 
 	OSCdef(\chordMode, { |msg| ~setChordMode.(msg[1]) }, '/chord/mode');
 	OSCdef(\chordArm, { |msg| ~arm.(msg[1].asInteger == 1) }, '/chord/arm');

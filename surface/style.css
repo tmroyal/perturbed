@@ -36,6 +36,10 @@ input:focus, select:focus { outline: none; border-color: var(--nord8); }
 .tempo label { color: var(--nord9); }
 #dial { width: 48px; height: 48px; cursor: ns-resize; touch-action: none; }
 #bpm { width: 64px; text-align: right; }
+.mod { display: flex; align-items: center; gap: 6px; color: var(--nord9); }
+.mod input { width: 44px; text-align: right; }
+#mod-swap { padding: 6px 8px; }
+#mod-apply { min-width: 84px; font-variant-numeric: tabular-nums; }
 #beats { display: flex; gap: 6px; }
 #beats span { width: 10px; height: 10px; border-radius: 50%; background: var(--nord2); }
 #beats span.lit { background: var(--nord8); }

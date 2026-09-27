@@ -23,5 +23,8 @@
 	~sendTransport.();
 };
 
+// Metric modulation: tempo × num/den. Beats carry on, so generators keep their grid.
+~scaleTempo = { |num, den| ~setTempo.(~bpm * num.asFloat.max(1) / den.asFloat.max(1)) };
+
 ~sendTransport = { ~send.('/transport', ~playing.binaryValue, ~bpm) };
 )

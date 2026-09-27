@@ -37,6 +37,7 @@ setInterval(() => {
 $('play').onclick = () => osc.send('/transport/play', model.playing ? 0 : 1);
 document.addEventListener('keydown', (e) => {
   const typing = ['INPUT', 'SELECT'].includes(e.target.tagName) && e.target.type !== 'range';
+  if (e.key === 'Enter' && e.target.closest?.('.mod')) e.target.blur();
   if (e.code === 'Space' && !typing) { e.preventDefault(); $('play').blur(); osc.send('/transport/play', model.playing ? 0 : 1); }
 });
 
@@ -45,11 +46,26 @@ function renderTransport() {
   $('play').textContent = model.playing ? 'Stop' : 'Play';
   if (!model.playing) showBeat(-1);
   if (!dialDragging) showTempo(model.bpm);
+  renderMod();
 }
 
 function showBeat(b) {
   [...$('beats').children].forEach((d, i) => d.classList.toggle('lit', b >= 0 && b % 4 === i));
 }
+
+// --- metric modulation: tempo × num/den; swap gives the reciprocal ---
+const modFraction = () => [Math.max(1, parseInt($('mod-num').value) || 1), Math.max(1, parseInt($('mod-den').value) || 1)];
+function renderMod() {
+  const [num, den] = modFraction();
+  $('mod-apply').textContent = `→ ${+(model.bpm * num / den).toFixed(1)}`;
+}
+$('mod-num').addEventListener('input', renderMod);
+$('mod-den').addEventListener('input', renderMod);
+$('mod-swap').onclick = () => {
+  [$('mod-num').value, $('mod-den').value] = [$('mod-den').value, $('mod-num').value];
+  renderMod();
+};
+$('mod-apply').onclick = () => osc.send('/transport/scale', ...modFraction());
 
 // --- save / load: the brain writes and reads the file ---
 $('save').onclick = async () => { const p = await files.pick('save'); if (p) osc.send('/save', p); };

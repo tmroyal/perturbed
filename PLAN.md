@@ -108,7 +108,8 @@ Carries forward from the POC: Nord theme, Electron main process speaking OSC ove
 Layout:
 
 - **Transport bar:** play/stop (space bar), tempo dial (drag, shift for fine, scroll, double-click
-  to type) plus a numeric BPM field, beat indicator.
+  to type) plus a numeric BPM field, beat indicator, metric modulation (tempo × num/den, with a
+  swap button for the reciprocal).
 - **Chord bar:** mode (Auto / Arm), Arm button, the current chord's notes, Clear.
 - **Generator grid:** one card per generator: active toggle (inactive by default), destination
   select, type-specific parameters (including where the note comes from), activity LED.
@@ -205,6 +206,7 @@ Surface → brain (intents):
 /ping                                   brain replies /pong <bootId> (changes on restart → re-/hello)
 /transport/play      1|0
 /transport/tempo     <bpm>
+/transport/scale     <num> <den>        tempo × num/den (metric modulation)
 /chord/mode          auto|arm
 /chord/arm           1|0                arm mode: next chord played replaces the current one
 /chord/set           <pitch>...         set the current chord directly

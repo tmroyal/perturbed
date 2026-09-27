@@ -2,6 +2,8 @@
   "ports": ["IAC Driver Bus 1", "IAC Driver Bus 2"],
   "destinations": [
     {"id": 1, "name": "Piano 1", "port": 1, "channel": 1, "instrument": "Pianoteq 9"},
-    {"id": 2, "name": "Piano 2", "port": 1, "channel": 2, "instrument": "Pianoteq 9"}
+    {"id": 2, "name": "Piano 2", "port": 1, "channel": 2, "instrument": "Pianoteq 9"},
+    {"id": 3, "name": "test a", "port": 1, "channel": 1, "instrument": "none"},
+    {"id": 4, "name": "test b", "port": 1, "channel": 2, "instrument": "none"}
   ]
 }

@@ -2,6 +2,8 @@
 # Starts the brain in test mode, runs the timing, capture and protocol tests against it, stops the brain.
 # Sends MIDI on IAC Bus 1 channels 1–2: anything listening there (REAPER) will play it.
 cd "$(dirname "$0")/.."
+# The test brain gets its own port so tests never touch a live brain on 57120.
+export PERFORMED_PORT=57140
 SCLANG=/Applications/SuperCollider.app/Contents/MacOS/sclang
 LOG=$(mktemp -t brain)
 limit() { perl -e 'alarm shift; exec @ARGV' "$@"; }

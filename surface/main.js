@@ -1,5 +1,5 @@
 // Electron main process: owns the UDP socket (57130) and translates between OSC and the renderer.
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const dgram = require('dgram');
 const path = require('path');
 
@@ -21,6 +21,16 @@ function createWindow() {
   });
   win.loadFile('index.html');
 }
+
+// Save/load dialogs; the brain reads and writes the file, the surface only picks the path.
+const PERFORMANCES = path.join(__dirname, '..', 'performances');
+const FILTERS = [{ name: 'Performance', extensions: ['json'] }];
+ipcMain.handle('pick-file', async (_e, mode) => {
+  const r = mode === 'save'
+    ? await dialog.showSaveDialog(win, { defaultPath: path.join(PERFORMANCES, 'untitled.json'), filters: FILTERS })
+    : await dialog.showOpenDialog(win, { defaultPath: PERFORMANCES, filters: FILTERS, properties: ['openFile'] });
+  return r.canceled ? null : (r.filePath ?? r.filePaths[0]);
+});
 
 ipcMain.on('osc', (_e, addr, args) => sock.send(encode(addr, args), SC.port, SC.host));
 

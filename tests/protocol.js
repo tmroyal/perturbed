@@ -12,7 +12,7 @@ sock.on('message', (buf) => {
   inbox.push(msg);
   waiters = waiters.filter((w) => !w(msg));
 });
-const send = (addr, ...args) => sock.send(encode(addr, args), 57120, '127.0.0.1');
+const send = (addr, ...args) => sock.send(encode(addr, args), +process.env.PERFORMED_PORT, '127.0.0.1');
 
 // Resolves with the first message (from now on) matching addr and pred.
 const next = (addr, pred = () => true, ms = 1000) => new Promise((resolve, reject) => {
@@ -85,6 +85,41 @@ sock.bind(0, async () => {
     send('/gen/remove', genId);
     await genGone;
     check(true, 'gen/remove echoed');
+
+    // save → change → load: state comes back in a full snapshot
+    const file = require('path').join(require('os').tmpdir(), `performed-test-${process.pid}.json`);
+    const d2 = next('/dest', (id, name) => name === 'saved');
+    send('/dest/add', 'saved', 1, 3, 'Pianoteq 9');
+    const [savedDest] = await d2;
+    const g2 = next('/gen');
+    send('/gen/add', 'fractionalRepeat');
+    const [savedGen] = await g2;
+    send('/gen/set', savedGen, 'dest', savedDest);
+    send('/gen/set', savedGen, 'num', 5);
+    send('/gen/set', savedGen, 'source', 'B');
+    send('/source/set', 'B', 62, 65, 69);
+    const tempo2 = next('/transport', (p, bpm) => bpm === 111);
+    send('/transport/tempo', 111);
+    await tempo2;
+    send('/save', file);
+    await new Promise((r) => setTimeout(r, 200));
+    send('/gen/remove', savedGen);
+    send('/dest/remove', savedDest);
+    send('/source/clear', 'B');
+    send('/transport/tempo', 90);
+    await new Promise((r) => setTimeout(r, 200));
+    inbox.length = 0;
+    const loaded = next('/state/end');
+    send('/load', file);
+    await loaded;
+    const has = (addr, pred) => inbox.some((m) => m.addr === addr && pred(...m.args));
+    check(has('/transport', (p, bpm) => bpm === 111), 'load restores tempo');
+    check(has('/source', (slot, armed, ...ps) => slot === 'B' && ps.join() === '62,65,69'), 'load restores sources');
+    check(has('/dest', (id, name, port, ch, inst) => id === savedDest && name === 'saved' && ch === 3 && inst === 'Pianoteq 9'), 'load restores destinations');
+    check(has('/gen', (id, t, d) => id === savedGen && d === savedDest), 'load restores generators with their dest');
+    check(has('/gen/param', (id, p, v) => id === savedGen && p === 'num' && v === 5)
+      && has('/gen/param', (id, p, v) => id === savedGen && p === 'source' && v === 'B'), 'load restores params');
+    require('fs').unlinkSync(file);
   } catch (e) {
     check(false, e.message);
   }

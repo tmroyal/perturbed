@@ -72,11 +72,11 @@ brain/
   main.scd            boot, load modules, OSC + MIDI setup
   core/
     clock.scd         transport, tempo, grid helpers
-    sources.scd       slot store, capture logic (milestone 4)
+    sources.scd       slot store, capture logic
     generators.scd    lifecycle (add/remove/start/stop/restart), param handling
     midi.scd          outputs (IAC buses), note on/off with timestamps, input handling
     osc.scd           surface protocol (§5)
-    persist.scd       save/load JSON (milestone 5)
+    persist.scd       save/load performance JSON
     destinations.scd  destination store; writes reaper/destinations.json
   config.scd          MIDI ports (IAC buses), latency, default destinations
   types/
@@ -189,7 +189,8 @@ start. Changing `num`/`den` restarts the routine at the next grid point of the n
 
 ## 5. Brain ⇄ surface OSC protocol
 
-Brain listens on 57120 (sclang); surface listens on 57130. All messages are plain OSC over UDP.
+Brain listens on 57120 (`PERFORMED_PORT` overrides; `tests/run.sh` uses 57140 so tests never touch
+a live brain); surface listens on 57130. All messages are plain OSC over UDP.
 
 Surface → brain (intents):
 
@@ -229,7 +230,7 @@ Brain → surface (state):
 
 The brain echoes every accepted change, so multiple surfaces (laptop + iPad) stay in sync.
 Any address that sends `/hello` is registered as a surface and receives all state messages.
-`/save` and `/load` arrive with milestone 5. The authoritative list is the header of `brain/core/osc.scd`.
+The authoritative list is the header of `brain/core/osc.scd`.
 
 ---
 
@@ -256,7 +257,7 @@ Any address that sends `/hello` is registered as a surface and receives all stat
 3. ✅ **Surface v1.** Transport bar, generator grid, destinations pane; brain-authoritative state sync.
 4. ✅ **Sources.** (Inputs: every MIDI device except the IAC Driver, or `inputs` in config.scd.) Chord capture from the keyboard into slots; FractionalRepeat `source` + `index`;
    sources pane in the surface.
-5. **Persistence.** Save/load performance JSON; REAPER project alongside.
+5. ✅ **Persistence.** (Save…/Load… in the surface; files in `performances/`.) Save/load performance JSON; REAPER project alongside.
 6. **More generator types** (e.g. euclidean, arpeggiator over a source, probability gates) and
    source kinds (scale, sequence, transforms).
 7. **Modulation / controllers.** CC mapping to any generator parameter; generator-to-generator

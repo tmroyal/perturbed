@@ -7,7 +7,7 @@
 // Checks: every onset lies on its grid (beat 0 = first onset), 3/4 and 1/1 coincide every 3 beats,
 // every note-on is balanced by a note-off after stop, and repeated pitches never overlap.
 (
-var brain = NetAddr("127.0.0.1", 57120);
+var brain = NetAddr("127.0.0.1", "PERFORMED_PORT".getenv.asInteger);
 var log = List[];      // [time, \on|\off, chan, note]
 var tol = 0.010;       // seconds
 var bps = 2;           // beats per second at 120 bpm

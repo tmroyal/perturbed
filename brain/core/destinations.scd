@@ -29,21 +29,12 @@
 
 ~sendDest = { |d| ~send.('/dest', d[\id], d[\name], d[\port], d[\channel], d[\instrument]) };
 
-~jsonStr = { |s| "\"" ++ s.asString.replace("\\", "\\\\").replace("\"", "\\\"") ++ "\"" };
-
 ~writeDestinations = {
-	var path = ~root.dirname +/+ "reaper/destinations.json";
-	var ports = ~config[\ports].collect { |p| ~jsonStr.(p.join(" ")) };
-	var dests = ~dests.keys.asArray.sort.collect { |id|
-		var d = ~dests[id];
-		"    {\"id\": %, \"name\": %, \"port\": %, \"channel\": %, \"instrument\": %}".format(
-			id, ~jsonStr.(d[\name]), d[\port], d[\channel], ~jsonStr.(d[\instrument]));
-	};
 	if(~testMode.not) {
-		File.use(path, "w", { |f|
-			f.write("{\n  \"ports\": [%],\n  \"destinations\": [\n%\n  ]\n}\n".format(
-				ports.join(", "), dests.join(",\n")));
-		});
+		~writeJSON.(~root.dirname +/+ "reaper/destinations.json", (
+			ports: ~config[\ports].collect(_.join(" ")),
+			destinations: ~dests.keys.asArray.sort.collect(~dests[_]),
+		));
 	};
 };
 )

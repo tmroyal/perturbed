@@ -1,7 +1,7 @@
 // osc.scd — the surface protocol. The brain is authoritative: surfaces send intents and render
 // what the brain echoes back. Any address that sends /hello is registered as a surface.
 //
-// Surface → brain (port 57120):
+// Surface → brain (port 57120, or $PERFORMED_PORT):
 //   /hello                                       register; brain replies with a full snapshot
 //   /ping                                        brain replies /pong to the sender only
 //   /transport/play   1|0                        play restarts at beat 0
@@ -14,6 +14,8 @@
 //   /gen/set          <id> <param> <value>       param = active | dest | a type param
 //   /dest/add         <name> <port> <channel> <instrument>     port and channel are 1-based
 //   /dest/remove      <id>
+//   /save             <path>                     write the performance as JSON
+//   /load             <path>                     replace everything; brain sends a full snapshot
 //
 // Brain → surfaces (on the sender's address):
 //   /state/begin, /state/end                     frame a full snapshot
@@ -50,11 +52,13 @@
 };
 
 ~oscInit = {
-	if(NetAddr.langPort != 57120) {
-		if(thisProcess.openUDPPort(57120).not) {
-			"port 57120 is taken (another sclang?); surfaces won't reach the brain".warn;
+	var port = ("PERFORMED_PORT".getenv ? "57120").asInteger;
+	if(NetAddr.langPort != port) {
+		if(thisProcess.openUDPPort(port).not) {
+			Error("port % is taken (another brain running?)".format(port)).throw;
 		};
 	};
+	~port = port;
 
 	OSCdef(\hello, { |msg, time, addr|
 		if(~surfaces.includesEqual(addr).not) { ~surfaces = ~surfaces.add(addr) };
@@ -76,5 +80,10 @@
 
 	OSCdef(\destAdd, { |msg| ~addDest.(msg[1], msg[2], msg[3], msg[4] ? "") }, '/dest/add');
 	OSCdef(\destRemove, { |msg| ~removeDest.(msg[1].asInteger) }, '/dest/remove');
+
+	OSCdef(\save, { |msg| ~savePerformance.(msg[1].asString) }, '/save');
+	OSCdef(\load, { |msg|
+		try { ~loadPerformance.(msg[1].asString) } { |e| "load failed: %".format(e.errorString).warn };
+	}, '/load');
 };
 )

@@ -10,7 +10,7 @@ var root = thisProcess.nowExecutingPath.dirname;
 ~config = (root +/+ "config.scd").load;
 if(~testMode) { ~config[\inputs] = [["IAC Driver", "Bus 2"]] };
 
-["midi", "clock", "sources", "destinations", "generators", "osc"].do { |name|
+["midi", "clock", "sources", "destinations", "generators", "persist", "osc"].do { |name|
 	(root +/+ "core" +/+ name ++ ".scd").load;
 };
 
@@ -24,5 +24,5 @@ if(~testMode.not) { ~config[\destinations].do { |d| ~addDest.(*d) } };
 ~oscInit.();
 
 "brain ready: % types, % destinations, OSC on %".format(
-	~types.size, ~dests.size, NetAddr.langPort).postln;
+	~types.size, ~dests.size, ~port).postln;
 )

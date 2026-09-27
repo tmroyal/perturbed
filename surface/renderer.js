@@ -51,6 +51,10 @@ function showBeat(b) {
   [...$('beats').children].forEach((d, i) => d.classList.toggle('lit', b >= 0 && b % 4 === i));
 }
 
+// --- save / load: the brain writes and reads the file ---
+$('save').onclick = async () => { const p = await files.pick('save'); if (p) osc.send('/save', p); };
+$('load').onclick = async () => { const p = await files.pick('load'); if (p) osc.send('/load', p); };
+
 // --- tempo dial: drag vertically (shift = fine), scroll, or double-click to type ---
 const BPM_MIN = 20, BPM_MAX = 400, SWEEP = 270;
 const polar = (deg) => {

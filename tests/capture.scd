@@ -1,7 +1,7 @@
 // capture.scd — plays a chord into a running test-mode brain (its input is IAC Bus 2) and checks
 // that an armed slot captures it and a generator reads the slot. Run via tests/run.sh.
 (
-var brain = NetAddr("127.0.0.1", 57120);
+var brain = NetAddr("127.0.0.1", "PERFORMED_PORT".getenv.asInteger);
 var out, source, genId, notes = List[];
 var fail = false;
 var check = { |ok, what| if(ok.not) { fail = true }; "%  %".format(if(ok) { "ok  " } { "FAIL" }, what).postln };

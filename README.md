@@ -15,7 +15,7 @@ archive/   the first proof of concept
 
 ```
 ./run.sh            # brain + surface; quitting the surface stops the brain
-./tests/run.sh      # ~25 s; plays MIDI on IAC Bus 1 ch 1–2 (REAPER will sound it)
+./tests/run.sh      # ~30 s; plays MIDI on IAC Bus 1 ch 1–2 (REAPER will sound it)
 ```
 
 One-time setup: IAC Driver buses 1 and 2 enabled (Audio MIDI Setup), and enabled as inputs in
@@ -26,4 +26,4 @@ keyboard in before starting it. Rig settings live in `brain/config.scd`.
 ## Adding a generator type
 
 Copy `brain/types/basic.scd`: a type is `params` (the surface builds its controls from them) and a
-`run` routine. Reuse `~pitchParams`/`~pitch` and `~velocityParams`/`~velocity` for note and velocity.
+`run` routine. Reuse `~pitchParams`/`~pitch`, `~rhythmParams`/`~rhythmGate` and `~velocityParams`/`~velocity`.

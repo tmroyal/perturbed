@@ -4,7 +4,7 @@
 (
 var brain = NetAddr("127.0.0.1", "PERFORMED_PORT".getenv.asInteger);
 var v;
-var out, chord, genId, notes = List[], vels = List[];
+var out, chord, genId, notes = List[], vels = List[], times = List[];
 var fail = false;
 var check = { |ok, what| if(ok.not) { fail = true }; "%  %".format(if(ok) { "ok  " } { "FAIL" }, what).postln };
 var play = { |ons, offs| ons.do { |n| out.noteOn(0, n, 90); 0.02.wait }; offs.do { |n| out.noteOff(0, n, 0); 0.02.wait }; 0.1.wait };
@@ -13,11 +13,13 @@ var run = { |source, index = 0, n = 6|
 	notes.clear;
 	[[\source, source], [\index, index]].do { |m| brain.sendMsg('/gen/set', genId, *m) };
 	brain.sendMsg('/transport/play', 1);
-	(n * 0.125 - 0.06).wait;  // 120 bpm, 1/4 beat = 0.125 s
+	(n * ~step - 0.03).wait;
 	brain.sendMsg('/transport/play', 0);
 	0.1.wait;
 	notes.asArray;
 };
+
+~step = 0.0625;  // seconds per 1/4-beat grid step at the test tempo, 240 bpm
 
 MIDIClient.init(verbose: false);
 out = MIDIOut.newByName("IAC Driver", "Bus 2");
@@ -25,13 +27,27 @@ out.latency = 0;
 OSCdef(\chord, { |msg| chord = msg[1..] }, '/chord');
 OSCdef(\gen, { |msg| genId = msg[1] }, '/gen');
 OSCdef(\param, { |msg| if(msg[1] == genId and: { msg[2] == 'note' }) { ~noteParam = msg[3] } }, '/gen/param');
-OSCdef(\note, { |msg| if(msg[1] == genId) { notes.add(msg[2]); vels.add(msg[3]) } }, '/note');
+OSCdef(\note, { |msg| if(msg[1] == genId) { notes.add(msg[2]); vels.add(msg[3]); times.add(Main.elapsedTime) } }, '/note');
+// plays n quarter-beat grid steps with the given params; returns the grid steps that played.
+// /note arrives `latency` after the grid time; play starts at beat 0 when the brain gets it.
+~hits = { |pairs, n|
+	var t0;
+	times.clear;
+	pairs.do { |m| brain.sendMsg('/gen/set', genId, *m) };
+	0.05.wait;
+	t0 = Main.elapsedTime;
+	brain.sendMsg('/transport/play', 1);
+	(n * ~step - 0.03).wait;
+	brain.sendMsg('/transport/play', 0);
+	0.1.wait;
+	times.collect { |t| ((t - t0 - 0.05) / ~step).round.asInteger }.asArray;
+};
 // plays n quarter-beat notes with the given params; returns the velocities
 ~vel = { |pairs, n = 8|
 	vels.clear;
 	pairs.do { |m| brain.sendMsg('/gen/set', genId, *m) };
 	brain.sendMsg('/transport/play', 1);
-	(n * 0.125 - 0.06).wait;
+	(n * ~step - 0.03).wait;
 	brain.sendMsg('/transport/play', 0);
 	0.1.wait;
 	vels.asArray;
@@ -39,7 +55,7 @@ OSCdef(\note, { |msg| if(msg[1] == genId) { notes.add(msg[2]); vels.add(msg[3]) 
 
 Routine {
 	brain.sendMsg('/hello');
-	brain.sendMsg('/transport/tempo', 120);
+	brain.sendMsg('/transport/tempo', 240);
 	0.3.wait;
 	check.(chord == ['auto', 0], "starts empty in auto mode (%)".format(chord));
 
@@ -105,6 +121,22 @@ Routine {
 	check.(v == [100, 50, 70, 100, 50, 70, 100], "velocity pattern (%)".format(v));
 	v = ~vel.([[\velMode, "set"], [\velocity, 64], [\humanize, 5]], 16);
 	check.(v.every(_.inclusivelyBetween(59, 69)) and: { v.asSet.size > 1 }, "humanize ±5 (%)".format(v));
+
+	// rhythm: which grid steps (k) play
+	brain.sendMsg('/gen/set', genId, \velMode, "set");
+	v = ~hits.([[\rhythm, "every"], [\interval, 3], [\offset, 1]], 12);
+	check.(v == [1, 4, 7, 10], "every 3, offset 1 (%)".format(v));
+	v = ~hits.([[\rhythm, "euclid"], [\pulses, 3], [\steps, 8], [\offset, 0]], 16);
+	check.(v == [0, 3, 6, 8, 11, 14], "euclid 3 of 8 (%)".format(v));
+	v = ~hits.([[\rhythm, "euclid"], [\offset, 2]], 8);
+	check.(v == [0, 2, 5], "euclid rotated by 2 (%)".format(v));
+	check.(~hits.([[\rhythm, "random"], [\prob, 0]], 8).isEmpty, "random 0%");
+	check.(~hits.([[\rhythm, "random"], [\prob, 100]], 8) == (0..7), "random 100%");
+	v = ~hits.([[\rhythm, "phrase"], [\phrase, "1 2"]], 9);
+	check.(v == [0, 1, 3, 4, 6, 7], "phrase 1 2 (%)".format(v));
+	check.(~hits.([[\rhythm, "phrase"], [\phrase, "1 x"]], 6) == (0..5), "invalid phrase → every 1");
+	brain.sendMsg('/gen/set', genId, \rhythm, "every");
+	brain.sendMsg('/gen/set', genId, \interval, 1);
 
 	brain.sendMsg('/chord/clear');
 	0.1.wait;

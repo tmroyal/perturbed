@@ -75,6 +75,7 @@ brain/
     chord.scd         current chord from the keyboard (auto/arm modes)
     generators.scd    lifecycle (add/remove/start/stop/restart), params, learn
     pitch.scd         which note: set note or from the current chord (shared by types)
+    rhythm.scd        which grid steps play: every, euclid, random, phrase (shared by types)
     velocity.scd      how loud: velocity modes (shared by types)
     midi.scd          outputs (IAC buses), note on/off with timestamps, input handling
     osc.scd           surface protocol (§5)
@@ -159,7 +160,7 @@ note and velocity from the shared params.
 
 ### 3.3 The basic generator
 
-One note at a time; each note lasts `num/den` beats and is released by the next.
+One note at a time on a grid of `num/den` beats; each note is released by the next.
 
 | Param | Meaning |
 |---|---|
@@ -169,7 +170,8 @@ One note at a time; each note lasts `num/den` beats and is released by the next.
 | `index` | (index) which chord note: 0 = lowest, negative counts from the top, wraps |
 | `direction` | (arpeggio) up, down, updown |
 | `permutation`, `advance` | (permute) plays `chord.permute(n)`; n starts at `permutation` and moves ahead by `advance` after each pass through the chord |
-| `num`, `den` | duration in beats = num/den |
+| `num`, `den` | grid step in beats = num/den |
+| `rhythm` | which steps play: every (interval, offset), euclid (pulses, steps 2–19, offset), random (prob %), phrase ("1 2 1 1 2": gaps in steps; invalid → every 1). A skipped step lets the previous note ring on. |
 | `velMode` | set, accent, random, drift, ramp, pattern (see `brain/core/velocity.scd`), each with its own params |
 | `humanize` | random ± on top of any velocity mode |
 

@@ -9,7 +9,8 @@
 //   showWhen:  (param: [otherParam, value...]) the surface shows param only for those values
 //   sections:  params that start a new group on the surface (drawn with a separator)
 //   restartOn: params whose change restarts `run` (re-quantizes to the new grid)
-// Shared building blocks: core/pitch.scd (which note), core/velocity.scd (how loud).
+// Shared building blocks: core/pitch.scd (which note), core/rhythm.scd (which grid steps play),
+// core/velocity.scd (how loud).
 (
 ~gens = ();
 ~nextGenId = 1;

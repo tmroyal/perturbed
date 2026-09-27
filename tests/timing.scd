@@ -25,8 +25,8 @@ Routine {
 	brain.sendMsg('/hello');
 	brain.sendMsg('/dest/add', "test a", 1, 1, "none");
 	brain.sendMsg('/dest/add', "test b", 1, 2, "none");
-	brain.sendMsg('/gen/add', "fractionalRepeat");
-	brain.sendMsg('/gen/add', "fractionalRepeat");
+	brain.sendMsg('/gen/add', "basic");
+	brain.sendMsg('/gen/add', "basic");
 	brain.sendMsg('/transport/tempo', 120);
 	0.3.wait;
 	[[1, \dest, 1], [1, \note, 60], [2, \dest, 2], [2, \note, 64], [2, \num, 3], [2, \den, 4],

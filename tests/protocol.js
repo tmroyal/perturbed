@@ -34,8 +34,8 @@ sock.bind(0, async () => {
     const addrs = inbox.map((m) => m.addr);
     check(addrs[0] === '/state/begin', 'snapshot starts with /state/begin');
     check(addrs.includes('/transport') && addrs.includes('/ports'), 'snapshot has /transport and /ports');
-    const schema = inbox.filter((m) => m.addr === '/gen/schema' && m.args[0] === 'fractionalRepeat').map((m) => m.args[1]);
-    check(['note', 'velocity', 'num', 'den'].every((p) => schema.includes(p)), `fractionalRepeat schema (${schema.join(' ')})`);
+    const schema = inbox.filter((m) => m.addr === '/gen/schema' && m.args[0] === 'basic').map((m) => m.args[1]);
+    check(['note', 'velocity', 'num', 'den'].every((p) => schema.includes(p)), `basic schema (${schema.join(' ')})`);
 
     const pong = next('/pong');
     send('/ping');
@@ -48,9 +48,9 @@ sock.bind(0, async () => {
     check(port === 2 && channel === 16, 'dest/add echoed with port and channel');
 
     const gen = next('/gen');
-    send('/gen/add', 'fractionalRepeat');
+    send('/gen/add', 'basic');
     const [genId, type, , active] = await gen;
-    check(type === 'fractionalRepeat' && active === 0, 'gen/add echoed, inactive by default');
+    check(type === 'basic' && active === 0, 'gen/add echoed, inactive by default');
 
     const param = next('/gen/param', (id, p, v) => id === genId && p === 'note' && v === 67);
     send('/gen/set', genId, 'note', 67);
@@ -100,7 +100,7 @@ sock.bind(0, async () => {
     send('/dest/add', 'saved', 1, 3, 'Pianoteq 9');
     const [savedDest] = await d2;
     const g2 = next('/gen');
-    send('/gen/add', 'fractionalRepeat');
+    send('/gen/add', 'basic');
     const [savedGen] = await g2;
     send('/gen/set', savedGen, 'dest', savedDest);
     send('/gen/set', savedGen, 'num', 5);

@@ -1,5 +1,5 @@
-// velocity.scd — velocity modes shared by generator types. A type adds ~velocityParams to its
-// params and ~velocityShow to its showWhen, then calls ~velocity.(g, p, k) for each note
+// velocity.scd — how loud; shared by generator types. A type adds ~velocityParams to its params
+// and ~velocityShow to its showWhen, then calls ~velocity.(g, p, k) for each note
 // (k = the note's grid index since transport start).
 //   set     velocity
 //   accent  accent on every `every`th grid step (k = 0, every, 2·every, ...), velocity otherwise

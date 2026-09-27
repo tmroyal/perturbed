@@ -1,5 +1,5 @@
-// chord.scd — plays into a running test-mode brain (its input is IAC Bus 2) and checks the current
-// chord (auto and arm modes, clear), the generator source choices and velocity modes.
+// basic.scd — plays into a running test-mode brain (its input is IAC Bus 2) and checks the current
+// chord (auto and arm modes, clear) and the basic generator: note sources, Set, velocity modes.
 // Run via tests/run.sh.
 (
 var brain = NetAddr("127.0.0.1", "PERFORMED_PORT".getenv.asInteger);
@@ -66,7 +66,7 @@ Routine {
 	brain.sendMsg('/chord/set', 57, 62, 65, 69);
 	0.1.wait;
 
-	brain.sendMsg('/gen/add', "fractionalRepeat");
+	brain.sendMsg('/gen/add', "basic");
 	0.1.wait;
 	[[\num, 1], [\den, 4], [\note, 48], [\active, 1]].do { |m| brain.sendMsg('/gen/set', genId, *m) };
 	check.(run.(\note).every(_ == 48), "note plays its note");
@@ -114,6 +114,6 @@ Routine {
 	brain.sendMsg('/gen/remove', genId);
 	brain.sendMsg('/chord/mode', "auto");
 	0.1.wait;
-	if(fail) { "CHORD FAILED".postln; 1.exit } { "CHORD PASSED".postln; 0.exit };
+	if(fail) { "BASIC FAILED".postln; 1.exit } { "BASIC PASSED".postln; 0.exit };
 }.play(SystemClock);
 )

@@ -65,7 +65,7 @@ Responsibilities:
 - **Persistence.** The brain saves/loads a performance file (JSON: chord, generators,
   destinations, tempo). Plugin state lives in the REAPER project, not here.
 
-Code layout (proposed):
+Code layout:
 
 ```
 brain/
@@ -73,14 +73,16 @@ brain/
   core/
     clock.scd         transport, tempo, grid helpers
     chord.scd         current chord from the keyboard (auto/arm modes)
-    generators.scd    lifecycle (add/remove/start/stop/restart), param handling
+    generators.scd    lifecycle (add/remove/start/stop/restart), params, learn
+    pitch.scd         which note: set note or from the current chord (shared by types)
+    velocity.scd      how loud: velocity modes (shared by types)
     midi.scd          outputs (IAC buses), note on/off with timestamps, input handling
     osc.scd           surface protocol (§5)
     persist.scd       save/load performance JSON
     destinations.scd  destination store; writes reaper/destinations.json
   config.scd          MIDI ports (IAC buses), latency, default destinations
   types/
-    fractionalRepeat.scd
+    basic.scd         the basic generator (§3.3)
     ...               one file per generator type; filename = type name
 ```
 
@@ -138,39 +140,40 @@ chord, generators that read it rest. Later: scales, sequences, transforms as oth
 ### 3.2 Generators
 
 A generator = a type + parameters + a destination.
-Each type is a file evaluating to an Event:
+Each type is a file evaluating to an Event (full description at the top of
+`brain/core/generators.scd`):
 
 ```supercollider
 (
-params: (...defaults...),           // sent to the surface as the schema
+params: ~pitchParams ++ [...] ++ ~velocityParams,  // [name, default, kind, args]: the surface's schema
+showWhen: (...),                    // show a param only for some values of another
+sections: [...],                    // params that start a new group on the surface
 restartOn: [\num, \den],            // params whose change re-quantizes the routine
 run: { |g, p| ... }                 // Routine body on the transport clock; waits in beats
 )
 ```
 
 Generators call a shared `~strike.(g, note, vel)` that releases the generator's previous note and
-plays the new one at the same logical time.
+plays the new one at the same logical time; `~pitch.(p, step)` and `~velocity.(g, p, k)` give the
+note and velocity from the shared params.
 
-### 3.3 FractionalRepeat (first type)
+### 3.3 The basic generator
 
-Repeats one note; each note lasts `num/den` beats and is released by the next.
+One note at a time; each note lasts `num/den` beats and is released by the next.
 
 | Param | Meaning |
 |---|---|
+| `dest`, `active` | destination; on/off (off by default) |
 | `source` | `note`, or from the current chord: `index`, `lowest`, `highest`, `arpeggio`, `permute` |
-| `note` | (note) explicit pitch, name + octave in the UI |
+| `note` | (note) explicit pitch, name + octave in the UI, with a Set button (next key played) |
 | `index` | (index) which chord note: 0 = lowest, negative counts from the top, wraps |
 | `direction` | (arpeggio) up, down, updown |
 | `permutation`, `advance` | (permute) plays `chord.permute(n)`; n starts at `permutation` and moves ahead by `advance` after each pass through the chord |
-
+| `num`, `den` | duration in beats = num/den |
 | `velMode` | set, accent, random, drift, ramp, pattern (see `brain/core/velocity.scd`), each with its own params |
 | `humanize` | random ± on top of any velocity mode |
 
-The surface shows each of these only for the mode it applies to (`showWhen` in the type file).
-| `velocity` | 1–127 |
-| `num`, `den` | duration in beats = num/den |
-| `active` | on/off (off by default) |
-| `dest` | destination id |
+The surface shows each param only for the mode it applies to (`showWhen`).
 
 **Grid alignment rule** (proven in the POC): onsets fall on `k · num/den` beats from transport
 start. Changing `num`/`den` restarts the routine at the next grid point of the new ratio,
@@ -265,14 +268,14 @@ The authoritative list is the header of `brain/core/osc.scd`.
 
 ## 7. Milestones
 
-1. ✅ **Brain skeleton, headless.** (`tests/timing.sh`: onsets within ~1.3 ms of the grid.) Clock, virtual MIDI outputs, FractionalRepeat with explicit note,
+1. ✅ **Brain skeleton, headless.** (`tests/run.sh`: onsets within ~1.3 ms of the grid.) Clock, MIDI outputs, first generator with explicit note,
    OSC transport/tempo/gen control. Verified by a test harness that captures the MIDI output
    (loop the brain's port back into a MIDI listener) and checks onset times against the grid.
 2. ✅ **REAPER rack.** `setup.lua` builds tracks from `destinations.json`; confirm Pianoteq 9 plays
    from the brain on two destinations.
 3. ✅ **Surface v1.** Transport bar, generator grid, destinations pane; brain-authoritative state sync.
 4. ✅ **Current chord.** (Inputs: every MIDI device except the IAC Driver, or `inputs` in config.scd.)
-   Latched chord with auto/arm modes; FractionalRepeat `source` (preset, index, arpeggio, lowest,
+   Latched chord with auto/arm modes; generator `source` (preset, index, arpeggio, lowest,
    highest); chord bar in the surface.
 5. ✅ **Persistence.** (Save…/Load… in the surface; files in `performances/`.) Save/load performance JSON; REAPER project alongside.
 6. **More generator types** (e.g. euclidean, probability gates) and other note sources

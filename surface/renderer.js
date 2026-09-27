@@ -6,11 +6,13 @@ const el = (tag, props = {}, ...children) => {
   e.append(...children);
   return e;
 };
+// Enter commits a typed value (fires 'change') by leaving the field.
+const blurOnEnter = (input) => input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
 
 // --- mirror of the brain's state ---
 const model = {
   playing: false, bpm: 120, ports: [],
-  types: new Map(),  // name -> [{ name, kind, def, args, show: { param, values } }]
+  types: new Map(),  // name -> [{ name, kind, def, args, show?: { param, values }, section? }]
   chord: { mode: 'auto', armed: false, pitches: [] },
   dests: new Map(),  // id -> { id, name, port, channel, instrument }
   gens: new Map(),   // id -> { id, type, dest, active, params, card }
@@ -37,7 +39,6 @@ setInterval(() => {
 $('play').onclick = () => osc.send('/transport/play', model.playing ? 0 : 1);
 document.addEventListener('keydown', (e) => {
   const typing = ['INPUT', 'SELECT'].includes(e.target.tagName) && e.target.type !== 'range';
-  if (e.key === 'Enter' && e.target.closest?.('.mod')) e.target.blur();
   if (e.code === 'Space' && !typing) { e.preventDefault(); $('play').blur(); osc.send('/transport/play', model.playing ? 0 : 1); }
 });
 
@@ -59,8 +60,7 @@ function renderMod() {
   const [num, den] = modFraction();
   $('mod-apply').textContent = `→ ${+(model.bpm * num / den).toFixed(1)}`;
 }
-$('mod-num').addEventListener('input', renderMod);
-$('mod-den').addEventListener('input', renderMod);
+['mod-num', 'mod-den'].forEach((id) => { $(id).addEventListener('input', renderMod); blurOnEnter($(id)); });
 $('mod-swap').onclick = () => {
   [$('mod-num').value, $('mod-den').value] = [$('mod-den').value, $('mod-num').value];
   renderMod();
@@ -119,7 +119,7 @@ dial.addEventListener('pointerdown', (e) => {
 dial.addEventListener('wheel', (e) => { e.preventDefault(); sendTempo(localBpm - Math.sign(e.deltaY)); });
 dial.addEventListener('dblclick', () => $('bpm').select());
 $('bpm').addEventListener('change', () => sendTempo(parseFloat($('bpm').value) || model.bpm));
-$('bpm').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('bpm').blur(); });
+blurOnEnter($('bpm'));
 
 // --- generator controls, built from the type's schema ---
 const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
@@ -142,7 +142,7 @@ function numberInput(min, max, onChange, step = 1) {
     input.value = v;
     onChange(v);
   });
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+  blurOnEnter(input);
   return input;
 }
 
@@ -155,8 +155,8 @@ function slider(min, max, onChange) {
   return { input, out };
 }
 
-// Returns { label, control, update(value) } for one param, or for num/den combined.
-// learn(on) asks the brain to set this param from the next key played (note params only).
+// One param's control: { label, control, update(value), learning?(on) }.
+// learn(on) asks the brain to set the param from the next key played (note params only).
 function paramControl(spec, send, learn) {
   const [min, max, step = 1] = spec.args;
   if (spec.kind === 'note') {
@@ -191,7 +191,7 @@ function paramControl(spec, send, learn) {
   }
   const input = el('input', { type: 'text' });
   input.addEventListener('change', () => send(input.value));
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+  blurOnEnter(input);
   return { label: spec.name, control: input, update: (v) => { if (!editing(input)) input.value = v; } };
 }
 
@@ -263,14 +263,16 @@ function buildCard(gen) {
   };
 }
 
+function mountCard(gen) {
+  gen.card = buildCard(gen);
+  gen.card.render();
+  for (const [k, v] of Object.entries(gen.params)) gen.card.param(k, v);
+  $('grid').append(gen.card.root);
+}
+
 function renderGens() {
   $('grid').replaceChildren();
-  for (const gen of model.gens.values()) {
-    gen.card = buildCard(gen);
-    gen.card.render();
-    for (const [k, v] of Object.entries(gen.params)) gen.card.param(k, v);
-    $('grid').append(gen.card.root);
-  }
+  model.gens.forEach(mountCard);
 }
 
 function renderTypes() {
@@ -323,6 +325,8 @@ function renderAll() {
 }
 
 // --- brain messages ---
+const specOf = (type, name) => model.types.get(type)?.find((s) => s.name === name);
+
 const handlers = {
   '/pong': (id) => {
     lastPong = Date.now();
@@ -349,13 +353,10 @@ const handlers = {
     model.chord = { mode, armed: !!armed, pitches };
     if (!inSnapshot) renderChord();
   },
-  '/gen/section': (type, name) => {
-    const spec = model.types.get(type)?.find((s) => s.name === name);
-    if (spec) spec.section = true;
-  },
+  '/gen/section': (type, name) => { const spec = specOf(type, name); if (spec) spec.section = true; },
   '/gen/learn': (id, name, on) => model.gens.get(id)?.card?.learning(name, !!on),
   '/gen/show': (type, name, param, ...values) => {
-    const spec = model.types.get(type)?.find((s) => s.name === name);
+    const spec = specOf(type, name);
     if (spec) spec.show = { param, values: values.map(String) };
   },
   '/gen/schema': (type, name, kind, def, ...args) => {
@@ -375,8 +376,7 @@ const handlers = {
     }
     Object.assign(gen, { dest, active: !!active });
     if (inSnapshot) return;
-    if (!gen.card) { gen.card = buildCard(gen); $('grid').append(gen.card.root); }
-    gen.card.render();
+    if (gen.card) gen.card.render(); else mountCard(gen);
   },
   '/gen/param': (id, name, value) => {
     const gen = model.gens.get(id);

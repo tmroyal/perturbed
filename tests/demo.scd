@@ -9,7 +9,7 @@ Routine {
 	brain.sendMsg('/hello');
 	0.5.wait;
 	ids.clear;
-	3.do { brain.sendMsg('/gen/add', "fractionalRepeat") };
+	3.do { brain.sendMsg('/gen/add', "basic") };
 	0.3.wait;
 	[[1, 60, 1, 1], [2, 64, 3, 4], [2, 67, 2, 3]].do { |spec, i|
 		var id = ids[i];

@@ -9,7 +9,7 @@
 (
 var brain = NetAddr("127.0.0.1", 57120);
 var log = List[];      // [time, \on|\off, chan, note]
-var tol = 0.010;       // seconds; typical error is < 1 ms, occasional ~5 ms outliers are fine
+var tol = 0.010;       // seconds
 var bps = 2;           // beats per second at 120 bpm
 var changeAt;
 var fail = false;
@@ -53,7 +53,6 @@ Routine {
 		var bAfter = b.select { |t| t >= (changeAt + 0.05) };
 		var errA = a.collect { |t| resid.(t, 1) };
 		var errB = bBefore.collect { |t| resid.(t, 0.75) } ++ bAfter.collect { |t| resid.(t, 1/3) };
-		var alternates;
 		var meets = a.select { |t| (beat.(t).round % 3) == 0 }
 			.collect { |t| b.collect { |u| (u - t).abs }.minItem };
 
@@ -61,22 +60,13 @@ Routine {
 		check.(a.size >= 14 and: { bBefore.size >= 10 } and: { bAfter.size >= 15 }, "onset counts");
 		check.(errA.maxItem < tol, "1/1 on grid (max err % ms)".format((errA.maxItem * 1000).round(0.1)));
 		check.(errB.maxItem < tol, "3/4 then 1/3 on grid (max err % ms)".format((errB.maxItem * 1000).round(0.1)));
-		if(errB.maxItem >= tol) {
-			"  gen 2 onsets (beat): %".format((bBefore ++ bAfter).collect { |t| beat.(t).round(0.001) }).postln;
-			"  change sent at beat %".format(beat.(changeAt).round(0.001)).postln;
-		};
 		check.(meets.size >= 4 and: { meets.maxItem < tol },
 			"1/1 and 3/4 meet every 3 beats (% meetings, max gap % ms)".format(meets.size, (meets.maxItem * 1000).round(0.1)));
 		check.(ons.size == offs.size, "note-ons balanced by note-offs (% / %)".format(ons.size, offs.size));
 		// per channel and pitch, events must alternate on, off, on, ... (a late off would cut the next note)
-		alternates = log.collect { |e| [e[2], e[3]] }.asSet.every { |key|
+		check.(log.collect { |e| [e[2], e[3]] }.asSet.every { |key|
 			log.select { |e| [e[2], e[3]] == key }.collect(_[1]).every { |kind, i| kind == [\on, \off].wrapAt(i) }
-		};
-		check.(alternates, "each note-off arrives before the next note-on of that pitch");
-		if(alternates.not) { log.collect { |e| [e[2], e[3]] }.asSet.do { |key|
-			"  ch % note %: %".format(key[0], key[1], log.select { |e| [e[2], e[3]] == key }
-				.collect { |e| "%@%".format(e[1], ((e[0] - t0) * 1000).round(0.1)) }).postln;
-		} };
+		}, "each note-off arrives before the next note-on of that pitch");
 		if(fail) { "TIMING FAILED".postln; 1.exit } { "TIMING PASSED".postln; 0.exit };
 	}.try { |err| err.reportError; "TIMING FAILED".postln; 1.exit };
 }.play(SystemClock);

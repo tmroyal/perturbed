@@ -15,7 +15,7 @@ if ! grep -q "brain ready" "$LOG"; then echo "brain did not start:"; tail -30 "$
 grep "brain ready" "$LOG"
 
 OUT=$(limit 20 "$SCLANG" tests/timing.scd 2>&1)
-echo "$OUT" | grep -E "^(ok|FAIL|gen |TIMING|ERROR|  )"
+echo "$OUT" | grep -E "^(ok|FAIL|gen |TIMING|ERROR)"
 echo "$OUT" | grep -q "TIMING PASSED"
 status=$?
 

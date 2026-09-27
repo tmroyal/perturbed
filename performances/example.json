@@ -1,0 +1,26 @@
+{
+  "tempo": 96,
+  "chordMode": "auto",
+  "chord": [57, 60, 64, 67],
+  "clocks": [
+    {"id": 1, "mode": "factor", "factor": 1.01, "num": 1, "den": 1, "bpm": 96}
+  ],
+  "destinations": [
+    {"id": 1, "name": "Piano 1", "port": 1, "channel": 1, "instrument": "Pianoteq 9"},
+    {"id": 2, "name": "Piano 2", "port": 1, "channel": 2, "instrument": "Pianoteq 9"}
+  ],
+  "generators": [
+    {"id": 1, "type": "basic", "dest": 1, "active": true,
+     "params": {"source": "arpeggio", "direction": "up", "num": 1, "den": 4,
+                "rhythm": "euclid", "pulses": 5, "steps": 8,
+                "velMode": "accent", "velocity": 60, "accent": 100, "every": 4}},
+    {"id": 2, "type": "basic", "dest": 2, "active": true,
+     "params": {"source": "arpeggio", "direction": "up", "num": 1, "den": 4,
+                "rhythm": "euclid", "pulses": 5, "steps": 8,
+                "velMode": "accent", "velocity": 60, "accent": 100, "every": 4, "clock": 1}},
+    {"id": 3, "type": "basic", "dest": 1, "active": true,
+     "params": {"source": "lowest", "num": 3, "den": 1, "velMode": "drift", "low": 40, "high": 80, "rate": 0.25}},
+    {"id": 4, "type": "passthrough", "dest": 2, "active": false,
+     "params": {"octave": 1, "lo": 72, "hi": 108, "delay": 0.5}}
+  ]
+}

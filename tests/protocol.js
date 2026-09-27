@@ -132,12 +132,18 @@ sock.bind(0, async () => {
     const [savedGen] = await g2;
     send('/gen/set', savedGen, 'dest', savedDest);
     send('/gen/set', savedGen, 'num', 5);
+    send('/gen/set', savedGen, 'rate', 0.25);  // fractional value of a float param
     send('/gen/set', savedGen, 'source', 'arpeggio');
     send('/chord/mode', 'arm');
     send('/chord/set', 62, 65, 69);
     const tempo2 = next('/transport', (p, bpm) => bpm === 111);
     send('/transport/tempo', 111);
     await tempo2;
+    const pg = next('/gen', (id, t) => t === 'passthrough');
+    send('/gen/add', 'passthrough');
+    const [passGen] = await pg;
+    send('/gen/set', passGen, 'delay', 0.5);
+    await new Promise((r) => setTimeout(r, 100));
     send('/save', file);
     await new Promise((r) => setTimeout(r, 200));
     send('/gen/remove', savedGen);
@@ -157,7 +163,9 @@ sock.bind(0, async () => {
     check(has('/dest', (id, name, port, ch, inst) => id === savedDest && name === 'saved' && ch === 3 && inst === 'Pianoteq 9'), 'load restores destinations');
     check(has('/gen', (id, t, d) => id === savedGen && d === savedDest), 'load restores generators with their dest');
     check(has('/gen/param', (id, p, v) => id === savedGen && p === 'num' && v === 5)
-      && has('/gen/param', (id, p, v) => id === savedGen && p === 'source' && v === 'arpeggio'), 'load restores params');
+      && has('/gen/param', (id, p, v) => id === savedGen && p === 'source' && v === 'arpeggio')
+      && has('/gen/param', (id, p, v) => id === savedGen && p === 'rate' && Math.abs(v - 0.25) < 1e-6), 'load restores params');
+    check(has('/gen/param', (id, p, v) => id === passGen && p === 'delay' && Math.abs(v - 0.5) < 1e-6), 'load keeps 0.5 for a param defaulting to 0');
     require('fs').unlinkSync(file);
   } catch (e) {
     check(false, e.message);

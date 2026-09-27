@@ -16,11 +16,13 @@
 
 ~writeJSON = { |path, x| File.use(path, "w", { |f| f.write(~toJSON.(x) ++ "\n") }) };
 
-// JSON scalars arrive as strings; convert each param to the type of its default.
+// JSON scalars arrive as strings; convert each param to the kind of its default. Numbers stay
+// integers when whole and the default is an integer (so 0.5 for a param defaulting to 0 survives).
 ~fromJSON = { |value, default|
-	case
-	{ default.isKindOf(Integer) } { value.asFloat.round.asInteger }
-	{ default.isKindOf(Float) } { value.asFloat }
-	{ value.asString };
+	var v;
+	if(default.isKindOf(Number)) {
+		v = value.asFloat;
+		if(default.isKindOf(Integer) and: { v.frac == 0 }) { v.asInteger } { v };
+	} { value.asString };
 };
 )

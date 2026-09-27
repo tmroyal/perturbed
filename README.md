@@ -8,7 +8,7 @@ brain/     SuperCollider: clock, current chord, generators, MIDI out, OSC (the a
 surface/   Electron UI; renders what the brain reports, sends intents over OSC
            (icon: node surface/icon/make-icon.js regenerates surface/icon/)
 reaper/    setup.lua builds monitor-only tracks from destinations.json (written by the brain)
-tests/     run.sh: timing, basic generator and OSC protocol tests against a test brain
+tests/     run.sh: timing, generator and OSC protocol tests against a test brain
 archive/   the first proof of concept
 ```
 

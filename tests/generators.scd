@@ -1,5 +1,6 @@
-// basic.scd — plays into a running test-mode brain (its input is IAC Bus 2) and checks the current
-// chord (auto and arm modes, clear) and the basic generator: note sources, Set, velocity modes.
+// generators.scd — plays into a running test-mode brain (its input is IAC Bus 2) and checks the
+// current chord (auto and arm modes, clear), the basic generator (note sources, Set, rhythm and
+// velocity modes) and passthrough (transpose, zone).
 // Run via tests/run.sh.
 (
 var brain = NetAddr("127.0.0.1", "PERFORMED_PORT".getenv.asInteger);
@@ -26,6 +27,11 @@ out = MIDIOut.newByName("IAC Driver", "Bus 2");
 out.latency = 0;
 OSCdef(\chord, { |msg| chord = msg[1..] }, '/chord');
 OSCdef(\gen, { |msg| genId = msg[1] }, '/gen');
+OSCdef(\dest, { |msg| ~destId = msg[1] }, '/dest');
+~midi = List[];
+MIDIClient.sources.select { |e| e.device == "IAC Driver" and: { e.name == "Bus 1" } }.do { |e| MIDIIn.connect(0, e) };
+MIDIdef.noteOn(\passOn, { |vel, note, ch| if(ch == 2) { ~midi.add([\on, note]) } });
+MIDIdef.noteOff(\passOff, { |vel, note, ch| if(ch == 2) { ~midi.add([\off, note]) } });
 OSCdef(\param, { |msg| if(msg[1] == genId and: { msg[2] == 'note' }) { ~noteParam = msg[3] } }, '/gen/param');
 OSCdef(\note, { |msg| if(msg[1] == genId) { notes.add(msg[2]); vels.add(msg[3]); times.add(Main.elapsedTime) } }, '/note');
 // plays n quarter-beat grid steps with the given params; returns the grid steps that played.
@@ -144,8 +150,28 @@ Routine {
 	check.(run.(\lowest).isEmpty, "empty chord rests");
 
 	brain.sendMsg('/gen/remove', genId);
+
+	// passthrough: transport stopped; zone C4..C5, up an octave and a tone
+	brain.sendMsg('/gen/add', "passthrough");
+	0.1.wait;
+	[[\octave, 1], [\semitone, 2], [\lo, 60], [\hi, 72], [\active, 1]].do { |m| brain.sendMsg('/gen/set', genId, *m) };
+	0.1.wait;
+	notes.clear;
+	[59, 60, 72, 73].do { |n| out.noteOn(0, n, 90); 0.03.wait; out.noteOff(0, n, 0); 0.03.wait };
+	0.1.wait;
+	check.(notes.asArray == [74, 86], "passthrough: zone and transpose (%)".format(notes));
+	// with a destination (port 1 ch 3): MIDI arrives on IAC Bus 1, note-offs included
+	brain.sendMsg('/dest/add', "pass", 1, 3, "none");
+	0.1.wait;
+	brain.sendMsg('/gen/set', genId, \dest, ~destId);
+	0.1.wait;
+	~midi.clear;
+	[60, 64].do { |n| out.noteOn(0, n, 90) }; 0.05.wait; [60, 64].do { |n| out.noteOff(0, n, 0) }; 0.1.wait;
+	check.(~midi.asArray == [[\on, 74], [\on, 78], [\off, 74], [\off, 78]], "passthrough: MIDI out on ch 3 (%)".format(~midi));
+	brain.sendMsg('/dest/remove', ~destId);
+	brain.sendMsg('/gen/remove', genId);
 	brain.sendMsg('/chord/mode', "auto");
 	0.1.wait;
-	if(fail) { "BASIC FAILED".postln; 1.exit } { "BASIC PASSED".postln; 0.exit };
+	if(fail) { "GENERATORS FAILED".postln; 1.exit } { "GENERATORS PASSED".postln; 0.exit };
 }.play(SystemClock);
 )

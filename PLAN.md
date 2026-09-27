@@ -84,6 +84,7 @@ brain/
   config.scd          MIDI ports (IAC buses), latency, default destinations
   types/
     basic.scd         the basic generator (§3.3)
+    passthrough.scd   keyboard → destination, transposed, zoned (§3.4)
     ...               one file per generator type; filename = type name
 ```
 
@@ -182,6 +183,14 @@ start. Changing `num`/`den` restarts the routine at the next grid point of the n
 `ceil(now / d) · d`, so generators keep their ratios with each other (3/4 and 1/1 meet every
 3 beats). A sounding note is not cut by a restart; it is released by the next strike.
 
+
+### 3.4 Passthrough
+
+Plays the keyboard into its destination while active, with or without the transport running.
+`octave` + `semitone` transpose; only keys from `lo` to `hi` pass (a cheap MIDI zone, with Set
+buttons to pick the ends from the keyboard). Notes are sent immediately; each note-off goes to the
+pitch its note-on sounded. Types like this implement `key` instead of (or besides) `run`.
+
 ### 3.4 Destinations
 
 `(port, channel)` with a display name and the intended REAPER instrument. Ports and channels are
@@ -196,8 +205,8 @@ start. Changing `num`/`den` restarts the routine at the next grid point of the n
 - MIDI is sent with a fixed latency (`MIDIOut.latency`, e.g. 0.05 s). On macOS, CoreMIDI
   delivers timestamped packets, so notes should land at logical time + latency regardless of
   sclang jitter.
-- Live keyboard input used for the *chord* needs no latency; keyboard input *played through* to
-  REAPER should go directly (REAPER track listening to the keyboard), not via the brain.
+- Live keyboard input used for the *chord* needs no latency. Keyboard notes *played through* (the
+  passthrough type) are sent immediately, without the scheduling latency.
 - UI feedback (note LEDs, beat indicator) is scheduled `latency` later so it lines up with the sound.
 
 ---

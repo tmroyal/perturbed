@@ -21,7 +21,7 @@
 
 ~removeDest = { |id|
 	~dests.removeAt(id) !? {
-		~gens.do { |g| if(g[\dest] == id) { ~release.(g); g[\dest] = 0; ~sendGen.(g) } };
+		~gens.do { |g| if(g[\dest] == id) { ~release.(g); ~releaseHeld.(g); g[\dest] = 0; ~sendGen.(g) } };
 		~send.('/dest/removed', id);
 		~writeDestinations.();
 	};

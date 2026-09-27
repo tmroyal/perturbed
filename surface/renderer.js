@@ -169,7 +169,7 @@ function paramControl(spec, send, learn) {
     const setBtn = el('button', { className: 'learn', textContent: 'Set', title: 'Set from the next key played',
       onclick: () => learn(!learning) });
     return {
-      label: 'note', control: el('div', { className: 'row' }, name, octave, setBtn),
+      label: spec.name, control: el('div', { className: 'row' }, name, octave, setBtn),
       update: (v) => { pc = v % 12; oct = Math.floor(v / 12); name.value = pc; octave.value = oct; },
       learning: (on) => { learning = on; setBtn.classList.toggle('on', on); setBtn.textContent = on ? 'Play…' : 'Set'; },
     };

@@ -8,7 +8,7 @@ SCLANG=/Applications/SuperCollider.app/Contents/MacOS/sclang
 LOG=$(mktemp -t brain)
 limit() { perl -e 'alarm shift; exec @ARGV' "$@"; }
 
-PERFORMED_TEST=1 perl -e 'alarm shift; exec @ARGV' 25 "$SCLANG" brain/main.scd > "$LOG" 2>&1 &
+PERFORMED_TEST=1 perl -e 'alarm shift; exec @ARGV' 60 "$SCLANG" brain/main.scd > "$LOG" 2>&1 &
 BRAIN=$!
 trap 'kill -9 $BRAIN 2>/dev/null' EXIT
 
@@ -21,7 +21,7 @@ echo "$OUT" | grep -E "^(ok|FAIL|gen |TIMING|ERROR)"
 echo "$OUT" | grep -q "TIMING PASSED"
 status=$?
 
-OUT=$(limit 15 "$SCLANG" tests/chord.scd 2>&1)
+OUT=$(limit 30 "$SCLANG" tests/chord.scd 2>&1)
 echo "$OUT" | grep -E "^(ok|FAIL|CHORD|ERROR)"
 echo "$OUT" | grep -q "CHORD PASSED" || status=1
 

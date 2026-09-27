@@ -163,7 +163,9 @@ Repeats one note; each note lasts `num/den` beats and is released by the next.
 | `direction` | (arpeggio) up, down, updown |
 | `permutation`, `advance` | (permute) plays `chord.permute(n)`; n starts at `permutation` and moves ahead by `advance` after each pass through the chord |
 
-The surface shows each of these only for the source it applies to (`showWhen` in the type file).
+| `velMode` | set, accent, random, drift, ramp (see `brain/core/velocity.scd`), each with its own params |
+
+The surface shows each of these only for the mode it applies to (`showWhen` in the type file).
 | `velocity` | 1–127 |
 | `num`, `den` | duration in beats = num/den |
 | `active` | on/off (off by default) |
@@ -230,7 +232,7 @@ Brain → surface (state):
 /gen/param           <id> <param> <value>
 /gen/removed         <id>
 /gen/schema          <type> <param> <kind> <default> <args>...
-                     kind = range (min max) | note | choice (options)
+                     kind = range (min max [step]) | note | choice (options)
 /gen/show            <type> <param> <otherParam> <value>...   show param only for those values
 /dest                <id> <name> <port> <channel> <instrument>
 /dest/removed        <id>
@@ -303,6 +305,8 @@ Useful code and lessons:
 - **Gotchas:**
   - Electron's binary download may be skipped by npm; run `node node_modules/electron/install.js`.
   - In sclang, `a = e[\k] = x` assigns the Event, not `x` (`put` returns the receiver).
+  - sclang binary operators have no precedence: `a + b * c` is `(a + b) * c`. Parenthesize.
+  - sclang ignores SIGTERM (use `kill -9`) and rejects unknown command-line flags (use env vars).
   - `Scale` uses `performDegreeToKey`, not `degreeToKey`.
   - Timestamp everything that touches the output (note-offs and frees too), or queued events
     arrive after the target is gone.

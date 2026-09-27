@@ -135,10 +135,10 @@ function selectInput(options, onChange) {
   return sel;
 }
 
-function numberInput(min, max, onChange) {
-  const input = el('input', { type: 'number', min, max, step: 1 });
+function numberInput(min, max, onChange, step = 1) {
+  const input = el('input', { type: 'number', min, max, step });
   input.addEventListener('change', () => {
-    const v = Math.min(max, Math.max(min, parseInt(input.value) || min));
+    const v = Math.min(max, Math.max(min, +(Math.round((parseFloat(input.value) || min) / step) * step).toFixed(4)));
     input.value = v;
     onChange(v);
   });
@@ -157,7 +157,7 @@ function slider(min, max, onChange) {
 
 // Returns { label, control, update(value) } for one param, or for num/den combined.
 function paramControl(spec, send) {
-  const [min, max] = spec.args;
+  const [min, max, step = 1] = spec.args;
   if (spec.kind === 'note') {
     // pitch class + octave -> MIDI note (capped at G9 = 127)
     let pc = 0, oct = 5;
@@ -181,7 +181,7 @@ function paramControl(spec, send) {
     };
   }
   if (spec.kind === 'range') {
-    const input = numberInput(min, max, send);
+    const input = numberInput(min, max, send, step);
     return { label: spec.name, control: input, update: (v) => { if (!editing(input)) input.value = v; } };
   }
   const input = el('input', { type: 'text' });

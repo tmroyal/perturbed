@@ -14,10 +14,9 @@ params: [
 	[\direction, "up", \choice, "up", "down", "updown"],
 	[\permutation, 0, \range, 0, 719],
 	[\advance, 1, \range, 0, 32],
-	[\velocity, 80, \range, 1, 127],
 	[\num, 1, \range, 1, 32],
 	[\den, 1, \range, 1, 32],
-],
+] ++ ~velocityParams,
 
 // params the surface shows only for some values of another param
 showWhen: (
@@ -26,7 +25,7 @@ showWhen: (
 	direction: [\source, "arpeggio"],
 	permutation: [\source, "permute"],
 	advance: [\source, "permute"],
-),
+) ++ ~velocityShow,
 
 restartOn: [\num, \den],
 
@@ -38,7 +37,7 @@ run: { |g, p|
 		var note;
 		(k * dur - thisThread.beats).max(0).wait;
 		note = if(p[\source].asSymbol == \note) { p[\note].asInteger } { ~chordNote.(p, step) };
-		if(note.notNil) { ~strike.(g, note.clip(0, 127), p[\velocity].asInteger.clip(1, 127)) } { ~release.(g) };
+		if(note.notNil) { ~strike.(g, note.clip(0, 127), ~velocity.(g, p, k)) } { ~release.(g) };
 		k = k + 1;
 		step = step + 1;
 	};

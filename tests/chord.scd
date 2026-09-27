@@ -1,8 +1,10 @@
 // chord.scd — plays into a running test-mode brain (its input is IAC Bus 2) and checks the current
-// chord (auto and arm modes, clear) and the generator source choices. Run via tests/run.sh.
+// chord (auto and arm modes, clear), the generator source choices and velocity modes.
+// Run via tests/run.sh.
 (
 var brain = NetAddr("127.0.0.1", "PERFORMED_PORT".getenv.asInteger);
-var out, chord, genId, notes = List[];
+var v;
+var out, chord, genId, notes = List[], vels = List[];
 var fail = false;
 var check = { |ok, what| if(ok.not) { fail = true }; "%  %".format(if(ok) { "ok  " } { "FAIL" }, what).postln };
 var play = { |ons, offs| ons.do { |n| out.noteOn(0, n, 90); 0.02.wait }; offs.do { |n| out.noteOff(0, n, 0); 0.02.wait }; 0.1.wait };
@@ -22,7 +24,17 @@ out = MIDIOut.newByName("IAC Driver", "Bus 2");
 out.latency = 0;
 OSCdef(\chord, { |msg| chord = msg[1..] }, '/chord');
 OSCdef(\gen, { |msg| genId = msg[1] }, '/gen');
-OSCdef(\note, { |msg| if(msg[1] == genId) { notes.add(msg[2]) } }, '/note');
+OSCdef(\note, { |msg| if(msg[1] == genId) { notes.add(msg[2]); vels.add(msg[3]) } }, '/note');
+// plays n quarter-beat notes with the given params; returns the velocities
+~vel = { |pairs, n = 8|
+	vels.clear;
+	pairs.do { |m| brain.sendMsg('/gen/set', genId, *m) };
+	brain.sendMsg('/transport/play', 1);
+	(n * 0.125 - 0.06).wait;
+	brain.sendMsg('/transport/play', 0);
+	0.1.wait;
+	vels.asArray;
+};
 
 Routine {
 	brain.sendMsg('/hello');
@@ -70,6 +82,17 @@ Routine {
 	brain.sendMsg('/gen/set', genId, \advance, 2);
 	check.(run.(\permute, 0, 12) == ([57, 62, 65, 69].permute(5) ++ [57, 62, 65, 69].permute(7) ++ [57, 62, 65, 69].permute(9)),
 		"permute: permutation 5, advancing by 2 each pass (%)".format(notes));
+
+	brain.sendMsg('/gen/set', genId, \source, "note");
+	check.(~vel.([[\velMode, "set"], [\velocity, 77]]).every(_ == 77), "velocity set");
+	v = ~vel.([[\velMode, "accent"], [\velocity, 50], [\accent, 120], [\every, 3]]);
+	check.(v == [120, 50, 50, 120, 50, 50, 120, 50], "velocity accent every 3 (%)".format(v));
+	v = ~vel.([[\velMode, "random"], [\low, 30], [\high, 40]], 16);
+	check.(v.every(_.inclusivelyBetween(30, 40)) and: { v.asSet.size > 1 }, "velocity random in range (%)".format(v));
+	v = ~vel.([[\velMode, "drift"], [\low, 20], [\high, 110], [\rate, 1]], 16);
+	check.(v.every(_.inclusivelyBetween(20, 110)) and: { v.asSet.size > 1 }, "velocity drift in range (%)".format(v));
+	v = ~vel.([[\velMode, "ramp"], [\low, 20], [\high, 100], [\attack, 1], [\decay, 1]], 9);
+	check.(v == [20, 40, 60, 80, 100, 80, 60, 40, 20], "velocity ramp (%)".format(v));
 
 	brain.sendMsg('/chord/clear');
 	0.1.wait;

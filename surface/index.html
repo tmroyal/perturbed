@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<title>performed</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="transport">
+    <button id="play">Play</button>
+    <div class="tempo">
+      <svg id="dial" viewBox="0 0 48 48">
+        <path id="dial-track" fill="none" stroke="#434C5E" stroke-width="4" stroke-linecap="round"/>
+        <path id="dial-value" fill="none" stroke="#88C0D0" stroke-width="4" stroke-linecap="round"/>
+        <line id="dial-pointer" stroke="#ECEFF4" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <input id="bpm" type="number" min="20" max="400" step="1">
+      <label for="bpm">BPM</label>
+    </div>
+    <div id="beats"><span></span><span></span><span></span><span></span></div>
+    <div class="spacer"></div>
+    <span id="status">waiting for brain…</span>
+  </div>
+  <div id="main">
+    <section id="gens-pane">
+      <div class="pane-head"><h1>Generators</h1><div id="add-gen"></div></div>
+      <div id="grid"></div>
+    </section>
+    <aside id="dests-pane">
+      <div class="pane-head"><h1>Destinations</h1></div>
+      <div id="dests"></div>
+      <form id="dest-form" class="card">
+        <div class="fields">
+          <label for="dest-name">name</label><input id="dest-name" type="text" placeholder="Piano 3">
+          <label>route</label>
+          <div class="row"><select id="dest-port"></select><select id="dest-channel"></select></div>
+          <label for="dest-inst">instrument</label><input id="dest-inst" type="text" value="Pianoteq 9">
+        </div>
+        <button type="submit">+ Destination</button>
+      </form>
+      <p class="hint">After adding or removing destinations, run <b>setup.lua</b> in REAPER.</p>
+    </aside>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>

@@ -1,8 +1,9 @@
 // midi.scd — MIDI outputs (one MIDIOut per configured port) and note on/off.
 //
 // Every message is timestamped `latency` after the calling thread's logical time, so CoreMIDI
-// delivers it on time regardless of sclang jitter. Channels and ports are 1-based everywhere
-// outside this file.
+// delivers it on time regardless of sclang jitter. MIDIOut.latency counts from the moment of
+// sending, not from logical time, so ~out subtracts how late the thread is running.
+// Channels and ports are 1-based everywhere outside this file.
 (
 ~midiInit = {
 	MIDIClient.init(verbose: false);
@@ -16,6 +17,13 @@
 	};
 };
 
-~noteOn = { |dest, note, vel| ~outs[dest[\port] - 1] !? { |o| o.noteOn(dest[\channel] - 1, note, vel) } };
-~noteOff = { |dest, note| ~outs[dest[\port] - 1] !? { |o| o.noteOff(dest[\channel] - 1, note, 0) } };
+~out = { |dest|
+	~outs[dest[\port] - 1] !? { |o|
+		o.latency = (~config[\latency] - (Main.elapsedTime - thisThread.seconds)).max(0);
+		o;
+	};
+};
+
+~noteOn = { |dest, note, vel| ~out.(dest) !? { |o| o.noteOn(dest[\channel] - 1, note, vel) } };
+~noteOff = { |dest, note| ~out.(dest) !? { |o| o.noteOff(dest[\channel] - 1, note, 0) } };
 )

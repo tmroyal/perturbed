@@ -195,6 +195,7 @@ Surface → brain (intents):
 
 ```
 /hello                                  brain replies with full state
+/ping                                   brain replies /pong <bootId> (changes on restart → re-/hello)
 /transport/play      1|0
 /transport/tempo     <bpm>
 /source/arm          <slot> 1|0         next captured chord goes into slot
@@ -212,6 +213,7 @@ Brain → surface (state):
 ```
 /state/begin | /state/end               full snapshot framing (on /hello, load)
 /transport           <playing> <bpm>
+/ports               <name>...                     MIDI outputs; destination port n = nth name
 /source              <slot> <armed> <pitch>...
 /gen                 <id> <type> <dest> <active>
 /gen/param           <id> <param> <value>

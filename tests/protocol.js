@@ -1,0 +1,93 @@
+// protocol.js — acts as a surface against a running brain (test mode) and checks the OSC protocol:
+// snapshot framing, schema, echoes of every accepted change, ping/pong, removals.
+// Run via tests/run.sh.
+const dgram = require('dgram');
+const { encode, decode } = require('../surface/osc');
+
+const sock = dgram.createSocket('udp4');
+const inbox = [];
+let waiters = [];
+sock.on('message', (buf) => {
+  const msg = decode(buf);
+  inbox.push(msg);
+  waiters = waiters.filter((w) => !w(msg));
+});
+const send = (addr, ...args) => sock.send(encode(addr, args), 57120, '127.0.0.1');
+
+// Resolves with the first message (from now on) matching addr and pred.
+const next = (addr, pred = () => true, ms = 1000) => new Promise((resolve, reject) => {
+  const t = setTimeout(() => reject(new Error(`timeout waiting for ${addr}`)), ms);
+  waiters.push((m) => {
+    if (m.addr !== addr || !pred(...m.args)) return false;
+    clearTimeout(t); resolve(m.args); return true;
+  });
+});
+
+let failed = false;
+const check = (ok, what) => { if (!ok) failed = true; console.log(`${ok ? 'ok  ' : 'FAIL'}  ${what}`); };
+
+sock.bind(0, async () => {
+  try {
+    const end = next('/state/end');
+    send('/hello');
+    await end;
+    const addrs = inbox.map((m) => m.addr);
+    check(addrs[0] === '/state/begin', 'snapshot starts with /state/begin');
+    check(addrs.includes('/transport') && addrs.includes('/ports'), 'snapshot has /transport and /ports');
+    const schema = inbox.filter((m) => m.addr === '/gen/schema' && m.args[0] === 'fractionalRepeat').map((m) => m.args[1]);
+    check(['note', 'velocity', 'num', 'den'].every((p) => schema.includes(p)), `fractionalRepeat schema (${schema.join(' ')})`);
+
+    const pong = next('/pong');
+    send('/ping');
+    const [bootId] = await pong;
+    check(Number.isInteger(bootId), 'ping → pong <bootId>');
+
+    const dest = next('/dest', (id, name) => name === 'proto');
+    send('/dest/add', 'proto', 2, 16, 'none');
+    const [destId, , port, channel] = await dest;
+    check(port === 2 && channel === 16, 'dest/add echoed with port and channel');
+
+    const gen = next('/gen');
+    send('/gen/add', 'fractionalRepeat');
+    const [genId, type, , active] = await gen;
+    check(type === 'fractionalRepeat' && active === 0, 'gen/add echoed, inactive by default');
+
+    const param = next('/gen/param', (id, p, v) => id === genId && p === 'note' && v === 67);
+    send('/gen/set', genId, 'note', 67);
+    await param;
+    check(true, 'gen/set param echoed');
+
+    const destSet = next('/gen', (id, t, d) => id === genId && d === destId);
+    send('/gen/set', genId, 'dest', destId);
+    await destSet;
+    check(true, 'gen/set dest echoed');
+
+    const tempo = next('/transport', (p, bpm) => Math.abs(bpm - 97.5) < 1e-3);
+    send('/transport/tempo', 97.5);
+    await tempo;
+    check(true, 'tempo echoed');
+
+    const noteMsg = next('/note', (id) => id === genId, 1500);
+    const beat = next('/beat', () => true, 1500);
+    send('/gen/set', genId, 'active', 1);
+    send('/transport/play', 1);
+    await Promise.all([noteMsg, beat]);
+    check(true, 'playing sends /note and /beat');
+    send('/transport/play', 0);
+
+    const destGone = next('/dest/removed', (id) => id === destId);
+    const genCleared = next('/gen', (id, t, d) => id === genId && d === 0);
+    send('/dest/remove', destId);
+    await Promise.all([destGone, genCleared]);
+    check(true, 'dest/remove echoed, generator unassigned');
+
+    const genGone = next('/gen/removed', (id) => id === genId);
+    send('/gen/remove', genId);
+    await genGone;
+    check(true, 'gen/remove echoed');
+  } catch (e) {
+    check(false, e.message);
+  }
+  console.log(failed ? 'PROTOCOL FAILED' : 'PROTOCOL PASSED');
+  process.exit(failed ? 1 : 0);
+});

@@ -3,6 +3,7 @@
 //
 // Surface → brain (port 57120):
 //   /hello                                       register; brain replies with a full snapshot
+//   /ping                                        brain replies /pong to the sender only
 //   /transport/play   1|0                        play restarts at beat 0
 //   /transport/tempo  <bpm>
 //   /gen/add          <type>                     brain assigns the id
@@ -13,7 +14,9 @@
 //
 // Brain → surfaces (on the sender's address):
 //   /state/begin, /state/end                     frame a full snapshot
+//   /pong             <bootId>                   bootId changes when the brain restarts: re-/hello
 //   /transport        <playing> <bpm>
+//   /ports            <name>...                  MIDI outputs; destination port n = nth name
 //   /gen/schema       <type> <param> <kind> <default> <kind args...>
 //   /dest             <id> <name> <port> <channel> <instrument>
 //   /dest/removed     <id>
@@ -24,6 +27,7 @@
 //   /note             <genId> <pitch> <vel>      latency-aligned with the sound
 (
 ~surfaces = [];
+~bootId = 1000000.rand;
 
 ~send = { |...msg| ~surfaces.do { |a| a.sendMsg(*msg) } };
 
@@ -33,6 +37,7 @@
 ~sendState = {
 	~send.('/state/begin');
 	~sendTransport.();
+	~send.('/ports', *~config[\ports].collect(_.join(" ")));
 	~sendSchema.();
 	~dests.keys.asArray.sort.do { |id| ~sendDest.(~dests[id]) };
 	~gens.keys.asArray.sort.do { |id| ~sendGen.(~gens[id]); ~sendParams.(~gens[id]) };
@@ -50,6 +55,8 @@
 		if(~surfaces.includesEqual(addr).not) { ~surfaces = ~surfaces.add(addr) };
 		~sendState.();
 	}, '/hello');
+
+	OSCdef(\ping, { |msg, time, addr| addr.sendMsg('/pong', ~bootId) }, '/ping');
 
 	OSCdef(\play, { |msg| ~setPlaying.(msg[1].asInteger == 1) }, '/transport/play');
 	OSCdef(\tempo, { |msg| ~setTempo.(msg[1]) }, '/transport/tempo');

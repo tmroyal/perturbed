@@ -1,0 +1,16 @@
+#!/bin/sh
+# Starts the brain and the surface; quitting the surface stops the brain.
+# REAPER runs separately (open reaper/performed.rpp, or run reaper/setup.lua in a new project).
+cd "$(dirname "$0")"
+SCLANG=/Applications/SuperCollider.app/Contents/MacOS/sclang
+
+# npm may skip Electron's postinstall, which downloads the actual binary
+if [ ! -d surface/node_modules/electron/dist ]; then
+  (cd surface && npm install && node node_modules/electron/install.js) || exit 1
+fi
+
+"$SCLANG" brain/main.scd &
+BRAIN=$!
+trap 'kill -9 $BRAIN 2>/dev/null' EXIT   # sclang ignores SIGTERM
+
+(cd surface && npx electron .)

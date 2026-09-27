@@ -1,0 +1,87 @@
+:root {
+  /* Nord */
+  --nord0: #2E3440; --nord1: #3B4252; --nord2: #434C5E; --nord3: #4C566A;
+  --nord4: #D8DEE9; --nord5: #E5E9F0; --nord6: #ECEFF4;
+  --nord7: #8FBCBB; --nord8: #88C0D0; --nord9: #81A1C1; --nord10: #5E81AC;
+  --nord11: #BF616A; --nord12: #D08770; --nord13: #EBCB8B; --nord14: #A3BE8C; --nord15: #B48EAD;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--nord0); color: var(--nord4);
+  font: 14px/1.4 -apple-system, "SF Pro Text", sans-serif; user-select: none;
+}
+body.offline #main { opacity: .4; pointer-events: none; }
+button, input, select { font: inherit; color: var(--nord6); }
+button {
+  background: var(--nord2); border: 1px solid var(--nord3); border-radius: 6px;
+  padding: 6px 14px; cursor: pointer;
+}
+button:hover { background: var(--nord3); }
+button.on { background: var(--nord14); color: var(--nord0); border-color: var(--nord14); }
+input[type=number], input[type=text], select {
+  background: var(--nord0); border: 1px solid var(--nord3); border-radius: 4px; padding: 4px 6px;
+}
+input[type=number] { width: 52px; font-variant-numeric: tabular-nums; }
+input[type=text] { width: 100%; user-select: text; }
+input:focus, select:focus { outline: none; border-color: var(--nord8); }
+
+/* --- transport --- */
+#transport {
+  display: flex; align-items: center; gap: 16px; padding: 14px 24px;
+  background: var(--nord1); border-bottom: 1px solid var(--nord2);
+}
+#play { width: 84px; }
+.tempo { display: flex; align-items: center; gap: 10px; }
+.tempo label { color: var(--nord9); }
+#dial { width: 48px; height: 48px; cursor: ns-resize; touch-action: none; }
+#bpm { width: 64px; text-align: right; }
+#beats { display: flex; gap: 6px; }
+#beats span { width: 10px; height: 10px; border-radius: 50%; background: var(--nord2); }
+#beats span.lit { background: var(--nord8); }
+#beats span.lit:first-child { background: var(--nord13); }
+.spacer { flex: 1; }
+#status { color: var(--nord12); }
+
+/* --- layout: generators | destinations --- */
+#main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; min-height: calc(100vh - 77px); }
+.pane-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px; }
+.pane-head h1 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--nord9); }
+#add-gen { display: flex; gap: 8px; }
+#gens-pane { padding: 24px; }
+#dests-pane { padding: 24px; background: var(--nord1); border-left: 1px solid var(--nord2); }
+#grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+#grid:empty::before { content: 'Add a generator to begin.'; color: var(--nord3); }
+#dests { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+#dests:empty::before { content: 'No destinations yet.'; color: var(--nord3); }
+
+/* --- cards --- */
+.card { background: var(--nord1); border-radius: 8px; padding: 14px 16px; border-top: 3px solid var(--nord3); }
+.gen.active { border-top-color: var(--nord8); }
+.card header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.card h2 { margin: 0; font-size: 14px; font-weight: 600; color: var(--nord6); margin-right: auto; }
+.led { width: 10px; height: 10px; border-radius: 50%; background: var(--nord2); }
+.close { background: none; border: none; color: var(--nord3); padding: 0 4px; font-size: 18px; line-height: 1; }
+.close:hover { background: none; color: var(--nord11); }
+.card .buttons { display: flex; gap: 8px; margin-bottom: 14px; }
+.card .buttons button { flex: 1; }
+/* minmax(0, …) lets the value column shrink below its content (long names) instead of overflowing */
+.fields { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 10px 12px; align-items: center; }
+.fields > * { min-width: 0; }
+.fields > select, .fields > input[type=range] { width: 100%; }
+.fields label { color: var(--nord9); }
+.fields .row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.fields .row select { min-width: 0; text-overflow: ellipsis; }
+.hint { color: var(--nord3); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hint.value { width: 28px; text-align: right; flex: none; }
+#dests-pane > .hint { white-space: normal; }
+input[type=range] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 0; height: 6px; background: var(--nord2); border-radius: 3px; }
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--nord8); cursor: pointer;
+}
+
+/* --- destinations --- */
+.dest { display: flex; align-items: center; gap: 10px; background: var(--nord2); border-radius: 6px; padding: 8px 10px 8px 12px; }
+.dest .name { color: var(--nord6); font-weight: 600; flex: none; }
+.dest .route { color: var(--nord4); opacity: .7; font-size: 12px; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#dest-form { border-top-color: var(--nord15); }
+#dest-form button { margin-top: 12px; width: 100%; }

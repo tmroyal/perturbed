@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<title>performed</title>
+<style>
+  :root {
+    /* Nord */
+    --nord0: #2E3440; --nord1: #3B4252; --nord2: #434C5E; --nord3: #4C566A;
+    --nord4: #D8DEE9; --nord5: #E5E9F0; --nord6: #ECEFF4;
+    --nord7: #8FBCBB; --nord8: #88C0D0; --nord9: #81A1C1; --nord10: #5E81AC;
+    --nord11: #BF616A; --nord12: #D08770; --nord13: #EBCB8B; --nord14: #A3BE8C; --nord15: #B48EAD;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--nord0); color: var(--nord4);
+    font: 14px/1.4 -apple-system, "SF Pro Text", sans-serif; user-select: none;
+  }
+  button, input { font: inherit; color: var(--nord6); }
+  button {
+    background: var(--nord2); border: 1px solid var(--nord3); border-radius: 6px;
+    padding: 6px 14px; cursor: pointer;
+  }
+  button:hover { background: var(--nord3); }
+  button.on { background: var(--nord14); color: var(--nord0); border-color: var(--nord14); }
+  input[type=number] {
+    background: var(--nord0); border: 1px solid var(--nord3); border-radius: 4px;
+    padding: 4px 6px; width: 48px; font-variant-numeric: tabular-nums;
+  }
+  input[type=number]:focus { outline: none; border-color: var(--nord8); }
+  select {
+    background: var(--nord0); color: var(--nord6); border: 1px solid var(--nord3); border-radius: 4px;
+    padding: 4px 6px; font: inherit;
+  }
+
+  /* --- transport --- */
+  #transport {
+    display: flex; align-items: center; gap: 16px; padding: 14px 24px;
+    background: var(--nord1); border-bottom: 1px solid var(--nord2);
+  }
+  #play { width: 84px; }
+  .tempo { display: flex; align-items: center; gap: 10px; }
+  .tempo label { color: var(--nord9); }
+  #dial { width: 48px; height: 48px; cursor: ns-resize; touch-action: none; }
+  #bpm { width: 64px; text-align: right; }
+  #beats { display: flex; gap: 6px; }
+  #beats span { width: 10px; height: 10px; border-radius: 50%; background: var(--nord2); }
+  #beats span.lit { background: var(--nord8); }
+  #beats span.lit:first-child { background: var(--nord13); }
+  .spacer { flex: 1; }
+  #status { color: var(--nord3); }
+
+  /* --- layout: generators | tracks --- */
+  #main { display: grid; grid-template-columns: 1fr 320px; min-height: calc(100vh - 77px); }
+  .pane-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .pane-head h1 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--nord9); }
+  #gens-pane { padding: 24px; }
+  #tracks-pane { padding: 24px; background: var(--nord1); border-left: 1px solid var(--nord2); }
+  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  #grid:empty::before { content: 'Add a generator to begin.'; color: var(--nord3); }
+  #tracks { display: flex; flex-direction: column; gap: 12px; }
+  #tracks:empty::before { content: 'Add a track to give generators somewhere to play.'; color: var(--nord3); }
+
+  /* --- cards (generators and tracks) --- */
+  .card { background: var(--nord1); border-radius: 8px; padding: 14px 16px; border-top: 3px solid var(--nord3); }
+  .gen.active { border-top-color: var(--nord8); }
+  .track { background: var(--nord2); border-top-color: var(--nord15); }
+  .card header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .card h2 { margin: 0; font-size: 14px; font-weight: 600; color: var(--nord6); }
+  .card .state { color: var(--nord3); font-size: 12px; margin-right: auto; }
+  .track .state { color: var(--nord4); opacity: .6; }
+  .card .led { width: 10px; height: 10px; border-radius: 50%; background: var(--nord2); }
+  .card .close { background: none; border: none; color: var(--nord3); padding: 0 4px; font-size: 18px; line-height: 1; }
+  .card .close:hover { color: var(--nord11); }
+  .card .buttons { display: flex; gap: 8px; margin-bottom: 14px; }
+  .card .buttons button { flex: 1; }
+  /* minmax(0, …) lets the value column shrink below its content (long plugin names) instead of overflowing */
+  .fields { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 10px 12px; align-items: center; }
+  .track .fields { grid-template-columns: 80px minmax(0, 1fr); }
+  .fields > * { min-width: 0; }
+  .fields > select, .fields > input[type=range] { width: 100%; }
+  .fields label { color: var(--nord9); }
+  .fields .row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .fields .row select { min-width: 0; text-overflow: ellipsis; }
+  .track .row select { flex: 1; }
+  .hint { color: var(--nord3); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .hint.value { width: 24px; text-align: right; flex: none; }
+  input[type=range] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 0; height: 6px; background: var(--nord2); border-radius: 3px; }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--nord8); cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <div id="transport">
+    <button id="play">Play</button>
+    <div class="tempo">
+      <svg id="dial" viewBox="0 0 48 48">
+        <path id="dial-track" fill="none" stroke="#434C5E" stroke-width="4" stroke-linecap="round"/>
+        <path id="dial-value" fill="none" stroke="#88C0D0" stroke-width="4" stroke-linecap="round"/>
+        <line id="dial-pointer" stroke="#ECEFF4" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <input id="bpm" type="number" min="20" max="300" step="1">
+      <label for="bpm">BPM</label>
+    </div>
+    <div id="beats"><span></span><span></span><span></span><span></span></div>
+    <div class="spacer"></div>
+    <span id="status">waiting for engine…</span>
+  </div>
+  <div id="main">
+    <section id="gens-pane">
+      <div class="pane-head"><h1>Generators</h1><button id="add-repeat">+ Fractional repeat</button></div>
+      <div id="grid"></div>
+    </section>
+    <aside id="tracks-pane">
+      <div class="pane-head"><h1>Tracks</h1><button id="add-track" disabled>+ Track</button></div>
+      <div id="tracks"></div>
+    </aside>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, props = {}, ...children) => {
+    const e = Object.assign(document.createElement(tag), props);
+    e.append(...children);
+    return e;
+  };
+
+  // --- app state (authoritative; the engine gets all of it again on /engine/ready) ---
+  const state = { playing: false, bpm: 120, tracks: new Map(), gens: new Map() };
+  let instruments = [];  // [{ key, name }] from the engine's plugin scan
+  let nextId = 1;
+
+  // --- transport ---
+  function setPlaying(on) {
+    state.playing = on;
+    $('play').classList.toggle('on', on);
+    $('play').textContent = on ? 'Stop' : 'Play';
+    if (!on) showBeat(-1);
+    osc.send('/transport/play', on ? 1 : 0);
+  }
+  $('play').onclick = () => setPlaying(!state.playing);
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && e.target.tagName !== 'INPUT') { e.preventDefault(); setPlaying(!state.playing); }
+  });
+
+  function showBeat(b) {
+    [...$('beats').children].forEach((d, i) => d.classList.toggle('lit', b >= 0 && b % 4 === i));
+  }
+
+  // --- tempo dial + typed input ---
+  const BPM_MIN = 20, BPM_MAX = 300, SWEEP = 270;
+  const polar = (deg) => {
+    const r = (deg - 90) * Math.PI / 180;
+    return [24 + 18 * Math.cos(r), 24 + 18 * Math.sin(r)];
+  };
+  const arc = (from, to) => {
+    const [x1, y1] = polar(from), [x2, y2] = polar(to);
+    return `M${x1} ${y1} A18 18 0 ${to - from > 180 ? 1 : 0} 1 ${x2} ${y2}`;
+  };
+  $('dial-track').setAttribute('d', arc(-SWEEP / 2, SWEEP / 2));
+
+  function setTempo(bpm) {
+    bpm = Math.round(Math.min(BPM_MAX, Math.max(BPM_MIN, bpm)) * 10) / 10;
+    state.bpm = bpm;
+    if (document.activeElement !== $('bpm')) $('bpm').value = bpm;
+    const angle = -SWEEP / 2 + SWEEP * (bpm - BPM_MIN) / (BPM_MAX - BPM_MIN);
+    $('dial-value').setAttribute('d', arc(-SWEEP / 2, Math.max(angle, -SWEEP / 2 + 0.01)));
+    const [px, py] = polar(angle), [cx, cy] = [24 + (px - 24) * 0.45, 24 + (py - 24) * 0.45];
+    Object.entries({ x1: cx, y1: cy, x2: px, y2: py }).forEach(([k, v]) => $('dial-pointer').setAttribute(k, v));
+    osc.send('/transport/tempo', bpm);
+  }
+
+  // drag vertically (shift = fine), scroll, or double-click to type
+  const dial = $('dial');
+  dial.addEventListener('pointerdown', (e) => {
+    dial.setPointerCapture(e.pointerId);
+    let lastY = e.clientY;
+    const move = (m) => {
+      setTempo(state.bpm + (lastY - m.clientY) * (m.shiftKey ? 0.1 : 1));
+      lastY = m.clientY;
+    };
+    dial.addEventListener('pointermove', move);
+    dial.addEventListener('pointerup', () => dial.removeEventListener('pointermove', move), { once: true });
+  });
+  dial.addEventListener('wheel', (e) => { e.preventDefault(); setTempo(state.bpm - Math.sign(e.deltaY)); });
+  dial.addEventListener('dblclick', () => $('bpm').select());
+  $('bpm').addEventListener('change', () => setTempo(parseFloat($('bpm').value) || state.bpm));
+  $('bpm').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('bpm').blur(); });
+
+  // --- generator types ---
+  const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+  const OCTAVES = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];  // MIDI 60 = C4
+
+  function selectInput(options, value, onChange) {
+    const sel = el('select');
+    options.forEach((o, i) => sel.add(new Option(o, i)));
+    sel.value = value;
+    sel.addEventListener('change', () => onChange(parseInt(sel.value)));
+    return sel;
+  }
+
+  function numberInput(value, min, max, onChange) {
+    const input = el('input', { type: 'number', min, max, step: 1, value });
+    input.addEventListener('change', () => {
+      const v = Math.min(max, Math.max(min, parseInt(input.value) || min));
+      input.value = v;
+      onChange(v);
+    });
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+    return input;
+  }
+
+  const TYPES = {
+    repeat: {
+      label: 'Fractional repeat',
+      params: { note: 60, velocity: 80, num: 1, den: 1 },
+      // builds the type-specific fields; set(param, value) updates state and engine
+      fields(gen, set) {
+        // pitch class + octave -> MIDI note (capped at G9 = 127)
+        let pc = gen.params.note % 12, oct = Math.floor(gen.params.note / 12);
+        const setNote = () => set('note', Math.min(127, oct * 12 + pc));
+        const name = selectInput(NOTE_NAMES, pc, (v) => { pc = v; setNote(); });
+        const octave = selectInput(OCTAVES, oct, (v) => { oct = v; setNote(); });
+
+        const velOut = el('span', { className: 'hint value', textContent: gen.params.velocity });
+        const vel = el('input', { type: 'range', min: 1, max: 127, value: gen.params.velocity });
+        vel.addEventListener('input', () => { velOut.textContent = vel.value; set('velocity', parseInt(vel.value)); });
+
+        const beats = el('span', { className: 'hint' });
+        const showBeats = () => { beats.textContent = `= ${+(gen.params.num / gen.params.den).toFixed(3)} beat`; };
+        const num = numberInput(gen.params.num, 1, 64, (v) => { set('num', v); showBeats(); });
+        const den = numberInput(gen.params.den, 1, 64, (v) => { set('den', v); showBeats(); });
+        showBeats();
+
+        return [
+          el('label', { textContent: 'note' }), el('div', { className: 'row' }, name, octave),
+          el('label', { textContent: 'velocity' }), el('div', { className: 'row' }, vel, velOut),
+          el('label', { textContent: 'duration' }), el('div', { className: 'row' }, num, '/', den, beats),
+        ];
+      },
+    },
+  };
+
+  // --- generators ---
+  function addGen(type) {
+    const id = nextId++;
+    const track = state.tracks.keys().next().value ?? 0;
+    const gen = { id, type, active: false, track, params: { ...TYPES[type].params }, card: null };
+    state.gens.set(id, gen);
+    gen.card = buildCard(gen);
+    $('grid').append(gen.card.root);
+    sendGen(gen);
+  }
+
+  function sendGen(gen) {
+    osc.send('/gen/add', gen.id, gen.type);
+    for (const [k, v] of Object.entries(gen.params)) osc.send('/gen/set', gen.id, k, v);
+    osc.send('/gen/set', gen.id, 'track', gen.track);
+    osc.send('/gen/set', gen.id, 'active', gen.active ? 1 : 0);
+  }
+
+  function removeGen(gen) {
+    state.gens.delete(gen.id);
+    gen.card.root.remove();
+    osc.send('/gen/remove', gen.id);
+  }
+
+  const trackLabel = (tr) => `Track ${tr.id} · ${instruments.find((i) => i.key === tr.plugin)?.name ?? tr.plugin}`;
+
+  function buildCard(gen) {
+    const set = (k, v) => { gen.params[k] = v; osc.send('/gen/set', gen.id, k, v); };
+    const led = el('span', { className: 'led' });
+
+    const active = el('button');
+    const showActive = () => {
+      active.classList.toggle('on', gen.active);
+      active.textContent = gen.active ? 'Active' : 'Inactive';
+      root.classList.toggle('active', gen.active);
+    };
+    active.onclick = () => {
+      gen.active = !gen.active;
+      showActive();
+      osc.send('/gen/set', gen.id, 'active', gen.active ? 1 : 0);
+    };
+
+    const trackSel = el('select');
+    const refreshTracks = () => {
+      trackSel.replaceChildren(new Option('—', 0), ...[...state.tracks.values()].map((tr) => new Option(trackLabel(tr), tr.id)));
+      trackSel.value = gen.track;
+    };
+    trackSel.addEventListener('change', () => {
+      gen.track = parseInt(trackSel.value);
+      osc.send('/gen/set', gen.id, 'track', gen.track);
+    });
+    refreshTracks();
+
+    const root = el('section', { className: 'card gen' },
+      el('header', {},
+        el('h2', { textContent: `${TYPES[gen.type].label} ${gen.id}` }),
+        el('span', { className: 'state' }), led,
+        el('button', { className: 'close', textContent: '×', title: 'Remove', onclick: () => removeGen(gen) })),
+      el('div', { className: 'buttons' }, active),
+      el('div', { className: 'fields' },
+        el('label', { textContent: 'track' }), trackSel,
+        ...TYPES[gen.type].fields(gen, set)));
+    showActive();
+
+    return {
+      root,
+      refreshTracks,
+      flash: () => led.animate([{ background: '#EBCB8B' }, { background: '#434C5E' }], { duration: 150 }),
+    };
+  }
+
+  $('add-repeat').onclick = () => addGen('repeat');
+
+  // --- tracks: one VSTi each; generators point at them ---
+  const refreshGenTracks = () => state.gens.forEach((g) => g.card.refreshTracks());
+
+  function addTrack() {
+    const id = nextId++;
+    const plugin = (instruments.find((i) => i.name === 'Pianoteq 9') ?? instruments[0]).key;
+    const tr = { id, plugin, volume: 0.8, card: null };
+    state.tracks.set(id, tr);
+    tr.card = buildTrackCard(tr);
+    $('tracks').append(tr.card.root);
+    sendTrack(tr);
+    refreshGenTracks();
+  }
+
+  function sendTrack(tr) {
+    osc.send('/track/add', tr.id, tr.plugin);
+    osc.send('/track/volume', tr.id, tr.volume ** 2);
+  }
+
+  function removeTrack(tr) {
+    state.tracks.delete(tr.id);
+    tr.card.root.remove();
+    osc.send('/track/remove', tr.id);
+    for (const g of state.gens.values()) {
+      if (g.track === tr.id) { g.track = 0; osc.send('/gen/set', g.id, 'track', 0); }
+    }
+    refreshGenTracks();
+  }
+
+  function buildTrackCard(tr) {
+    const status = el('span', { className: 'state', textContent: 'loading…' });
+    const plugin = el('select');
+    const refreshPlugins = () => {
+      plugin.replaceChildren(...instruments.map((i) => new Option(i.name, i.key)));
+      plugin.value = tr.plugin;
+    };
+    plugin.addEventListener('change', () => {
+      tr.plugin = plugin.value;
+      status.textContent = 'loading…';
+      osc.send('/track/plugin', tr.id, tr.plugin);
+      refreshGenTracks();
+    });
+    refreshPlugins();
+
+    const vol = el('input', { type: 'range', min: 0, max: 1, step: 0.01, value: tr.volume });
+    vol.addEventListener('input', () => { tr.volume = parseFloat(vol.value); osc.send('/track/volume', tr.id, tr.volume ** 2); });
+
+    const root = el('section', { className: 'card track' },
+      el('header', {},
+        el('h2', { textContent: `Track ${tr.id}` }), status,
+        el('button', { className: 'close', textContent: '×', title: 'Remove', onclick: () => removeTrack(tr) })),
+      el('div', { className: 'fields' },
+        el('label', { textContent: 'instrument' }),
+        el('div', { className: 'row' }, plugin, el('button', { textContent: 'Editor', onclick: () => osc.send('/track/editor', tr.id) })),
+        el('label', { textContent: 'volume' }), vol));
+
+    return {
+      root,
+      refreshPlugins,
+      loading: () => { status.textContent = 'loading…'; },
+      ready: (ok) => { status.textContent = ok ? '' : 'failed to load'; },
+    };
+  }
+
+  $('add-track').onclick = addTrack;
+
+  // --- engine sync ---
+  function syncAll() {
+    osc.send('/engine/reset');
+    osc.send('/transport/tempo', state.bpm);
+    for (const tr of state.tracks.values()) { tr.card.loading(); sendTrack(tr); }
+    for (const gen of state.gens.values()) sendGen(gen);
+    osc.send('/transport/play', state.playing ? 1 : 0);
+  }
+
+  const handlers = {
+    '/engine/ready': () => { $('status').textContent = ''; syncAll(); },
+    '/plugins/instruments': (...flat) => {
+      instruments = [];
+      for (let i = 0; i < flat.length; i += 2) instruments.push({ key: flat[i], name: flat[i + 1] });
+      $('add-track').disabled = instruments.length === 0;
+      state.tracks.forEach((tr) => tr.card.refreshPlugins());
+      refreshGenTracks();
+    },
+    '/track/ready': (id, ok) => state.tracks.get(id)?.card.ready(!!ok),
+    '/gen/note': (id) => state.gens.get(id)?.card.flash(),
+    '/transport/beat': (b) => { if (state.playing) showBeat(b); },
+  };
+  osc.on(({ addr, args }) => handlers[addr]?.(...args));
+
+  setTempo(state.bpm);
+  osc.send('/engine/hello');
+</script>
+</body>
+</html>

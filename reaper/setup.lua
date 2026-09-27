@@ -69,12 +69,18 @@ local function readFile(path)
   return s
 end
 
--- REAPER addresses MIDI inputs by index; find the port by name ("IAC Driver Bus 1", or just "Bus 1").
+-- REAPER addresses MIDI inputs by index; find the port by name. REAPER prefixes the maker
+-- ("Apple Inc. - IAC Driver - Bus 1"), so compare letters and digits only, matching the end.
+local function squash(s) return s:lower():gsub("[^%w]", "") end
+
 local function midiInputIndex(portName)
-  local short = portName:gsub("^IAC Driver ", "")
+  local want = squash(portName)
   for i = 0, reaper.GetNumMIDIInputs() - 1 do
     local ok, name = reaper.GetMIDIInputName(i, "")
-    if ok and (name == portName or name == short) then return i end
+    if ok then
+      local have = squash(name)
+      if have:sub(-#want) == want then return i end
+    end
   end
 end
 

@@ -134,7 +134,7 @@ presets, sets levels and effects.
 ```
  MIDI keyboard ──MIDI──▶ ┌──────────────────────────────┐
                          │ BRAIN (sclang)               │ ──MIDI──▶ REAPER
- Perturbed app ◀─OSC─▶ │ clocks · chord · generators  │  IAC       tracks: instrument,
+ Perturbed app ◀──OSC──▶ │ clocks · chord · generators  │  IAC       tracks: instrument,
                          │ outputs · state · files      │  buses     effects, mixer
                          └──────────────────────────────┘
 ```

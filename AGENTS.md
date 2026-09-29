@@ -18,7 +18,7 @@ change it.
 
 ### Rules
 
-- **Do not edit the app:** nothing under `brain/`, `surface/`, `reaper/`, `tests/`, and not
+- **Do not edit the app:** nothing under `brain/`, `surface/`, `ableton/`, `tests/`, and not
   README/PLAN/AGENTS. If what the performer wants needs a new kind of generator or a code change,
   say so and suggest they ask a developer (AdHoc generators, written by you, are planned: PLAN §2.1).
 - **You may write** performance files in `performances/`.
@@ -48,7 +48,7 @@ working example.
   "clocks": [                         // extra clocks B (id 1), C (id 2), ...
     {"id": 1, "mode": "factor", "factor": 1.01, "num": 1, "den": 1, "bpm": 96}
   ],
-  "destinations": [                   // outputs: one REAPER track each
+  "destinations": [                   // outputs: one Live MIDI track each
     {"id": 1, "name": "Piano 1", "port": 1, "channel": 1, "instrument": "Pianoteq 9"}
   ],
   "generators": [
@@ -60,10 +60,11 @@ working example.
 (Comments are for this document only; JSON files can't contain them.) Params left out keep their
 defaults. `dest` is an output id (0 = none); `active` true means on.
 
-**Outputs.** `port` is an IAC bus (1 = Bus 1, 2 = Bus 2), `channel` 1–16. Each output is a REAPER
-track the performer creates by running `setup.lua` in REAPER; reuse existing outputs where you
-can (the defaults are *Piano 1* = port 1 ch 1 and *Piano 2* = port 1 ch 2, Pianoteq 9), and tell
-the performer when a new one needs `setup.lua`.
+**Outputs.** `port` is an IAC bus (1 = Bus 1, 2 = Bus 2), `channel` 1–16. Each output is a Live
+MIDI track the performer sets up by hand (MIDI From that bus and channel, Monitor In, an
+instrument loaded); `instrument` is only a label. Reuse existing outputs where you can (the
+defaults are *Piano 1* = port 1 ch 1 and *Piano 2* = port 1 ch 2, Pianoteq 9), and tell the
+performer when a new one needs a Live track, with its bus, channel and the instrument you had in mind.
 
 **Clocks.** `mode` is `ratio` (main × num/den), `factor` (main × factor; 1.01 phases slowly
 against main) or `free` (its own `bpm`). Ratio and factor clocks follow main tempo changes.

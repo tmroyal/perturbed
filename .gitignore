@@ -1,8 +1,7 @@
 node_modules/
 .DS_Store
-*.rpp-bak
-reaper/destinations.json
+Icon?
 build/
 
 # Live project backups
-ableton/**/Backup/
+**/Backup/

@@ -2,7 +2,7 @@
 
 An algorithmic performance instrument. You play chords on a MIDI keyboard; generators running on
 shared clocks turn them into arpeggios, permutations, euclidean rhythms, phasing and polytempo
-layers, and send the MIDI to instruments in REAPER. You shape it all live from the Perturbed app.
+layers, and send the MIDI to instruments in Ableton Live. You shape it all live from the Perturbed app.
 
 Next up: Claude inside the app, setting up a performance from a description of the piece
 ([PLAN.md](PLAN.md), [AGENTS.md](AGENTS.md)).
@@ -10,19 +10,23 @@ Next up: Claude inside the app, setting up a performance from a description of t
 ## Requirements
 
 - macOS, [SuperCollider](https://supercollider.github.io/) 3.14 in `/Applications`
-- [REAPER](https://www.reaper.fm/) with the instruments you want (the defaults use Pianoteq 9)
+- [Ableton Live](https://www.ableton.com/) with the instruments you want (the defaults use
+  Pianoteq 9); Max for Live for the bridge device (optional so far)
 - Node.js (for the app); ImageMagick only to regenerate the icon
 - A MIDI keyboard
 
 ## One-time setup
 
 1. **IAC buses:** Audio MIDI Setup → Window → Show MIDI Studio → IAC Driver: enable, with
-   *Bus 1* and *Bus 2*. The brain sends on these; REAPER listens.
-2. **REAPER:** Preferences → Audio → MIDI Inputs: enable *IAC Driver – Bus 1* and *Bus 2*
-   (restart REAPER if they don't appear).
-3. **Tracks:** start Perturbed once (it writes `reaper/destinations.json`), then in REAPER:
-   Actions → Load ReaScript… → `reaper/setup.lua`, and run it. Save the project as
-   `reaper/performed.rpp`. Run `setup.lua` again whenever you add or remove outputs.
+   *Bus 1* and *Bus 2*. The brain sends on these; Live listens.
+2. **Live:** Settings → Link, Tempo & MIDI: turn **Track** on for the inputs *IAC Driver (Bus 1)*
+   and *(Bus 2)*, and off for your keyboard (it reaches Live through the brain's passthrough).
+3. **Tracks:** one MIDI track per output in Perturbed's Outputs pane (defaults: *Piano 1* =
+   Bus 1 ch 1, *Piano 2* = Bus 1 ch 2): MIDI From *IAC Driver (Bus n)*, that channel, Monitor
+   **In**, not armed, your instrument on it. Save the set as
+   `ableton/Perturbed Project/Perturbed.als`. Add a track whenever you add an output.
+4. **Bridge (optional):** `ableton/Perturbed Bridge.amxd` on any track connects Live to the
+   brain (it logs outputs to the Max Console for now; see PLAN §0.2).
 
 ## Run
 
@@ -59,7 +63,7 @@ first (the brain lists the MIDI inputs it found in the terminal). The first run 
 brain/     SuperCollider: clocks, chord, generators, MIDI, OSC protocol (the authority)
   types/     generator types (basic, passthrough); a new file here is a new generator
 surface/   the Perturbed app (Electron): ui, transport, generators, sidebar, app (state + protocol)
-reaper/    setup.lua builds monitor-only tracks from destinations.json
+ableton/   the Live set and the Perturbed Bridge (Max for Live: bridge.js)
 tests/     run.sh and the tests it runs
 performances/  saved performances
 archive/   the first proof of concept

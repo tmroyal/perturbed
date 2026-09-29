@@ -1,6 +1,6 @@
 #!/bin/sh
 # Starts the brain and the surface; quitting the surface stops the brain.
-# REAPER runs separately (open reaper/performed.rpp, or run reaper/setup.lua in a new project).
+# Live runs separately (open ableton/Perturbed Project/Perturbed.als).
 cd "$(dirname "$0")"
 SCLANG=/Applications/SuperCollider.app/Contents/MacOS/sclang
 

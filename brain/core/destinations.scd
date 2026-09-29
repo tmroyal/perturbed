@@ -1,5 +1,5 @@
-// destinations.scd — (port, channel) pairs a generator can play into; one REAPER track each.
-// Changes are written to reaper/destinations.json for reaper/setup.lua.
+// destinations.scd — (port, channel) pairs a generator can play into ("outputs"); each is a Live
+// MIDI track listening to that IAC bus and channel.
 (
 ~dests = ();
 ~nextDestId = 1;
@@ -15,7 +15,6 @@
 		instrument: instrument.asString,
 	);
 	~sendDest.(~dests[id]);
-	~writeDestinations.();
 	id;
 };
 
@@ -23,18 +22,7 @@
 	~dests.removeAt(id) !? {
 		~gens.do { |g| if(g[\dest] == id) { ~release.(g); ~releaseHeld.(g); g[\dest] = 0; ~sendGen.(g) } };
 		~send.('/dest/removed', id);
-		~writeDestinations.();
 	};
 };
 
-~sendDest = { |d| ~send.('/dest', d[\id], d[\name], d[\port], d[\channel], d[\instrument]) };
-
-~writeDestinations = {
-	if(~testMode.not) {
-		~writeJSON.(~root.dirname +/+ "reaper/destinations.json", (
-			ports: ~config[\ports].collect(_.join(" ")),
-			destinations: ~dests.keys.asArray.sort.collect(~dests[_]),
-		));
-	};
-};
-)
+~sendDest = { |d| ~send.('/dest', d[\id], d[\name], d[\port], d[\channel], d[\instrument]) };)

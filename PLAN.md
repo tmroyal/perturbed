@@ -2,8 +2,8 @@
 
 Perturbed is an algorithmic performance toolbox: generators on shared clocks read the chord you
 play and send MIDI to instruments in a DAW, played from the Perturbed app. The system works end to
-end today with REAPER (§5 describes it). **First comes a hard pivot from REAPER to Ableton Live
-(§0)**; then Claude inside the app (§1).
+end today with Ableton Live (§5 describes it). **First the rest of the pivot from REAPER to Live
+(§0: Ableton Link)**; then Claude inside the app (§1).
 
 **The idea.** A performer describes the piece they want to play ("two pianos phasing on an
 arpeggio of whatever I play, a slow bass on the lowest note, echo my right hand an octave up")
@@ -13,7 +13,10 @@ tempo. Claude arranges the instrument; it does **not** rewrite the app. Its brie
 
 ---
 
-## 0. Migration: REAPER → Ableton Live (do first)
+## 0. Migration: REAPER → Ableton Live (in progress)
+
+**Status (2026-09-28):** 0.1 done (a hand-made set plays the brain), 0.2 step 1 done (the bridge
+connects and logs outputs; track setup deferred), 0.4 done (REAPER removed). Next: 0.3 Link.
 
 **Why.** Live is what gets used for live performance; REAPER isn't used often enough to be the
 sound rack. REAPER was chosen for its MIDI routing and ReaScript, but the brain now does all the
@@ -25,9 +28,9 @@ performer's usual instrument.
 sends MIDI on IAC buses to whatever listens, so the pivot is almost entirely on the DAW side.
 "Outputs" stay (IAC port, channel) pairs; each becomes a Live MIDI track instead of a REAPER track.
 
-### 0.1 Routing: a Live Set that listens to the brain
+### 0.1 Routing: a Live Set that listens to the brain *(done)*
 
-- A template Live Set, `ableton/Perturbed.als` (in `ableton/`, replacing `reaper/`), with one MIDI
+- A Live Set, `ableton/Perturbed Project/Perturbed.als`, with one MIDI
   track per default output: *Piano 1* = MIDI From *IAC Driver (Bus 1)*, Ch. 1; *Piano 2* = Bus 1,
   Ch. 2; Monitor **In** (plays incoming MIDI without arming or recording), instrument loaded.
 - One-time Live setup: Preferences → Link, Tempo & MIDI → MIDI Ports: IAC Bus 1 and 2 with
@@ -38,11 +41,13 @@ sends MIDI on IAC buses to whatever listens, so the pivot is almost entirely on 
 - **Verify:** `tests/demo.scd` plays on both tracks; `tests/run.sh` still passes (it plays on
   Bus 1 ch 1–2, so Live will sound it, as REAPER did).
 
-### 0.2 Setting up outputs: the Perturbed Bridge (Max for Live)
+### 0.2 The Perturbed Bridge (Max for Live) *(step 1 done; track setup deferred)*
 
-A Max for Live device, **Perturbed Bridge**, lives on a track in the template set and replaces
-`setup.lua`. It speaks the brain's OSC protocol as one more surface, so the brain needs no
-Live-specific code:
+A Max for Live device, **Perturbed Bridge**, lives on a track in the set. It speaks the brain's
+OSC protocol as one more surface, so the brain needs no Live-specific code. Step 1 (done): it
+connects (`/hello 57150`: the brain replies to the named port, since `udpsend` sends from a random
+one), follows brain restarts, and logs outputs to the Max Console. Outputs are set up by hand for
+now; automatic track setup below is deferred until it earns its keep:
 
 - **Patch** (`ableton/Perturbed Bridge.amxd`, a MIDI Effect device): `[udpreceive 57150]` →
   `[js bridge.js]` → `[udpsend 127.0.0.1 57120]`. All logic is in `ableton/bridge.js` (plain
@@ -59,7 +64,6 @@ Live-specific code:
   hidden template tracks was rejected as too fiddly). The output's `instrument` is a label.
 - **Removed outputs** leave their tracks alone (they may hold the performer's sound design);
   the bridge only unassigns their input.
-- The brain's `destinations.json` writer and `reaper/setup.lua` are retired.
 
 Later, the bridge is also where Live control goes: Claude's Live commands (§2.2) and reading Live
 state (track names, instruments) back into the app.
@@ -76,22 +80,17 @@ state (track names, instruments) back into the app.
 - **Verify:** with Link on, the timing test's grid still holds; Live's metronome and the brain's
   beat pulse agree.
 
-### 0.4 Retire REAPER
+### 0.4 Retire REAPER *(done)*
 
-- Remove `reaper/` and the brain's `destinations.json` writer (the bridge gets outputs from the protocol).
-- Update README (setup steps), AGENTS.md ("each output is a Live track", created by the bridge),
-  `run.sh` comments, the Outputs pane hint, and §5 below.
-- §2.2 becomes **Claude and Live**, through the bridge: new protocol messages (e.g.
-  `/live/track/volume`, `/live/record`, `/live/clip/launch`) that the brain forwards and the
-  bridge carries out with the Live API.
-- The Live Set is saved alongside the performance file (it holds instruments and their state).
+- Removed `reaper/` and the brain's `destinations.json` writer; README, AGENTS.md, `run.sh`, the
+  Outputs pane hint and §5 describe Live. §2.2 is now Claude and Live.
 
 ### 0.5 Open questions
 
 - Max for Live in use (decided 2026-09-28): the bridge needs Live Suite, or Standard + the
   Max for Live add-on.
 - Live API routing names: `input_routing_type` display names for IAC buses (e.g. "IAC Driver
-  (Bus 1)") and channels ("Ch. 1") must be matched by name, like `setup.lua` did in REAPER.
+  (Bus 1)") and channels ("Ch. 1") must be matched by name (only if track setup is built).
 - Latency: Live's MIDI input path on top of the brain's 50 ms scheduling latency; retune
   `latency` in `brain/config.scd` if the surface feedback and the sound drift apart.
 - Whether passthrough should stay in the brain or become a plain Live track listening to the
@@ -160,18 +159,13 @@ canon of another generator), called **AdHoc**.
 - A performance file that uses an AdHoc type records it, so saving/opening carries the type along
   (copy the type file next to the performance, or embed its source).
 
-### 2.2 Claude and REAPER *(superseded: becomes Claude and Live through the bridge, see §0.2, §0.4)*
+### 2.2 Claude and Live
 
-Claude sets up the sound side too: adds the tracks a performance needs, loads instruments and
-presets, sets levels and effects.
-
-- **Run `setup.lua` automatically:** REAPER's OSC control surface (`/action/<command id>`)
-  triggers the script when outputs change (also useful without Claude: the surface's Outputs
-  pane could do it).
-- **Richer control:** ReaScript beyond setup (instrument choice per track, FX chains, volume) via
-  a command file the brain writes and a deferred script in REAPER that polls it, or REAPER's web
-  interface. Expose it as `perturbed reaper ...` commands.
-- The REAPER project is saved alongside the performance file.
+Claude sets up the sound side too, through the bridge (§0.2): new protocol messages (e.g.
+`/live/track/volume`, `/live/record`, `/live/clip/launch`) that the brain forwards and the bridge
+carries out with the Live API, exposed as `perturbed live ...` commands. Instruments stay loaded
+by hand (the Live API can't load third-party plugins). The Live Set is saved alongside the
+performance file (it holds instruments and their state).
 
 ---
 
@@ -187,8 +181,6 @@ presets, sets levels and effects.
   generator-to-generator modulation.
 - **Swing** as a rhythm-timing feel.
 - **Open questions:**
-  - ~~REAPER headless/scripted testing~~ (moot after §0):  can REAPER run a setup script and render from the command
-    line well enough for automated checks? Nice to have; the brain is verified on its own.
   - Pedal gestures for the chord (sustain pedal to latch or arm).
   - Metric modulation at the next beat instead of immediately.
 
@@ -220,17 +212,18 @@ presets, sets levels and effects.
 
 ```
  MIDI keyboard ──MIDI──▶ ┌──────────────────────────────┐
-                         │ BRAIN (sclang)               │ ──MIDI──▶ REAPER
+                         │ BRAIN (sclang)               │ ──MIDI──▶ Ableton Live
  Perturbed app ◀──OSC──▶ │ clocks · chord · generators  │  IAC       tracks: instrument,
                          │ outputs · state · files      │  buses     effects, mixer
-                         └──────────────────────────────┘
+                         └──────────────────────────────┘ ◀──OSC──▶ Perturbed Bridge (M4L)
 ```
 
 - **Brain (SuperCollider, `brain/`):** owns time and all musical state; runs generators; emits
   MIDI. Authoritative: surfaces (and Claude's tools) send intents and render what it reports.
-  Saves/loads performances (JSON; plugin state lives in the REAPER project).
-- **Sound rack (REAPER, `reaper/`):** one track per output, record-armed in monitor-only mode,
-  listening to an IAC bus + channel; `setup.lua` builds them from `destinations.json`.
+  Saves/loads performances (JSON; plugin state lives in the Live Set).
+- **Sound rack (Ableton Live, `ableton/`):** one MIDI track per output, MIDI From an IAC bus +
+  channel, Monitor In; set up by hand. The Perturbed Bridge (`bridge.js` in a Max for Live
+  device) joins the brain as a surface; it only logs so far (§0.2).
 - **Perturbed (Electron, `surface/`):** renders the brain's state; cards are built from the type
   schema (params, labels, sections, showWhen), so new types need no surface code.
 
@@ -254,7 +247,7 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   delayed by beats; works with the transport stopped.
 - **Clocks:** A is the main clock (transport tempo). B, C, ... run at main × ratio, main × factor,
   or a free bpm; all share beat 0 at play. Metric modulation multiplies the main tempo by a fraction.
-- **Outputs** (the brain's *destinations*): (IAC port, channel) pairs, one REAPER track each.
+- **Outputs** (the brain's *destinations*): (IAC port, channel) pairs, one Live track each.
 
 ### 5.3 Timing
 
@@ -264,11 +257,3 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
 - Onsets fall on `k · num/den` beats from play; changing num/den (or clock) restarts on the next
   point of the new grid, so generators keep their ratios. A sounding note is released by the next.
 - Passthrough notes go out immediately (or after their delay), not through the scheduling latency.
-
-### 5.4 REAPER integration *(until the Live migration, §0)*
-
-- `reaper/setup.lua` reads `reaper/destinations.json` (written by the brain) and creates/updates
-  one track per output: name, MIDI input (IAC bus found by name, channel), monitor-only arm,
-  instrument by name. Idempotent; tracks without a MIDI input are left unarmed (no feedback).
-- Run it from REAPER's Actions list after output changes (automating this: §2.2).
-- One-time: enable the IAC buses as MIDI inputs in REAPER's preferences.

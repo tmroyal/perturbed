@@ -1,14 +1,86 @@
 # Perturbed — plan
 
 Perturbed is an algorithmic performance toolbox: generators on shared clocks read the chord you
-play and send MIDI to instruments in REAPER, played from the Perturbed app. The system works end to
-end today (§5 describes it). What comes next is **Claude inside the app**.
+play and send MIDI to instruments in a DAW, played from the Perturbed app. The system works end to
+end today with REAPER (§5 describes it). **First comes a hard pivot from REAPER to Ableton Live
+(§0)**; then Claude inside the app (§1).
 
 **The idea.** A performer describes the piece they want to play ("two pianos phasing on an
 arpeggio of whatever I play, a slow bass on the lowest note, echo my right hand an octave up")
 and Claude sets up the performance interface: outputs, clocks, generators and their settings,
 tempo. Claude arranges the instrument; it does **not** rewrite the app. Its brief is
 [AGENTS.md](AGENTS.md).
+
+---
+
+## 0. Migration: REAPER → Ableton Live (do first)
+
+**Why.** Live is what gets used for live performance; REAPER isn't used often enough to be the
+sound rack. REAPER was chosen for its MIDI routing and ReaScript, but the brain now does all the
+routing itself (each output is one IAC bus + channel), so Live's simpler per-track MIDI input is
+enough. What we lose is scripted setup (`setup.lua`); what we gain is Ableton Link and the
+performer's usual instrument.
+
+**What doesn't change.** The brain, the protocol, the surface and performance files. The brain
+sends MIDI on IAC buses to whatever listens, so the pivot is almost entirely on the DAW side.
+"Outputs" stay (IAC port, channel) pairs; each becomes a Live MIDI track instead of a REAPER track.
+
+### 0.1 Routing: a Live Set that listens to the brain
+
+- A template Live Set, `ableton/Perturbed.als` (in `ableton/`, replacing `reaper/`), with one MIDI
+  track per default output: *Piano 1* = MIDI From *IAC Driver (Bus 1)*, Ch. 1; *Piano 2* = Bus 1,
+  Ch. 2; Monitor **In** (plays incoming MIDI without arming or recording), instrument loaded.
+- One-time Live setup: Preferences → Link, Tempo & MIDI → MIDI Ports: IAC Bus 1 and 2 with
+  **Track** on for input. Remote/Sync stay off for these ports so Live doesn't treat the brain's
+  notes as control messages.
+- Keep the performer's keyboard out of the IAC buses. It reaches the brain directly, and a Live
+  track only hears it through a passthrough generator (or an ordinary Live track set to it, if wanted).
+- **Verify:** `tests/demo.scd` plays on both tracks; `tests/run.sh` still passes (it plays on
+  Bus 1 ch 1–2, so Live will sound it, as REAPER did).
+
+### 0.2 Setting up outputs without `setup.lua`
+
+Live has no ReaScript; options, in order:
+
+1. **Manual, by convention (start here):** the Outputs pane shows each output's bus/channel; the
+   performer adds a Live MIDI track with that input. Name tracks after outputs. The template
+   covers the defaults.
+2. **AbletonOSC** (an open-source Live remote script exposing the Live Object Model over OSC):
+   the brain (or `tools/perturbed`) creates and names tracks and sets their input routing and
+   monitoring from the output list. Loading third-party instruments through the API is limited,
+   so instruments likely stay a manual step (or come from a template track the script duplicates).
+3. **Max for Live device** in the set doing the same from inside Live (needs Live Suite / M4L).
+
+The brain's `destinations.json` writer and `reaper/setup.lua` are retired once (1) or (2) works.
+
+### 0.3 Tempo and transport: Ableton Link
+
+- Make the brain's main clock a **LinkClock** (built into SuperCollider) so Live and the brain
+  share tempo and beat phase. Metric modulation and the tempo dial then change Live's tempo too,
+  and Live's tempo changes reach the brain (the surface shows them; the brain stays authoritative
+  for everything else).
+- Extra clocks (ratio/factor/free) stay local TempoClocks derived from main, as now.
+- Decide who owns play: Perturbed's Play (as now), with Link start/stop sync optional so Live's
+  transport follows (useful when recording the performance into Live).
+- **Verify:** with Link on, the timing test's grid still holds; Live's metronome and the brain's
+  beat pulse agree.
+
+### 0.4 Retire REAPER
+
+- Remove `reaper/` and the `destinations.json` writer (or retarget it if AbletonOSC setup uses it).
+- Update README (setup steps), AGENTS.md ("each output is a Live track"; outputs need a Live
+  track rather than `setup.lua`), `run.sh` comments, the Outputs pane hint, and §5 below.
+- §2.2 becomes **Claude and Live**: AbletonOSC (or an Ableton MCP server) lets Claude create and
+  route tracks, arm/record, set levels and devices, and launch clips for a performance.
+- The Live Set is saved alongside the performance file (it holds instruments and their state).
+
+### 0.5 Open questions
+
+- Live edition: Suite (Max for Live) or Standard? Decides whether option 3 in §0.2 is available.
+- Latency: Live's MIDI input path on top of the brain's 50 ms scheduling latency; retune
+  `latency` in `brain/config.scd` if the surface feedback and the sound drift apart.
+- Whether passthrough should stay in the brain or become a plain Live track listening to the
+  keyboard (lower latency) when no transpose/zone/delay is needed.
 
 ---
 
@@ -73,7 +145,7 @@ canon of another generator), called **AdHoc**.
 - A performance file that uses an AdHoc type records it, so saving/opening carries the type along
   (copy the type file next to the performance, or embed its source).
 
-### 2.2 Claude and REAPER
+### 2.2 Claude and REAPER *(superseded: becomes Claude and Live, see §0.4)*
 
 Claude sets up the sound side too: adds the tracks a performance needs, loads instruments and
 presets, sets levels and effects.
@@ -100,7 +172,7 @@ presets, sets levels and effects.
   generator-to-generator modulation.
 - **Swing** as a rhythm-timing feel.
 - **Open questions:**
-  - REAPER headless/scripted testing: can REAPER run a setup script and render from the command
+  - ~~REAPER headless/scripted testing~~ (moot after §0):  can REAPER run a setup script and render from the command
     line well enough for automated checks? Nice to have; the brain is verified on its own.
   - Pedal gestures for the chord (sustain pedal to latch or arm).
   - Metric modulation at the next beat instead of immediately.
@@ -178,7 +250,7 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   point of the new grid, so generators keep their ratios. A sounding note is released by the next.
 - Passthrough notes go out immediately (or after their delay), not through the scheduling latency.
 
-### 5.4 REAPER integration
+### 5.4 REAPER integration *(until the Live migration, §0)*
 
 - `reaper/setup.lua` reads `reaper/destinations.json` (written by the brain) and creates/updates
   one track per output: name, MIDI input (IAC bus found by name, channel), monitor-only arm,

@@ -54,10 +54,9 @@ Live-specific code:
   with the output's name or create one (`live_set create_midi_track`); set its input routing to
   the output's IAC bus and channel (`input_routing_type`, `input_routing_channel`), monitoring to
   In, and its name. Idempotent: existing tracks are matched by name and only re-routed.
-- **Instruments:** the Live API can't load third-party plugins by name, so a new track is made by
-  duplicating a **template track** named after the output's instrument (e.g. a track called
-  "Pianoteq 9" holding the plugin, kept muted at the end of the set). No template: an empty MIDI
-  track, and the bridge says so (Max window, and a `/bridge/status` message the app can show).
+- **Instruments:** loaded by hand. A new track is an empty MIDI track, already routed; the
+  performer drops the instrument on it (the Live API can't load third-party plugins, and copying
+  hidden template tracks was rejected as too fiddly). The output's `instrument` is a label.
 - **Removed outputs** leave their tracks alone (they may hold the performer's sound design);
   the bridge only unassigns their input.
 - The brain's `destinations.json` writer and `reaper/setup.lua` are retired.

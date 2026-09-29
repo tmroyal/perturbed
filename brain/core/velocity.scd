@@ -41,7 +41,7 @@
 );
 
 ~velocity = { |g, p, k|
-	var low = p[\low].asFloat, high = p[\high].asFloat, beats = thisThread.beats;
+	var low = p[\low].asFloat, high = p[\high].asFloat, beats = ~beats.();
 	var vel = switch(p[\velMode].asSymbol,
 		\accent, { if(k % p[\every].asInteger.max(1) == 0) { p[\accent] } { p[\velocity] } },
 		\random, { rrand(low, high) },

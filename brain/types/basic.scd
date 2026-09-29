@@ -15,11 +15,11 @@ restartOn: [\clock, \num, \den],
 
 run: { |g, p|
 	var dur = p[\num].asInteger.max(1) / p[\den].asInteger.max(1);
-	var k = (thisThread.beats / dur - 1e-9).ceil.asInteger;  // next grid index at or after now
+	var k = (~beats.() / dur - 1e-9).ceil.asInteger;  // next grid index at or after now
 	var step = 0;  // notes played, for arpeggio and permute
 	loop {
 		var note;
-		(k * dur - thisThread.beats).max(0).wait;
+		(k * dur - ~beats.()).max(0).wait;
 		if(~rhythmGate.(p, k)) {
 			note = ~pitch.(p, step);
 			if(note.notNil) { ~strike.(g, note, ~velocity.(g, p, k)) } { ~release.(g) };

@@ -21,6 +21,8 @@ Next up: Claude inside the app, setting up a performance from a description of t
    *Bus 1* and *Bus 2*. The brain sends on these; Live listens.
 2. **Live:** Settings → Link, Tempo & MIDI: turn **Track** on for the inputs *IAC Driver (Bus 1)*
    and *(Bus 2)*, and off for your keyboard (it reaches Live through the brain's passthrough).
+   Turn **Link** on (the button at the top left of Live's window): Live and Perturbed then share
+   tempo and bar lines.
 3. **Tracks:** one MIDI track per output in Perturbed's Outputs pane (defaults: *Piano 1* =
    Bus 1 ch 1, *Piano 2* = Bus 1 ch 2): MIDI From *IAC Driver (Bus n)*, that channel, Monitor
    **In**, not armed, your instrument on it. Save the set as

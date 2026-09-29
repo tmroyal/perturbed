@@ -1,28 +1,60 @@
-// clock.scd — transport and clocks. The main clock is a fresh TempoClock per play, so beat 0 is
-// the grid origin. Extra clocks (B, C, ...) are TempoClocks started at the same instant, so they
-// share beat 0; a generator's `clock` param (0 = main) picks the one it runs on. Clock modes:
+// clock.scd — transport and clocks. The main clock is a LinkClock (Ableton Link), so tempo and
+// bar phase are shared with Live: tempo changes go both ways. It runs all the time; play sets the
+// grid origin to the start of the current Link bar (~beats counts from there), so generators line
+// up with Live's bars and start at once. Test mode uses a fresh TempoClock per play instead, so
+// tests never join the Link session.
+// Extra clocks (B, C, ...) are TempoClocks started at the origin, so they share beat 0; a
+// generator's `clock` param (0 = main) picks the one it runs on. Clock modes:
 //   ratio   main tempo × num/den      (follows main)
 //   factor  main tempo × factor       (follows main; e.g. 1.01 for slow phasing)
 //   free    its own bpm
 (
 ~bpm = 120;
 ~playing = false;
-~clock = nil;
+~clock = nil;      // the main clock while playing, else nil
+~origin = 0;       // main-clock beat of the grid origin
+~link = nil;
+~quantum = 4;      // beats per Link bar
 ~clocks = ();
 ~nextClockId = 1;
+
+~linkInit = {
+	if(~testMode.not) {
+		~link = LinkClock(~bpm / 60).quantum_(~quantum).latency_(~config[\latency]);
+		// tempo changed by another Link peer (Live): follow it
+		~link.addDependant({ |clock, what|
+			if(what == \tempo and: { (clock.tempo * 60 - ~bpm).abs > 0.001 }) {
+				~bpm = clock.tempo * 60;
+				~clocks.do { |c| ~applyClockTempo.(c) };
+				~sendTransport.();
+			};
+		});
+		"Link: % peers".format(~link.numPeers).postln;
+	};
+};
+
+// Beats since the grid origin, for routines on any clock (extra clocks start at the origin).
+~beats = { var b = thisThread.beats; if(thisThread.clock === ~clock) { b - ~origin } { b } };
 
 ~setPlaying = { |on|
 	var t0;
 	~gens.do { |g| ~stopGen.(g) };
-	~clock !? { ~clock.stop };
+	~clock !? { if(~clock === ~link) { ~clock.clear } { ~clock.stop } };
 	~clock = nil;
 	~clocks.do { |c| c[\clock] !? { c[\clock].stop }; c[\clock] = nil };
 	~playing = on;
 	if(on) {
-		t0 = thisThread.seconds;
-		~clock = TempoClock(~bpm / 60, 0, t0);
+		if(~link.notNil) {
+			~clock = ~link;
+			~origin = (~link.beats / ~quantum).floor * ~quantum;
+			t0 = ~link.beats2secs(~origin);
+		} {
+			t0 = thisThread.seconds;
+			~clock = TempoClock(~bpm / 60, 0, t0);
+			~origin = 0;
+		};
 		~clocks.do { |c| c[\clock] = TempoClock(~clockTempo.(c) / 60, 0, t0) };
-		Routine { loop { ~sendLate.('/beat', thisThread.beats.round.asInteger); 1.wait } }.play(~clock);
+		Routine { loop { ~sendLate.('/beat', ~beats.().round.asInteger); 1.wait } }.play(~clock, 1);
 		~gens.do { |g| ~startGen.(g) };
 	};
 	~sendTransport.();
@@ -30,6 +62,7 @@
 
 ~setTempo = { |bpm|
 	~bpm = bpm.asFloat.clip(20, 400);
+	~link !? { ~link.tempo = ~bpm / 60 };
 	~clock !? { ~clock.tempo = ~bpm / 60 };
 	~clocks.do { |c| ~applyClockTempo.(c) };
 	~sendTransport.();
@@ -67,7 +100,7 @@
 	c = (id: id, name: (65 + id).asAscii.asString, mode: \ratio, num: 1, den: 1, factor: 1.0, bpm: ~bpm);
 	~clocks[id] = c;
 	// added while playing: start at the beat it would be on had it run since play
-	if(~playing) { c[\clock] = TempoClock(~clockTempo.(c) / 60, ~clock.beats * ~clockTempo.(c) / ~bpm) };
+	if(~playing) { c[\clock] = TempoClock(~clockTempo.(c) / 60, (~clock.beats - ~origin) * ~clockTempo.(c) / ~bpm) };
 	~sendClock.(c);
 	c;
 };

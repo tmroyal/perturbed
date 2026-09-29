@@ -27,7 +27,7 @@
 	~dests.keys.copy.do { |id| ~removeDest.(id) };
 	~clocks.keys.copy.do { |id| ~removeClock.(id) };
 
-	~bpm = perf["tempo"].asFloat;
+	~setTempo.(perf["tempo"]);  // also sets Link tempo
 	~nextClockId = 1;
 	(perf["clocks"] ? []).do { |saved|
 		var c = ~addClock.(saved["id"].asInteger);

@@ -3,7 +3,7 @@
 Perturbed is an algorithmic performance toolbox: generators on shared clocks read the chord you
 play and send MIDI to instruments in a DAW, played from the Perturbed app. The system works end to
 end today with Ableton Live (§5 describes it). **First the rest of the pivot from REAPER to Live
-(§0: Ableton Link)**; then Claude inside the app (§1).
+(§0: checking Link with Live)**; then Claude inside the app (§1).
 
 **The idea.** A performer describes the piece they want to play ("two pianos phasing on an
 arpeggio of whatever I play, a slow bass on the lowest note, echo my right hand an octave up")
@@ -16,7 +16,8 @@ tempo. Claude arranges the instrument; it does **not** rewrite the app. Its brie
 ## 0. Migration: REAPER → Ableton Live (in progress)
 
 **Status (2026-09-28):** 0.1 done (a hand-made set plays the brain), 0.2 step 1 done (the bridge
-connects and logs outputs; track setup deferred), 0.4 done (REAPER removed). Next: 0.3 Link.
+connects and logs outputs; track setup deferred), 0.3 built (LinkClock; verify with Live),
+0.4 done (REAPER removed).
 
 **Why.** Live is what gets used for live performance; REAPER isn't used often enough to be the
 sound rack. REAPER was chosen for its MIDI routing and ReaScript, but the brain now does all the
@@ -68,7 +69,13 @@ now; automatic track setup below is deferred until it earns its keep:
 Later, the bridge is also where Live control goes: Claude's Live commands (§2.2) and reading Live
 state (track names, instruments) back into the app.
 
-### 0.3 Tempo and transport: Ableton Link
+### 0.3 Tempo and transport: Ableton Link *(built; to verify with Live)*
+
+Built: the main clock is a persistent LinkClock (quantum 4, latency = MIDI latency); play puts
+the grid origin at the start of the current Link bar (`~beats` counts from there), so generators
+start at once, on Live's bar lines. Tempo changes go both ways. Test mode keeps a fresh
+TempoClock per play and stays out of the Link session. Start/stop sync not done.
+
 
 - Make the brain's main clock a **LinkClock** (built into SuperCollider) so Live and the brain
   share tempo and beat phase. Metric modulation and the tempo dial then change Live's tempo too,
@@ -251,9 +258,9 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
 
 ### 5.3 Timing
 
-- All scheduling runs on TempoClocks in logical time; onsets land within a few ms of the grid
+- All scheduling runs on clocks in logical time (main: a LinkClock shared with Live, §0.3); onsets land within a few ms of the grid
   (`tests/timing.scd`). MIDI is timestamped 50 ms ahead (`latency` in `brain/config.scd`);
   surface feedback (`/beat`, `/note`) is sent at the same delay so it lines up with the sound.
-- Onsets fall on `k · num/den` beats from play; changing num/den (or clock) restarts on the next
+- Onsets fall on `k · num/den` beats from the grid origin (the Link bar where play was pressed); changing num/den (or clock) restarts on the next
   point of the new grid, so generators keep their ratios. A sounding note is released by the next.
 - Passthrough notes go out immediately (or after their delay), not through the scheduling latency.

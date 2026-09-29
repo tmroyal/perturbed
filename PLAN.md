@@ -3,7 +3,7 @@
 Perturbed is an algorithmic performance toolbox: generators on shared clocks read the chord you
 play and send MIDI to instruments in a DAW, played from the Perturbed app. The system works end to
 end today with Ableton Live (§5 describes it). **First the rest of the pivot from REAPER to Live
-(§0: checking Link with Live)**; then Claude inside the app (§1).
+(§0: done but for housekeeping)**; then Claude inside the app (§1).
 
 **The idea.** A performer describes the piece they want to play ("two pianos phasing on an
 arpeggio of whatever I play, a slow bass on the lowest note, echo my right hand an octave up")
@@ -16,7 +16,7 @@ tempo. Claude arranges the instrument; it does **not** rewrite the app. Its brie
 ## 0. Migration: REAPER → Ableton Live (in progress)
 
 **Status (2026-09-28):** 0.1 done (a hand-made set plays the brain), 0.2 step 1 done (the bridge
-connects and logs outputs; track setup deferred), 0.3 built (LinkClock; verify with Live),
+connects and logs outputs; track setup deferred), 0.3 done (LinkClock, verified with Live),
 0.4 done (REAPER removed).
 
 **Why.** Live is what gets used for live performance; REAPER isn't used often enough to be the
@@ -69,7 +69,7 @@ now; automatic track setup below is deferred until it earns its keep:
 Later, the bridge is also where Live control goes: Claude's Live commands (§2.2) and reading Live
 state (track names, instruments) back into the app.
 
-### 0.3 Tempo and transport: Ableton Link *(built; to verify with Live)*
+### 0.3 Tempo and transport: Ableton Link *(done)*
 
 Built: the main clock is a persistent LinkClock (quantum 4, latency = MIDI latency); play puts
 the grid origin at the start of the current Link bar (`~beats` counts from there), so generators

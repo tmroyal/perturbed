@@ -38,20 +38,32 @@ sends MIDI on IAC buses to whatever listens, so the pivot is almost entirely on 
 - **Verify:** `tests/demo.scd` plays on both tracks; `tests/run.sh` still passes (it plays on
   Bus 1 ch 1–2, so Live will sound it, as REAPER did).
 
-### 0.2 Setting up outputs without `setup.lua`
+### 0.2 Setting up outputs: the Perturbed Bridge (Max for Live)
 
-Live has no ReaScript; options, in order:
+A Max for Live device, **Perturbed Bridge**, lives on a track in the template set and replaces
+`setup.lua`. It speaks the brain's OSC protocol as one more surface, so the brain needs no
+Live-specific code:
 
-1. **Manual, by convention (start here):** the Outputs pane shows each output's bus/channel; the
-   performer adds a Live MIDI track with that input. Name tracks after outputs. The template
-   covers the defaults.
-2. **AbletonOSC** (an open-source Live remote script exposing the Live Object Model over OSC):
-   the brain (or `tools/perturbed`) creates and names tracks and sets their input routing and
-   monitoring from the output list. Loading third-party instruments through the API is limited,
-   so instruments likely stay a manual step (or come from a template track the script duplicates).
-3. **Max for Live device** in the set doing the same from inside Live (needs Live Suite / M4L).
+- **Patch** (`ableton/Perturbed Bridge.amxd`, a MIDI Effect device): `[udpreceive 57150]` →
+  `[js bridge.js]` → `[udpsend 127.0.0.1 57120]`. All logic is in `ableton/bridge.js` (plain
+  text, diffable, editable without Max); the `.amxd` stays a thin shell saved from Max.
+- **Protocol:** the bridge sends `/hello` (and `/ping`, re-`/hello` on a new boot id, like the
+  app) and receives the snapshot and live updates. It only acts on outputs (`/dest`,
+  `/dest/removed`) and the transport; it ignores the rest.
+- **Tracks** via the Live API (`LiveAPI` in `bridge.js`): for each output, find the MIDI track
+  with the output's name or create one (`live_set create_midi_track`); set its input routing to
+  the output's IAC bus and channel (`input_routing_type`, `input_routing_channel`), monitoring to
+  In, and its name. Idempotent: existing tracks are matched by name and only re-routed.
+- **Instruments:** the Live API can't load third-party plugins by name, so a new track is made by
+  duplicating a **template track** named after the output's instrument (e.g. a track called
+  "Pianoteq 9" holding the plugin, kept muted at the end of the set). No template: an empty MIDI
+  track, and the bridge says so (Max window, and a `/bridge/status` message the app can show).
+- **Removed outputs** leave their tracks alone (they may hold the performer's sound design);
+  the bridge only unassigns their input.
+- The brain's `destinations.json` writer and `reaper/setup.lua` are retired.
 
-The brain's `destinations.json` writer and `reaper/setup.lua` are retired once (1) or (2) works.
+Later, the bridge is also where Live control goes: Claude's Live commands (§2.2) and reading Live
+state (track names, instruments) back into the app.
 
 ### 0.3 Tempo and transport: Ableton Link
 
@@ -67,16 +79,20 @@ The brain's `destinations.json` writer and `reaper/setup.lua` are retired once (
 
 ### 0.4 Retire REAPER
 
-- Remove `reaper/` and the `destinations.json` writer (or retarget it if AbletonOSC setup uses it).
-- Update README (setup steps), AGENTS.md ("each output is a Live track"; outputs need a Live
-  track rather than `setup.lua`), `run.sh` comments, the Outputs pane hint, and §5 below.
-- §2.2 becomes **Claude and Live**: AbletonOSC (or an Ableton MCP server) lets Claude create and
-  route tracks, arm/record, set levels and devices, and launch clips for a performance.
+- Remove `reaper/` and the brain's `destinations.json` writer (the bridge gets outputs from the protocol).
+- Update README (setup steps), AGENTS.md ("each output is a Live track", created by the bridge),
+  `run.sh` comments, the Outputs pane hint, and §5 below.
+- §2.2 becomes **Claude and Live**, through the bridge: new protocol messages (e.g.
+  `/live/track/volume`, `/live/record`, `/live/clip/launch`) that the brain forwards and the
+  bridge carries out with the Live API.
 - The Live Set is saved alongside the performance file (it holds instruments and their state).
 
 ### 0.5 Open questions
 
-- Live edition: Suite (Max for Live) or Standard? Decides whether option 3 in §0.2 is available.
+- Max for Live in use (decided 2026-09-28): the bridge needs Live Suite, or Standard + the
+  Max for Live add-on.
+- Live API routing names: `input_routing_type` display names for IAC buses (e.g. "IAC Driver
+  (Bus 1)") and channels ("Ch. 1") must be matched by name, like `setup.lua` did in REAPER.
 - Latency: Live's MIDI input path on top of the brain's 50 ms scheduling latency; retune
   `latency` in `brain/config.scd` if the surface feedback and the sound drift apart.
 - Whether passthrough should stay in the brain or become a plain Live track listening to the
@@ -145,7 +161,7 @@ canon of another generator), called **AdHoc**.
 - A performance file that uses an AdHoc type records it, so saving/opening carries the type along
   (copy the type file next to the performance, or embed its source).
 
-### 2.2 Claude and REAPER *(superseded: becomes Claude and Live, see §0.4)*
+### 2.2 Claude and REAPER *(superseded: becomes Claude and Live through the bridge, see §0.2, §0.4)*
 
 Claude sets up the sound side too: adds the tracks a performance needs, loads instruments and
 presets, sets levels and effects.

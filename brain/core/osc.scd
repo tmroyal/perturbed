@@ -2,8 +2,10 @@
 // what the brain echoes back. Any address that sends /hello is registered as a surface.
 //
 // Surface → brain (port 57120, or $PERFORMED_PORT):
-//   /hello                                       register; brain replies with a full snapshot
-//   /ping                                        brain replies /pong to the sender only
+//   /hello            [<port>]                   register; brain replies with a full snapshot
+//                                                (to <port> if given: for senders like Max's udpsend,
+//                                                whose source port isn't the one they listen on)
+//   /ping             [<port>]                   brain replies /pong to the sender only
 //   /transport/play   1|0                        play restarts at beat 0
 //   /transport/tempo  <bpm>
 //   /transport/scale  <num> <den>                tempo × num/den (metric modulation)
@@ -52,6 +54,9 @@
 // Sent when the note actually sounds (MIDI is timestamped `latency` ahead of logical time).
 ~sendLate = { |...msg| SystemClock.sched(~config[\latency], { ~send.(*msg); nil }) };
 
+// Where to answer: the sender, or the port named in msg[1].
+~replyAddr = { |msg, addr| msg[1] !? { |port| NetAddr(addr.ip, port.asInteger) } ? addr };
+
 ~sendState = {
 	~send.('/state/begin');
 	~sendTransport.();
@@ -74,11 +79,12 @@
 	~port = port;
 
 	OSCdef(\hello, { |msg, time, addr|
+		addr = ~replyAddr.(msg, addr);
 		if(~surfaces.includesEqual(addr).not) { ~surfaces = ~surfaces.add(addr) };
 		~sendState.();
 	}, '/hello');
 
-	OSCdef(\ping, { |msg, time, addr| addr.sendMsg('/pong', ~bootId) }, '/ping');
+	OSCdef(\ping, { |msg, time, addr| ~replyAddr.(msg, addr).sendMsg('/pong', ~bootId) }, '/ping');
 
 	OSCdef(\play, { |msg| ~setPlaying.(msg[1].asInteger == 1) }, '/transport/play');
 	OSCdef(\tempo, { |msg| ~setTempo.(msg[1]) }, '/transport/tempo');

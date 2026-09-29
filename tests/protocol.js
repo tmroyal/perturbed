@@ -42,6 +42,15 @@ sock.bind(0, async () => {
     const [bootId] = await pong;
     check(Number.isInteger(bootId), 'ping → pong <bootId>');
 
+    // /hello <port>: replies go to that port, not the sender's (Max's udpsend case)
+    const other = dgram.createSocket('udp4');
+    await new Promise((r) => other.bind(0, r));
+    const otherEnd = new Promise((resolve) => other.on('message', (b) => decode(b).addr === '/state/end' && resolve()));
+    send('/hello', other.address().port);
+    check(await Promise.race([otherEnd.then(() => true), new Promise((r) => setTimeout(() => r(false), 1000))]),
+      '/hello <port> sends the snapshot to that port');
+    other.close();
+
     const dest = next('/dest', (id, name) => name === 'proto');
     send('/dest/add', 'proto', 2, 16, 'none');
     const [destId, , port, channel] = await dest;

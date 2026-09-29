@@ -3,3 +3,6 @@ node_modules/
 *.rpp-bak
 reaper/destinations.json
 build/
+
+# Live project backups
+ableton/**/Backup/

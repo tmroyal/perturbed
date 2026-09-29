@@ -16,7 +16,7 @@ tempo. Claude arranges the instrument; it does **not** rewrite the app. Its brie
 ## 0. Migration: REAPER → Ableton Live (in progress)
 
 **Status (2026-09-28):** 0.1 done (a hand-made set plays the brain), 0.2 step 1 done (the bridge
-connects and logs outputs; track setup deferred), 0.3 done (LinkClock, verified with Live),
+connects and logs outputs; next: step 2, outputs from Live's tracks), 0.3 done (LinkClock, verified with Live),
 0.4 done (REAPER removed).
 
 **Why.** Live is what gets used for live performance; REAPER isn't used often enough to be the
@@ -42,13 +42,12 @@ sends MIDI on IAC buses to whatever listens, so the pivot is almost entirely on 
 - **Verify:** `tests/demo.scd` plays on both tracks; `tests/run.sh` still passes (it plays on
   Bus 1 ch 1–2, so Live will sound it, as REAPER did).
 
-### 0.2 The Perturbed Bridge (Max for Live) *(step 1 done; track setup deferred)*
+### 0.2 The Perturbed Bridge (Max for Live) *(step 1 done; step 2 next)*
 
 A Max for Live device, **Perturbed Bridge**, lives on a track in the set. It speaks the brain's
 OSC protocol as one more surface, so the brain needs no Live-specific code. Step 1 (done): it
 connects (`/hello 57150`: the brain replies to the named port, since `udpsend` sends from a random
-one), follows brain restarts, and logs outputs to the Max Console. Outputs are set up by hand for
-now; automatic track setup below is deferred until it earns its keep:
+one), follows brain restarts, and logs outputs to the Max Console.
 
 - **Patch** (`ableton/Perturbed Bridge.amxd`, a MIDI Effect device): `[udpreceive 57150]` →
   `[js bridge.js]` → `[udpsend 127.0.0.1 57120]`. All logic is in `ableton/bridge.js` (plain
@@ -56,15 +55,28 @@ now; automatic track setup below is deferred until it earns its keep:
 - **Protocol:** the bridge sends `/hello` (and `/ping`, re-`/hello` on a new boot id, like the
   app) and receives the snapshot and live updates. It only acts on outputs (`/dest`,
   `/dest/removed`) and the transport; it ignores the rest.
-- **Tracks** via the Live API (`LiveAPI` in `bridge.js`): for each output, find the MIDI track
-  with the output's name or create one (`live_set create_midi_track`); set its input routing to
-  the output's IAC bus and channel (`input_routing_type`, `input_routing_channel`), monitoring to
-  In, and its name. Idempotent: existing tracks are matched by name and only re-routed.
-- **Instruments:** loaded by hand. A new track is an empty MIDI track, already routed; the
-  performer drops the instrument on it (the Live API can't load third-party plugins, and copying
-  hidden template tracks was rejected as too fiddly). The output's `instrument` is a label.
-- **Removed outputs** leave their tracks alone (they may hold the performer's sound design);
-  the bridge only unassigns their input.
+
+**Step 2 — outputs from Live's tracks (next).** Live is where tracks are made; the bridge only
+*reads* them (sturdier than creating them, and instruments are loaded by hand anyway), and the app
+turns them into outputs:
+
+- **Bridge → brain:** list the MIDI tracks whose *MIDI From* is an IAC bus: name, bus, channel,
+  first device (e.g. "Pianoteq 9"), via `LiveAPI` (`input_routing_type`, `input_routing_channel`,
+  `devices`). Send `/live/tracks` (one `/live/track <name> <port> <channel> <instrument>` per
+  track, framed like the snapshot) on connect and whenever tracks are added, renamed or re-routed
+  (observe `live_set tracks` and each track's name and input routing). The patch gains
+  `[live.thisdevice]` → `js`: the Live API isn't usable until the device has loaded.
+- **Brain:** keeps the latest list and forwards it to surfaces (and to Claude's `perturbed state`).
+  Outputs stay what they are (so generators and performance files are unchanged).
+- **App:** the Outputs pane lists Live's tracks; one click makes a track an output (name, bus,
+  channel, instrument filled in), plus **Add all**. Outputs with no matching Live track get a
+  warning mark (a generator playing into nothing). The typed form stays as a fallback.
+- **Workflow:** new sound = a Live track with MIDI From *IAC Bus n* on a free channel and an
+  instrument; it shows up in Perturbed, one click away.
+- **Later, if clicking gets tedious:** full auto-sync (outputs *are* Live's tracks). Needs a rule
+  for opening performance files: match their outputs to tracks by name, flag missing ones.
+- **Not doing:** creating or copying tracks from the bridge (template tracks rejected as fiddly;
+  the Live API can't load third-party plugins).
 
 Later, the bridge is also where Live control goes: Claude's Live commands (§2.2) and reading Live
 state (track names, instruments) back into the app.

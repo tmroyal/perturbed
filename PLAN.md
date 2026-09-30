@@ -296,4 +296,6 @@ designed; likely pieces:
   in its header.
 - **Files and Claude:** groups saved in performance files; a natural unit for Claude to set up
   ("add a group of three canon voices") and, later, for AdHoc generators.
-- **Open:** can a generator be in more than one group? Do groups nest? Is "solo a group" useful?
+- **Rules (decided):** a generator is in at most one group; groups don't nest.
+- **Solo:** soloing a group silences every generator outside it (their routines keep running, so
+  they come back in time when solo is released); more than one group can be soloed at once.

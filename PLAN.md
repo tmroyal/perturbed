@@ -224,6 +224,9 @@ performance file (it holds instruments and their state).
   - `a = e[\k] = x` assigns the Event, not `x` (`put` returns the receiver).
   - Electron's binary download may be skipped by npm; run `node node_modules/electron/install.js`.
   - ImageMagick's SVG renderer drops stroked circles; the icon script renders with Quick Look.
+  - To try the app while a performance may be running, move both ports:
+    `PERFORMED_PORT=57141 PERFORMED_SURFACE_PORT=57131 ./run.sh`, and stop that copy by its PID,
+    never with a pattern that matches the performer's app.
 
 ---
 

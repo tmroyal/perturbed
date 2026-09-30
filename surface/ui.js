@@ -33,13 +33,16 @@ function numberInput(min, max, onChange, step = 1) {
   return input;
 }
 
+// Slider with a typed field beside it; set(v) shows a value unless the user is dragging or typing.
 function slider(min, max, onChange) {
   const input = el('input', { type: 'range', min, max, step: 1 });
-  const out = el('span', { className: 'hint value' });
+  const field = numberInput(min, max, (v) => { input.value = v; onChange(v); });
+  field.classList.add('value');
   input.addEventListener('pointerdown', () => { input.dataset.dragging = '1'; });
   input.addEventListener('pointerup', () => { delete input.dataset.dragging; });
-  input.addEventListener('input', () => { out.textContent = input.value; onChange(parseInt(input.value)); });
-  return { input, out };
+  input.addEventListener('input', () => { field.value = input.value; onChange(parseInt(input.value)); });
+  const set = (v) => { if (!editing(input)) input.value = v; if (!editing(field)) field.value = v; };
+  return { root: el('div', { className: 'row' }, input, field), set };
 }
 
 // Rotary dial with a typed field: drag vertically (shift = fine), scroll, or double-click to type.

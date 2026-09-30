@@ -42,7 +42,7 @@ input[type=range]::-webkit-slider-thumb {
 .close { background: none; border: none; color: var(--nord3); padding: 0 4px; font-size: 18px; line-height: 1; }
 .close:hover { background: none; color: var(--nord11); }
 .hint { color: var(--nord3); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.hint.value { width: 28px; text-align: right; flex: none; }
+.fields .row input[type=number].value { width: 52px; text-align: right; flex: none; }
 .unit { color: var(--nord9); font-size: 12px; letter-spacing: .04em; }
 
 /* --- transport --- */

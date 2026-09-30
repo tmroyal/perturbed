@@ -38,11 +38,8 @@ function paramControl(spec, send, learn) {
     }
     case 'range': {
       if (max - min <= 32) return plain(numberInput(min, max, send, step));
-      const { input, out } = slider(min, max, send);
-      return {
-        control: el('div', { className: 'row' }, input, out),
-        update: (v) => { if (!editing(input)) input.value = v; out.textContent = v; },
-      };
+      const s = slider(min, max, send);
+      return { control: s.root, update: s.set };
     }
     default: {  // text
       const input = el('input', { type: 'text' });

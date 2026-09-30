@@ -278,3 +278,22 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
 - Onsets fall on `k · num/den` beats from the grid origin (the Link bar where play was pressed); changing num/den (or clock) restarts on the next
   point of the new grid, so generators keep their ratios. A sounding note is released by the next.
 - Passthrough notes go out immediately (or after their delay), not through the scheduling latency.
+
+---
+
+## 6. Ideas to shape
+
+### 6.1 Generator groups
+
+Gather generators into named groups so a layer of the piece can be handled as one thing. To be
+designed; likely pieces:
+
+- **Switch together:** one On/Off (and later a fade) for the whole group, e.g. bring in "the phasing
+  pianos" in one move.
+- **Shared settings:** a group can set params for all its members (output, clock, num/den,
+  velocity), with members free to override.
+- **Surface:** groups as collapsible sections of the generator grid, with the group's controls
+  in its header.
+- **Files and Claude:** groups saved in performance files; a natural unit for Claude to set up
+  ("add a group of three canon voices") and, later, for AdHoc generators.
+- **Open:** can a generator be in more than one group? Do groups nest? Is "solo a group" useful?

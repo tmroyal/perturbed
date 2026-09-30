@@ -2,8 +2,8 @@
 
 Perturbed is an algorithmic performance toolbox: generators on shared clocks read the chord you
 play and send MIDI to instruments in a DAW, played from the Perturbed app. The system works end to
-end today with Ableton Live (§5 describes it). **First the rest of the pivot from REAPER to Live
-(§0: done but for housekeeping)**; then Claude inside the app (§1).
+end today with Ableton Live (§5 describes it; the pivot from REAPER is done, §0). **Next:
+generator LFOs (§6.3)**; then Claude inside the app (§1).
 
 **The idea.** A performer describes the piece they want to play ("two pianos phasing on an
 arpeggio of whatever I play, a slow bass on the lowest note, echo my right hand an octave up")
@@ -13,7 +13,7 @@ tempo. Claude arranges the instrument; it does **not** rewrite the app. Its brie
 
 ---
 
-## 0. Migration: REAPER → Ableton Live (in progress)
+## 0. Migration: REAPER → Ableton Live (done)
 
 **Status (2026-09-28):** 0.1 done (a hand-made set plays the brain), 0.2 steps 1–2 done (the bridge
 connects and reports Live's tracks; the app makes outputs from them; verified in Live), 0.3 done (LinkClock, verified with Live),
@@ -119,7 +119,7 @@ TempoClock per play and stays out of the Link session. Start/stop sync not done.
 
 ---
 
-## 1. Next: Claude in Perturbed
+## 1. Then: Claude in Perturbed
 
 ### 1.1 A terminal drawer running Claude Code
 
@@ -299,3 +299,46 @@ designed; likely pieces:
 - **Rules (decided):** a generator is in at most one group; groups don't nest.
 - **Solo:** soloing a group silences every generator outside it (their routines keep running, so
   they come back in time when solo is released); more than one group can be soloed at once.
+
+### 6.2 Audio processing: clip → script → clip
+
+Process Live's audio clips outside Live and bring the result back as a new clip (Live 12.4,
+so the Live API can create audio clips from files).
+
+- **Pick:** the bridge reads the selected clip's `file_path` (`live_set view detail_clip`) and sends
+  it to the brain with the clip's track and slot.
+- **Process:** a script in `processes/` runs on it (`python process.py in.wav out.wav --args`),
+  Python with numpy/scipy/librosa in a repo venv (`tools/venv`), or SuperCollider NRT. Stretch,
+  freeze, granular, reverse, slice, spectral...
+- **Return:** output goes to the project (`Perturbed Project/Samples/Processed/`, so the set stays
+  self-contained); the bridge puts it in the next empty slot below the original
+  (`clip_slot create_audio_clip`), or swaps it into a Simpler (`replace_sample`) so generators can
+  play it at once. The original is never touched.
+- **Not real time:** seconds per pass; for building material during a set, not on the beat. The
+  surface shows a pending/done state.
+- **Claude:** processes are small scripts like generator types, so Claude can write one for the
+  moment ("stretch 8x, freeze the attack, reverse the tail"), run it, and the clip appears:
+  AdHoc processes, alongside AdHoc generators (§2.1).
+
+### 6.3 Generator LFOs *(next)*
+
+Slow, beat-synced movement of any numeric generator param (note, index, num/den, velocity,
+prob, delay, ...), so a static setup evolves without hands.
+
+- **LFOs as shared objects,** listed in the sidebar like clocks (L1, L2, ...): shape (sine,
+  triangle, saw up/down, square, random steps, smooth random), rate in beats (e.g. 1 cycle per
+  16 beats) on a chosen clock, phase. Shared, so one LFO can move several params in sync or in
+  opposition (negative depth).
+- **Assign per param:** a small mod button next to any range param on a card picks an LFO and a
+  depth (± units of that param); the control shows the base value and the moving value. Several
+  params can follow one LFO; a param follows at most one.
+- **Brain:** the effective value = base + depth × lfo(beats), clipped to the param's range and
+  rounded to its step; read when the generator uses the param (at each onset), so no extra
+  scheduling. Changing num/den/clock by LFO needs a rule (restartOn params re-quantize: only
+  step at cycle boundaries, or exclude them at first).
+- **Saved** in performance files (LFOs + assignments); in the protocol (`/lfo/*`, `/gen/mod`).
+- **Relation to existing modes:** velocity `drift` and `ramp` are LFO shapes on velocity; keep
+  them, but they could become presets of this later. Sending an LFO to Live as MIDI CC (to move
+  a filter) is the backlog's CC generator: same LFOs, different target.
+- **Open:** LFO-to-LFO modulation (rate/depth)? Per-generator LFOs as well as shared ones?
+  Sync LFO phase to the Link bar?

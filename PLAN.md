@@ -325,20 +325,23 @@ so the Live API can create audio clips from files).
 Slow, beat-synced movement of any numeric generator param (note, index, num/den, velocity,
 prob, delay, ...), so a static setup evolves without hands.
 
-- **LFOs as shared objects,** listed in the sidebar like clocks (L1, L2, ...): shape (sine,
-  triangle, saw up/down, square, random steps, smooth random), rate in beats (e.g. 1 cycle per
-  16 beats) on a chosen clock, phase. Shared, so one LFO can move several params in sync or in
-  opposition (negative depth).
+- **LFOs as shared objects (decided),** listed in the sidebar like clocks (L1, L2, ...): shape
+  (sine, triangle, saw up/down, square, random steps, smooth random) and phase. Shared, so one
+  LFO can move several params in sync or in opposition (negative depth).
+- **Rate, as in Ableton's LFO (decided):** two modes. *Sync*: a cycle of num/den beats (e.g. 16/1,
+  1/4) on a chosen clock. *Free*: a frequency in Hz (or seconds per cycle), ignoring tempo.
+- **Phase follows the grid origin (decided):** synced LFOs count from the same origin as
+  generators (the Link bar where play was pressed), so a 16-beat LFO peaks on the same bar each
+  time; free LFOs also restart at play.
 - **Assign per param:** a small mod button next to any range param on a card picks an LFO and a
   depth (± units of that param); the control shows the base value and the moving value. Several
   params can follow one LFO; a param follows at most one.
 - **Brain:** the effective value = base + depth × lfo(beats), clipped to the param's range and
   rounded to its step; read when the generator uses the param (at each onset), so no extra
-  scheduling. Changing num/den/clock by LFO needs a rule (restartOn params re-quantize: only
-  step at cycle boundaries, or exclude them at first).
+  scheduling. First version: params that restart the generator (num, den, clock) can't be
+  modulated; add them later with a rule (change only where old and new grids meet).
 - **Saved** in performance files (LFOs + assignments); in the protocol (`/lfo/*`, `/gen/mod`).
 - **Relation to existing modes:** velocity `drift` and `ramp` are LFO shapes on velocity; keep
   them, but they could become presets of this later. Sending an LFO to Live as MIDI CC (to move
   a filter) is the backlog's CC generator: same LFOs, different target.
-- **Open:** LFO-to-LFO modulation (rate/depth)? Per-generator LFOs as well as shared ones?
-  Sync LFO phase to the Link bar?
+- **Open:** LFO-to-LFO modulation (rate/depth)?

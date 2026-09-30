@@ -25,4 +25,11 @@
 	};
 };
 
+// Live's MIDI tracks listening to the brain's buses, as reported by the Perturbed Bridge:
+// flat [name, port, channel, instrument, ...] (channel 0 = all channels); nil = no bridge.
+// The surface offers them as outputs.
+~liveTracks = nil;
+~setLiveTracks = { |args| ~liveTracks = args; ~sendLiveTracks.() };
+~sendLiveTracks = { if(~liveTracks.isNil) { ~send.('/live/tracks/clear') } { ~send.('/live/tracks', *~liveTracks) } };
+
 ~sendDest = { |d| ~send.('/dest', d[\id], d[\name], d[\port], d[\channel], d[\instrument]) };)

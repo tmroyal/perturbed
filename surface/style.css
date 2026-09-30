@@ -110,6 +110,16 @@ button.learn.on { background: var(--nord12); border-color: var(--nord12); color:
 .clock.main .tempo { margin-right: 26px; }
 .output .route { color: var(--nord4); opacity: .7; font-size: 12px; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #outputs:empty::before { content: 'No outputs yet.'; color: var(--nord3); }
+.output .warn {
+  flex: none; width: 18px; height: 18px; border-radius: 50%; background: var(--nord12); color: var(--nord0);
+  font-size: 12px; font-weight: 700; line-height: 18px; text-align: center; cursor: help;
+}
+.output.deaf .name { color: var(--nord12); }
+#live-tracks { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.output.live { background: none; border: 1px dashed var(--nord3); }
+.output .add { padding: 2px 10px; }
+#live-head button { padding: 3px 10px; font-size: 12px; }
+#output-manual summary { color: var(--nord9); cursor: pointer; margin: 8px 0; font-size: 12px; }
 #output-form { border-top-color: var(--nord15); }
 #output-form button { margin-top: 12px; width: 100%; }
 #sidebar > .hint { white-space: normal; }

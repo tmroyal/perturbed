@@ -51,6 +51,16 @@ sock.bind(0, async () => {
       '/hello <port> sends the snapshot to that port');
     other.close();
 
+    // Live's tracks, as the bridge reports them, reach every surface and the next snapshot
+    const tracks = next('/live/tracks');
+    send('/live/tracks', 'Piano 3', 1, 3, 'Pianoteq 9', 'Pad', 2, 1, '');
+    const t = await tracks;
+    check(t.length === 8 && t[0] === 'Piano 3' && t[2] === 3 && t[7] === '', '/live/tracks forwarded');
+    const cleared = next('/live/tracks/clear');
+    send('/live/tracks/clear');
+    await cleared;
+    check(true, '/live/tracks/clear forwarded');
+
     const dest = next('/dest', (id, name) => name === 'proto');
     send('/dest/add', 'proto', 2, 16, 'none');
     const [destId, , port, channel] = await dest;

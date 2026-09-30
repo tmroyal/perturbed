@@ -61,8 +61,9 @@ working example.
 defaults. `dest` is an output id (0 = none); `active` true means on.
 
 **Outputs.** `port` is an IAC bus (1 = Bus 1, 2 = Bus 2), `channel` 1–16. Each output is a Live
-MIDI track the performer sets up by hand (MIDI From that bus and channel, Monitor In, an
-instrument loaded); `instrument` is only a label. Reuse existing outputs where you can (the
+MIDI track the performer makes (MIDI From that bus and channel, Monitor In, an instrument
+loaded); the Perturbed Bridge reports those tracks and the app offers them as outputs.
+`instrument` is only a label. Reuse existing outputs where you can (the
 defaults are *Piano 1* = port 1 ch 1 and *Piano 2* = port 1 ch 2, Pianoteq 9), and tell the
 performer when a new one needs a Live track, with its bus, channel and the instrument you had in mind.
 

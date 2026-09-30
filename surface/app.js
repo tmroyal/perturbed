@@ -7,6 +7,7 @@ const model = {
   chord: { mode: 'auto', armed: false, pitches: [] },
   clocks: new Map(), // id -> { id, name, mode, num, den, factor, bpm, tempo }  (A = main, implicit)
   dests: new Map(),  // id -> { id, name, port, channel, instrument }
+  live: null,        // Live's tracks on the brain's buses [{ name, port, channel, instrument }]; null = no bridge
   gens: new Map(),   // id -> { id, type, dest, active, params, card }
 };
 let inSnapshot = false;
@@ -50,6 +51,7 @@ const handlers = {
   '/state/begin': () => {
     inSnapshot = true;
     model.types.clear(); model.clocks.clear(); model.dests.clear(); model.gens.clear();
+    model.live = null;
   },
   '/state/end': () => {
     inSnapshot = false;
@@ -87,6 +89,12 @@ const handlers = {
     live(renderOutputs);
   },
   '/dest/removed': (id) => { model.dests.delete(id); renderOutputs(); },
+  '/live/tracks': (...a) => {
+    model.live = [];
+    for (let i = 0; i + 3 < a.length; i += 4) model.live.push({ name: a[i], port: a[i + 1], channel: a[i + 2], instrument: a[i + 3] });
+    live(renderOutputs);
+  },
+  '/live/tracks/clear': () => { model.live = null; live(renderOutputs); },
 
   '/gen': (id, type, dest, active) => {
     let gen = model.gens.get(id);

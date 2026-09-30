@@ -52,6 +52,10 @@
 
       <div class="pane-head"><h1>Outputs</h1></div>
       <div id="outputs"></div>
+      <div class="pane-head" id="live-head"><h1>In Live</h1><button id="live-add-all">Add all</button></div>
+      <div id="live-tracks"></div>
+      <p class="hint" id="live-hint"></p>
+      <details id="output-manual"><summary>Add by hand</summary>
       <form id="output-form" class="card">
         <div class="fields">
           <label for="output-name">name</label><input id="output-name" type="text" placeholder="Piano 3">
@@ -61,7 +65,7 @@
         </div>
         <button type="submit">+ Output</button>
       </form>
-      <p class="hint">Each output is a Live MIDI track: <b>MIDI From</b> its IAC bus and channel, <b>Monitor In</b>.</p>
+      </details>
     </aside>
   </div>
 

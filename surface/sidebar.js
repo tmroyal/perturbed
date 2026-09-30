@@ -63,13 +63,39 @@ function updateClock(c) {
   if (row && row.mode === c.mode) row.update(c); else renderClocks();
 }
 
-// --- outputs ---
+// --- outputs: made from Live's tracks (reported by the Perturbed Bridge), or by hand. An output
+// and a Live track match when the track listens to the output's bus and channel. ---
+const listensTo = (t, d) => t.port === d.port && (t.channel === d.channel || t.channel === 0);
+const addOutput = (t) => osc.send('/dest/add', t.name, t.port, t.channel, t.instrument);
+
 function renderOutputs() {
-  $('outputs').replaceChildren(...[...model.dests.values()].map((d) => el('div', { className: 'output' },
-    el('span', { className: 'name', textContent: d.name }),
-    el('span', { className: 'route', textContent: `port ${d.port} · ch ${d.channel} · ${d.instrument}`, title: model.ports[d.port - 1] ?? '' }),
-    el('button', { className: 'close', textContent: '×', title: 'Remove', onclick: () => osc.send('/dest/remove', d.id) }))));
+  $('outputs').replaceChildren(...[...model.dests.values()].map((d) => {
+    const deaf = model.live && !model.live.some((t) => listensTo(t, d));
+    return el('div', { className: 'output' + (deaf ? ' deaf' : '') },
+      el('span', { className: 'name', textContent: d.name }),
+      el('span', { className: 'route', textContent: `port ${d.port} · ch ${d.channel} · ${d.instrument}`, title: model.ports[d.port - 1] ?? '' }),
+      deaf ? el('span', { className: 'warn', textContent: '!', title: `No Live track listens to port ${d.port} ch ${d.channel}` }) : '',
+      el('button', { className: 'close', textContent: '×', title: 'Remove', onclick: () => osc.send('/dest/remove', d.id) }));
+  }));
+  renderLiveTracks();
   model.gens.forEach((g) => g.card?.refreshOutputs());
+}
+
+// Live's tracks that aren't outputs yet (a track on "All Channels" can't be one: it needs a channel).
+function renderLiveTracks() {
+  const dests = [...model.dests.values()];
+  const fresh = (model.live ?? []).filter((t) => !dests.some((d) => d.port === t.port && d.channel === t.channel));
+  const addable = fresh.filter((t) => t.channel > 0);
+  $('live-tracks').replaceChildren(...fresh.map((t) => el('div', { className: 'output live' },
+    el('span', { className: 'name', textContent: t.name }),
+    el('span', { className: 'route', textContent: t.channel ? `port ${t.port} · ch ${t.channel} · ${t.instrument || 'no instrument'}` : 'all channels: pick one in Live' }),
+    t.channel ? el('button', { className: 'add', textContent: '+', title: 'Add as an output', onclick: () => addOutput(t) }) : '')));
+  $('live-head').hidden = fresh.length === 0;
+  $('live-add-all').hidden = addable.length < 2;
+  $('live-add-all').onclick = () => addable.forEach(addOutput);
+  $('live-hint').textContent = model.live === null
+    ? 'Live not connected: put the Perturbed Bridge on a track to see its tracks here.'
+    : 'New sound: a Live MIDI track with MIDI From an IAC bus and a free channel, Monitor In.';
 }
 
 function renderPorts() {

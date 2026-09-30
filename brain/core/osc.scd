@@ -22,6 +22,9 @@
 //   /clock/remove     <id>
 //   /dest/add         <name> <port> <channel> <instrument>     port and channel are 1-based
 //   /dest/remove      <id>
+//   /live/tracks      (<name> <port> <channel> <instrument>)...   from the Perturbed Bridge: Live's
+//                                                MIDI tracks on the brain's buses (channel 0 = all)
+//   /live/tracks/clear                           the bridge is gone
 //   /save             <path>                     write the performance as JSON
 //   /load             <path>                     replace everything; brain sends a full snapshot
 //
@@ -40,6 +43,8 @@
 //   /clock/removed    <id>
 //   /dest             <id> <name> <port> <channel> <instrument>
 //   /dest/removed     <id>
+//   /live/tracks      (<name> <port> <channel> <instrument>)...   as received from the bridge
+//   /live/tracks/clear                           no bridge (Live's tracks unknown)
 //   /gen              <id> <type> <dest> <active>
 //   /gen/param        <id> <param> <value>
 //   /gen/removed      <id>
@@ -65,6 +70,7 @@
 	~sendSchema.();
 	~clocks.keys.asArray.sort.do { |id| ~sendClock.(~clocks[id]) };
 	~dests.keys.asArray.sort.do { |id| ~sendDest.(~dests[id]) };
+	~sendLiveTracks.();
 	~gens.keys.asArray.sort.do { |id| ~sendGen.(~gens[id]); ~sendParams.(~gens[id]) };
 	~send.('/state/end');
 };
@@ -105,6 +111,8 @@
 	OSCdef(\clockRemove, { |msg| ~removeClock.(msg[1].asInteger) }, '/clock/remove');
 
 	OSCdef(\destAdd, { |msg| ~addDest.(msg[1], msg[2], msg[3], msg[4] ? "") }, '/dest/add');
+	OSCdef(\liveTracks, { |msg| ~setLiveTracks.(msg[1..].collect { |x| if(x.isKindOf(Symbol)) { x.asString } { x } }) }, '/live/tracks');
+	OSCdef(\liveTracksClear, { ~setLiveTracks.(nil) }, '/live/tracks/clear');
 	OSCdef(\destRemove, { |msg| ~removeDest.(msg[1].asInteger) }, '/dest/remove');
 
 	OSCdef(\save, { |msg| ~savePerformance.(msg[1].asString) }, '/save');

@@ -23,12 +23,12 @@ Next up: Claude inside the app, setting up a performance from a description of t
    and *(Bus 2)*, and off for your keyboard (it reaches Live through the brain's passthrough).
    Turn on **Show Link Toggle** there, then the **Link** button at the top left of Live's window:
    Live and Perturbed then share tempo and bar lines.
-3. **Tracks:** one MIDI track per output in Perturbed's Outputs pane (defaults: *Piano 1* =
-   Bus 1 ch 1, *Piano 2* = Bus 1 ch 2): MIDI From *IAC Driver (Bus n)*, that channel, Monitor
-   **In**, not armed, your instrument on it. Save the set as
-   `ableton/Perturbed Project/Perturbed.als`. Add a track whenever you add an output.
-4. **Bridge (optional):** `ableton/Perturbed Bridge.amxd` on any track connects Live to the
-   brain (it logs outputs to the Max Console for now; see PLAN §0.2).
+3. **Bridge:** put `ableton/Perturbed Bridge.amxd` (Max for Live) on any track. It shows
+   Perturbed which Live tracks listen to the brain.
+4. **Tracks:** a sound is a Live MIDI track with MIDI From *IAC Driver (Bus n)*, a channel no
+   other track uses, Monitor **In**, not armed, an instrument on it. It appears under *In Live*
+   in Perturbed's Outputs pane; **+** makes it an output. Save the set as
+   `ableton/Perturbed Project/Perturbed.als`.
 
 ## Run
 
@@ -44,6 +44,8 @@ first (the brain lists the MIDI inputs it found in the terminal). The first run 
 
 - **Chord:** play a chord; it stays until the next one (*Auto*), or only changes after you press
   *Arm* (*Arm* mode). *Clear* empties it.
+- **Outputs:** Live's tracks on the IAC buses are listed under *In Live*; **+** (or *Add all*)
+  makes them outputs. A **!** marks an output no Live track listens to.
 - **Generators:** *+ Basic* adds a generator. Pick an output, turn it *On*, press *Play* (or
   space). Set where its pitch comes from (a note or the chord: index, lowest, highest, arpeggio,
   permute), its rhythm (every, euclid, random, phrase on a num/den grid) and velocity (set,

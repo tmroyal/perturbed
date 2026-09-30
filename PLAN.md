@@ -15,8 +15,8 @@ tempo. Claude arranges the instrument; it does **not** rewrite the app. Its brie
 
 ## 0. Migration: REAPER → Ableton Live (in progress)
 
-**Status (2026-09-28):** 0.1 done (a hand-made set plays the brain), 0.2 step 1 done (the bridge
-connects and logs outputs; next: step 2, outputs from Live's tracks), 0.3 done (LinkClock, verified with Live),
+**Status (2026-09-28):** 0.1 done (a hand-made set plays the brain), 0.2 steps 1–2 built (the bridge
+connects and reports Live's tracks; the app makes outputs from them; step 2 to verify in Live), 0.3 done (LinkClock, verified with Live),
 0.4 done (REAPER removed).
 
 **Why.** Live is what gets used for live performance; REAPER isn't used often enough to be the
@@ -42,7 +42,7 @@ sends MIDI on IAC buses to whatever listens, so the pivot is almost entirely on 
 - **Verify:** `tests/demo.scd` plays on both tracks; `tests/run.sh` still passes (it plays on
   Bus 1 ch 1–2, so Live will sound it, as REAPER did).
 
-### 0.2 The Perturbed Bridge (Max for Live) *(step 1 done; step 2 next)*
+### 0.2 The Perturbed Bridge (Max for Live) *(step 1 done; step 2 built, to verify)*
 
 A Max for Live device, **Perturbed Bridge**, lives on a track in the set. It speaks the brain's
 OSC protocol as one more surface, so the brain needs no Live-specific code. Step 1 (done): it
@@ -56,7 +56,7 @@ one), follows brain restarts, and logs outputs to the Max Console.
   app) and receives the snapshot and live updates. It only acts on outputs (`/dest`,
   `/dest/removed`) and the transport; it ignores the rest.
 
-**Step 2 — outputs from Live's tracks (next).** Live is where tracks are made; the bridge only
+**Step 2 — outputs from Live's tracks (built; verify in Live).** Live is where tracks are made; the bridge only
 *reads* them (sturdier than creating them, and instruments are loaded by hand anyway), and the app
 turns them into outputs:
 
@@ -64,7 +64,9 @@ turns them into outputs:
   first device (e.g. "Pianoteq 9"), via `LiveAPI` (`input_routing_type`, `input_routing_channel`,
   `devices`). Send `/live/tracks` (one `/live/track <name> <port> <channel> <instrument>` per
   track, framed like the snapshot) on connect and whenever tracks are added, renamed or re-routed
-  (observe `live_set tracks` and each track's name and input routing). The patch gains
+  (observe `live_set tracks` and each track's name, input routing and devices; rescans are
+  debounced and only changes are sent). Built as one flat message; `/live/tracks/clear` when
+  the device is removed. The patch gains
   `[live.thisdevice]` → `js`: the Live API isn't usable until the device has loaded.
 - **Brain:** keeps the latest list and forwards it to surfaces (and to Claude's `perturbed state`).
   Outputs stay what they are (so generators and performance files are unchanged).

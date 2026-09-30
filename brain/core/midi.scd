@@ -16,13 +16,14 @@
 		out.latency = ~config[\latency];
 		out;
 	};
-	// the control bus is optional: without it LFOs and /cc are silent
-	~ctl = nil;
-	~config[\control] !? { |pair|
-		try { ~ctl = MIDIOut.newByName(*pair); ~ctl.latency = ~config[\latency] } {
-			"MIDI control bus % not found: LFOs and /cc are silent (add it in Audio MIDI Setup → IAC Driver)"
+	// control buses are optional: a missing one is silent (nil)
+	~ctls = (~config[\control] ? []).collect { |pair|
+		var out;
+		try { out = MIDIOut.newByName(*pair); out.latency = ~config[\latency] } {
+			"MIDI control bus % not found: LFOs on it are silent (add it in Audio MIDI Setup → IAC Driver)"
 			.format(pair.join(" ")).warn;
 		};
+		out;
 	};
 };
 
@@ -36,9 +37,12 @@
 ~noteOn = { |dest, note, vel, now = false| ~withOut.(dest, now, { |o| o.noteOn(dest[\channel] - 1, note, vel) }) };
 ~noteOff = { |dest, note, now = false| ~withOut.(dest, now, { |o| o.noteOff(dest[\channel] - 1, note, 0) }) };
 
-// A control change on the control bus; channel 1-based.
-~cc = { |channel, num, val, now = false|
-	~ctl !? { |o|
+// The control buses by name (as LFOs show and save them): port n = ~controlNames[n-1].
+~controlNames = (~config[\control] ? []).collect(_[1]);
+
+// A control change on control bus `port`; port and channel 1-based.
+~cc = { |port, channel, num, val, now = false|
+	~ctls[port.asInteger - 1] !? { |o|
 		if(now) { o.latency = 0 };
 		o.control(channel.asInteger.clip(1, 16) - 1, num.asInteger.clip(0, 127), val.asInteger.clip(0, 127));
 		o.latency = ~config[\latency];

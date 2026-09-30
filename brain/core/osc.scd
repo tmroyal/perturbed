@@ -23,7 +23,7 @@
 //   /dest/add         <name> <port> <channel> <instrument>     port and channel are 1-based
 //   /dest/remove      <id>
 //   /gen/do           <id> <action>              run one of the type's actions (a card button)
-//   /cc               <channel> <cc> <value>     one control change on the control bus, now
+//   /cc               <port> <channel> <cc> <value>   one control change now; port = control bus 1, 2, ...
 //   /live/tracks      (<name> <port> <channel> <instrument>)...   from the Perturbed Bridge: Live's
 //                                                MIDI tracks on the brain's buses (channel 0 = all)
 //   /live/tracks/clear                           the bridge is gone
@@ -118,7 +118,7 @@
 	OSCdef(\genDo, { |msg|
 		~gens[msg[1].asInteger] !? { |g| g[\type][\actions] !? { |acts| acts[msg[2].asSymbol] !? { |fn| fn.(g, g[\p]) } } };
 	}, '/gen/do');
-	OSCdef(\cc, { |msg| ~cc.(msg[1], msg[2], msg[3], true) }, '/cc');
+	OSCdef(\cc, { |msg| ~cc.(msg[1], msg[2], msg[3], msg[4], true) }, '/cc');
 	OSCdef(\liveTracks, { |msg| ~setLiveTracks.(msg[1..].collect { |x| if(x.isKindOf(Symbol)) { x.asString } { x } }) }, '/live/tracks');
 	OSCdef(\liveTracksClear, { ~setLiveTracks.(nil) }, '/live/tracks/clear');
 	OSCdef(\destRemove, { |msg| ~removeDest.(msg[1].asInteger) }, '/dest/remove');

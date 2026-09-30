@@ -8,7 +8,7 @@ var root = thisProcess.nowExecutingPath.dirname;
 ~root = root;
 ~testMode = "PERFORMED_TEST".getenv.notNil;
 ~config = (root +/+ "config.scd").load;
-if(~testMode) { ~config[\inputs] = [["IAC Driver", "Bus 2"]]; ~config[\control] = ["IAC Driver", "Bus 2"] };
+if(~testMode) { ~config[\inputs] = [["IAC Driver", "Bus 2"]]; ~config[\control] = [["IAC Driver", "Bus 2"]] };
 
 ["json", "midi", "keyboard", "clock", "chord", "destinations", "generators", "pitch", "rhythm", "velocity", "persist", "osc"].do { |name|
 	(root +/+ "core" +/+ name ++ ".scd").load;

@@ -6,7 +6,7 @@
 // renamed, and Max's virtual "from Max" ports, which appear when Live runs a Max for Live device).
 // Call after ~midiInit.
 ~keyboardInit = {
-	var own = (~config[\ports] ++ [~config[\control]]).select(_.notNil).collect(_[0]);
+	var own = (~config[\ports] ++ (~config[\control] ? [])).collect(_[0]);
 	~inputUids = MIDIClient.sources.select { |e|
 		~config[\inputs] !? { |ins| ins.any { |pair| e.device == pair[0] and: { e.name == pair[1] } } }
 		?? { own.includesEqual(e.device).not and: { e.device.beginsWith("from Max").not } };

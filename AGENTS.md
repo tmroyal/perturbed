@@ -105,7 +105,7 @@ against main) or `free` (its own `bpm`). Ratio and factor clocks follow main tem
 | `lo`, `hi` | 0–127 (0, 127) | only keys in this range pass (a zone; the key as played) |
 | `delay` | 0–16 beats of the main tempo, quarter steps (0) | delay notes (and note-offs) |
 
-**lfo** — a MIDI CC wave on the control bus (not an output). Live maps it to a parameter (MIDI
+**lfo** — a MIDI CC wave on a control bus (not an output). Live maps it to a parameter (MIDI
 Map mode); tell the performer which channel/cc you used and what it's meant to move, since the
 mapping is done by hand in Live.
 
@@ -117,7 +117,8 @@ mapping is done by hand in Live.
 | `hz` | 0.01–20 (0.25) | cycles per second, for free |
 | `phase` | 0–1 (0) | start point in the cycle |
 | `low`, `high` | 0–127 (0, 127) | CC range (low > high inverts) |
-| `channel`, `cc` | 1–16 (1), 0–127 (1) | where it goes on the control bus |
+| `port` | a control bus by name ("Perturbed CTL 1") | which control bus |
+| `channel`, `cc` | "1"–"16" ("1"), 0–127 (1) | where it goes on that bus (channel is a menu: a string) |
 | `clock` | clock id (0) | for sync |
 
 ### Musical building blocks

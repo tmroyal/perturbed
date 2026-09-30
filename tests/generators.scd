@@ -205,13 +205,13 @@ Routine {
 
 	// --- control changes ---
 	~ccs.clear;
-	brain.sendMsg('/cc', 3, 20, 99);
+	brain.sendMsg('/cc', 1, 3, 20, 99);
 	0.1.wait;
 	check.(~ccs.asArray == [[2, 20, 99]], "/cc: one control change on ch 3 (%)".format(~ccs));
 	// lfo: square, one cycle per 1/2 beat (0.125 s at 240 bpm), 10..100 on ch 4 cc 21
 	brain.sendMsg('/gen/add', "lfo");
 	0.1.wait;
-	[[\shape, "square"], [\num, 1], [\den, 2], [\low, 10], [\high, 100], [\channel, 4], [\cc, 21], [\active, 1]]
+	[[\shape, "square"], [\num, 1], [\den, 2], [\low, 10], [\high, 100], [\channel, "4"], [\cc, 21], [\active, 1]]
 		.do { |m| brain.sendMsg('/gen/set', genId, *m) };
 	0.1.wait;
 	~ccs.clear;

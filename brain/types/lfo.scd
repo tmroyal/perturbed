@@ -1,11 +1,12 @@
-// lfo — a low-frequency oscillator sent as MIDI control changes on the control bus (config
-// `control`), not to an output. In Live, map it with MIDI Map mode (⌘M, click a parameter, let the
+// lfo — a low-frequency oscillator sent as MIDI control changes on a control bus (config
+// `control`, picked by name), not to an output. In Live, map it with MIDI Map mode (⌘M, click a parameter, let the
 // LFO move) or a plugin's MIDI learn. The card's Send button sends one value (from/to in turn),
 // for mapping without playing.
 //
 // Rate is like Ableton's LFO: sync = one cycle per num/den beats of its clock, counted from the
 // grid origin (so it lines up with Live's bars); free = cycles per second from play. It sends about
 // 50 values a second, only when the value changes, timestamped like notes.
+~lfoPort = { |p| ~controlNames.indexOfEqual(p[\port].asString) !? (_ + 1) ? 0 };  // 0 = no such bus: silent
 (
 params: [
 	[\shape, "sine", \choice, "sine", "triangle", "saw up", "saw down", "square", "random", "smooth random"],
@@ -16,20 +17,21 @@ params: [
 	[\phase, 0, \range, 0, 1, 0.01],
 	[\low, 0, \range, 0, 127],
 	[\high, 127, \range, 0, 127],
-	[\channel, 1, \range, 1, 16],
+	[\port, ~controlNames.first ? "", \choice] ++ ~controlNames,
+	[\channel, "1", \choice] ++ (1..16).collect(_.asString),
 	[\cc, 1, \range, 0, 127],
 	~clockParam,
 ],
 output: false,
 showWhen: (num: [\rate, "sync"], den: [\rate, "sync"], clock: [\rate, "sync"], hz: [\rate, "free"]),
-labels: (rate: "rate", num: "cycle", hz: "Hz", low: "from", high: "to"),
-sections: (shape: "Wave", low: "Range", channel: "MIDI CC", clock: "Clock"),
+labels: (rate: "rate", num: "cycle", hz: "Hz", low: "from", high: "to", port: "bus"),
+sections: (shape: "Wave", low: "Range", port: "MIDI CC", clock: "Clock"),
 restartOn: [\clock],
 actions: (
 	// one value now, alternating from/to so a mapped parameter visibly moves
 	Send: { |g, p|
 		g[\sendTo] = (g[\sendTo] ? false).not;
-		~cc.(p[\channel], p[\cc], if(g[\sendTo]) { p[\high] } { p[\low] }, true);
+		~cc.(~lfoPort.(p), p[\channel].asString.asInteger, p[\cc], if(g[\sendTo]) { p[\high] } { p[\low] }, true);
 	},
 ),
 
@@ -51,7 +53,7 @@ run: { |g, p|
 			"smooth random", { rnd.(c) + ((rnd.(c + 1) - rnd.(c)) * (0.5 - (0.5 * cos(pi * f)))) },
 			{ 0.5 + (0.5 * sin(2pi * f)) });
 		var v = (p[\low].asFloat + ((p[\high].asFloat - p[\low].asFloat) * u)).round.asInteger;
-		if(v != last) { ~cc.(p[\channel], p[\cc], v); last = v };
+		if(v != last) { ~cc.(~lfoPort.(p), p[\channel].asString.asInteger, p[\cc], v); last = v };
 		(0.02 * thisThread.clock.tempo).wait;
 	};
 },

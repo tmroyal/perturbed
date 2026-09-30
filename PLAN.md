@@ -327,8 +327,8 @@ An `lfo` generator type sends a control-change stream to Live, to move any param
 macro, send, plugin knob). It replaced an earlier design (LFOs modulating generator params),
 dropped after a misunderstanding: the goal is movement in the *sound*.
 
-- **Control bus:** CCs go to their own IAC bus (config `control`, *Perturbed CTL 1*; *CTL 2*
-  spare), never to an output. In Live that bus has **Remote** on and Track off, so MIDI Map mode
+- **Control buses:** CCs go to IAC buses of their own (config `control`: *Perturbed CTL 1* and
+  *CTL 2*), never to an output; each LFO picks its bus and channel from menus. In Live that bus has **Remote** on and Track off, so MIDI Map mode
   (⌘M, click a parameter, move the LFO) maps any parameter, with a min/max per mapping; no Max
   devices per track. Plugins' own MIDI learn works too. Test mode sends CCs to Bus 2 instead.
 - **The type:** shape (sine, triangle, saw up/down, square, random, smooth random), rate like
@@ -336,7 +336,7 @@ dropped after a misunderstanding: the goal is movement in the *sound*.
   up with Live's bars; *free*: Hz), phase, range (from/to 0–127), channel and cc. ~50 values a
   second, only on change, timestamped like notes. Its card has no output menu (`output: false`
   in the type → `/gen/nooutput`).
-- **`/cc <channel> <cc> <value>`** sends one value at once: for mapping in Live without an LFO
+- **`/cc <port> <channel> <cc> <value>`** sends one value at once: for mapping in Live without an LFO
   running, and for anything else (Claude, patches) that wants to set a CC.
 - **Send** on the card sends one value now (from/to in turn), for mapping without playing. Built
   on a generic mechanism: a type's `actions` become card buttons (`/gen/action`, `/gen/do`).

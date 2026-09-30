@@ -1,6 +1,7 @@
 // generators.scd — plays into a running test-mode brain (its input is IAC Bus 2) and checks the
 // current chord (auto and arm modes, clear), the basic generator (note sources, Set, rhythm and
-// velocity modes) and passthrough (transpose, zone).
+// velocity modes), passthrough (transpose, zone), and control changes (/cc, the lfo type) on the
+// test control bus (Bus 2).
 // Run via tests/run.sh.
 (
 var brain = NetAddr("127.0.0.1", "PERFORMED_PORT".getenv.asInteger);
@@ -31,6 +32,10 @@ OSCdef(\dest, { |msg| ~destId = msg[1] }, '/dest');
 OSCdef(\clock, { |msg| ~clockId = msg[1] }, '/clock');
 ~midi = List[];
 MIDIClient.sources.select { |e| e.device == "IAC Driver" and: { e.name == "Bus 1" } }.do { |e| MIDIIn.connect(0, e) };
+// control changes from the test brain arrive on Bus 2: [channel (0-based), cc, value]
+~ccs = List[];
+MIDIClient.sources.select { |e| e.device == "IAC Driver" and: { e.name == "Bus 2" } }.do { |e| MIDIIn.connect(0, e) };
+MIDIdef.cc(\ccs, { |val, num, ch| ~ccs.add([ch, num, val]) });
 MIDIdef.noteOn(\passOn, { |vel, note, ch| if(ch == 2) { ~midi.add([\on, note]) } });
 MIDIdef.noteOff(\passOff, { |vel, note, ch| if(ch == 2) { ~midi.add([\off, note]) } });
 OSCdef(\param, { |msg| if(msg[1] == genId and: { msg[2] == 'note' }) { ~noteParam = msg[3] } }, '/gen/param');
@@ -196,6 +201,39 @@ Routine {
 	brain.sendMsg('/dest/remove', ~destId);
 	brain.sendMsg('/gen/remove', genId);
 	brain.sendMsg('/chord/mode', "auto");
+	0.1.wait;
+
+	// --- control changes ---
+	~ccs.clear;
+	brain.sendMsg('/cc', 3, 20, 99);
+	0.1.wait;
+	check.(~ccs.asArray == [[2, 20, 99]], "/cc: one control change on ch 3 (%)".format(~ccs));
+	// lfo: square, one cycle per 1/2 beat (0.125 s at 240 bpm), 10..100 on ch 4 cc 21
+	brain.sendMsg('/gen/add', "lfo");
+	0.1.wait;
+	[[\shape, "square"], [\num, 1], [\den, 2], [\low, 10], [\high, 100], [\channel, 4], [\cc, 21], [\active, 1]]
+		.do { |m| brain.sendMsg('/gen/set', genId, *m) };
+	0.1.wait;
+	~ccs.clear;
+	brain.sendMsg('/transport/play', 1);
+	0.6.wait;
+	brain.sendMsg('/transport/play', 0);
+	0.1.wait;
+	v = ~ccs.select { |e| e[0] == 3 and: { e[1] == 21 } }.collect(_[2]);
+	check.(v.size >= 6 and: { v.asSet == Set[10, 100] } and: { ~ccs.size == v.size },
+		"lfo square: alternates 10/100 on ch 4 cc 21, only on change (%)".format(v));
+	// sine: stays in range, moves smoothly
+	[[\shape, "sine"], [\num, 1], [\den, 1]].do { |m| brain.sendMsg('/gen/set', genId, *m) };
+	0.1.wait;
+	~ccs.clear;
+	brain.sendMsg('/transport/play', 1);
+	0.5.wait;
+	brain.sendMsg('/transport/play', 0);
+	0.1.wait;
+	v = ~ccs.collect(_[2]);
+	check.(v.size >= 10 and: { v.every { |x| x.inclusivelyBetween(10, 100) } } and: { v.asSet.size >= 8 },
+		"lfo sine: % values in 10..100".format(v.size));
+	brain.sendMsg('/gen/remove', genId);
 	0.1.wait;
 	if(fail) { "GENERATORS FAILED".postln; 1.exit } { "GENERATORS PASSED".postln; 0.exit };
 }.play(SystemClock);

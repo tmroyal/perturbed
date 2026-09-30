@@ -37,6 +37,9 @@ sock.bind(0, async () => {
     const schema = inbox.filter((m) => m.addr === '/gen/schema' && m.args[0] === 'basic').map((m) => m.args[1]);
     check(['note', 'velocity', 'num', 'den'].every((p) => schema.includes(p)), `basic schema (${schema.join(' ')})`);
 
+    check(inbox.some((m) => m.addr === '/gen/nooutput' && m.args[0] === 'lfo')
+      && !inbox.some((m) => m.addr === '/gen/nooutput' && m.args[0] === 'basic'), 'lfo is marked output-less, basic is not');
+
     const pong = next('/pong');
     send('/ping');
     const [bootId] = await pong;

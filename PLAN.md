@@ -2,8 +2,8 @@
 
 Perturbed is an algorithmic performance toolbox: generators on shared clocks read the chord you
 play and send MIDI to instruments in a DAW, played from the Perturbed app. The system works end to
-end today with Ableton Live (§5 describes it; the pivot from REAPER is done, §0). **Next:
-generator LFOs (§6.3)**; then Claude inside the app (§1).
+end today with Ableton Live (§5 describes it; the pivot from REAPER is done, §0), with LFOs to
+Live as MIDI CC (§6.3). **Next: Claude inside the app (§1).**
 
 **The idea.** A performer describes the piece they want to play ("two pianos phasing on an
 arpeggio of whatever I play, a slow bass on the lowest note, echo my right hand an octave up")
@@ -264,6 +264,7 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
 - **basic:** one note at a time on a grid of num/den beats, each released by the next.
   Pitch from a set note or the chord (index, lowest, highest, arpeggio up/down/up-down, permute);
   rhythm every/euclid/random/phrase; velocity set/accent/random/drift/ramp/pattern + humanize.
+- **lfo:** a MIDI CC stream on the control bus for Live's MIDI mapping (§6.3).
 - **passthrough:** the keyboard into an output, transposed, zoned (lowest..highest), optionally
   delayed by beats; works with the transport stopped.
 - **Clocks:** A is the main clock (transport tempo). B, C, ... run at main × ratio, main × factor,
@@ -320,28 +321,22 @@ so the Live API can create audio clips from files).
   moment ("stretch 8x, freeze the attack, reverse the tail"), run it, and the clip appears:
   AdHoc processes, alongside AdHoc generators (§2.1).
 
-### 6.3 Generator LFOs *(next)*
+### 6.3 LFOs to Live: MIDI CC *(done)*
 
-Slow, beat-synced movement of any numeric generator param (note, index, num/den, velocity,
-prob, delay, ...), so a static setup evolves without hands.
+An `lfo` generator type sends a control-change stream to Live, to move any parameter (filter,
+macro, send, plugin knob). It replaced an earlier design (LFOs modulating generator params),
+dropped after a misunderstanding: the goal is movement in the *sound*.
 
-- **LFOs as shared objects (decided),** listed in the sidebar like clocks (L1, L2, ...): shape
-  (sine, triangle, saw up/down, square, random steps, smooth random) and phase. Shared, so one
-  LFO can move several params in sync or in opposition (negative depth).
-- **Rate, as in Ableton's LFO (decided):** two modes. *Sync*: a cycle of num/den beats (e.g. 16/1,
-  1/4) on a chosen clock. *Free*: a frequency in Hz (or seconds per cycle), ignoring tempo.
-- **Phase follows the grid origin (decided):** synced LFOs count from the same origin as
-  generators (the Link bar where play was pressed), so a 16-beat LFO peaks on the same bar each
-  time; free LFOs also restart at play.
-- **Assign per param:** a small mod button next to any range param on a card picks an LFO and a
-  depth (± units of that param); the control shows the base value and the moving value. Several
-  params can follow one LFO; a param follows at most one.
-- **Brain:** the effective value = base + depth × lfo(beats), clipped to the param's range and
-  rounded to its step; read when the generator uses the param (at each onset), so no extra
-  scheduling. Params that restart the generator (num, den, clock) are never modulated
-  (decided).
-- **Saved** in performance files (LFOs + assignments); in the protocol (`/lfo/*`, `/gen/mod`).
-- **Relation to existing modes:** velocity `drift` and `ramp` are LFO shapes on velocity; keep
-  them, but they could become presets of this later. Sending an LFO to Live as MIDI CC (to move
-  a filter) is the backlog's CC generator: same LFOs, different target.
-- **Open:** LFO-to-LFO modulation (rate/depth)?
+- **Control bus:** CCs go to their own IAC bus (config `control`, *Perturbed CTL 1*; *CTL 2*
+  spare), never to an output. In Live that bus has **Remote** on and Track off, so MIDI Map mode
+  (⌘M, click a parameter, move the LFO) maps any parameter, with a min/max per mapping; no Max
+  devices per track. Plugins' own MIDI learn works too. Test mode sends CCs to Bus 2 instead.
+- **The type:** shape (sine, triangle, saw up/down, square, random, smooth random), rate like
+  Ableton's LFO (*sync*: a cycle per num/den beats on a clock, from the grid origin, so it lines
+  up with Live's bars; *free*: Hz), phase, range (from/to 0–127), channel and cc. ~50 values a
+  second, only on change, timestamped like notes. Its card has no output menu (`output: false`
+  in the type → `/gen/nooutput`).
+- **`/cc <channel> <cc> <value>`** sends one value at once: for mapping in Live without an LFO
+  running, and for anything else (Claude, patches) that wants to set a CC.
+- **Later:** a "send once" button on the card for mapping; LFO-to-LFO modulation; showing the
+  current value on the card.

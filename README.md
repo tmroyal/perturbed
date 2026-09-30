@@ -21,6 +21,7 @@ Next up: Claude inside the app, setting up a performance from a description of t
    *Bus 1* and *Bus 2*. The brain sends on these; Live listens.
 2. **Live:** Settings → Link, Tempo & MIDI: turn **Track** on for the inputs *IAC Driver (Bus 1)*
    and *(Bus 2)*, and off for your keyboard (it reaches Live through the brain's passthrough).
+   For *IAC Driver (Perturbed CTL 1)* turn **Remote** on and Track off: the control bus for LFOs.
    Turn on **Show Link Toggle** there, then the **Link** button at the top left of Live's window:
    Live and Perturbed then share tempo and bar lines.
 3. **Bridge:** put `ableton/Perturbed Bridge.amxd` (Max for Live) on any track. It shows
@@ -51,6 +52,9 @@ first (the brain lists the MIDI inputs it found in the terminal). The first run 
   permute), its rhythm (every, euclid, random, phrase on a num/den grid) and velocity (set,
   accent, random, drift, ramp, pattern, humanize).
 - **Passthrough:** *+ Passthrough* plays the keyboard into an output: transposed, zoned, delayed.
+- **LFOs:** *+ Lfo* sends a MIDI CC wave (synced to the beat or free) on the control bus. To make
+  it move something in Live: ⌘M, click the parameter, turn the LFO on until Live learns it, ⌘M.
+  The range of each mapping is set in Live's mapping browser.
 - **Tempo:** the dial (drag, shift for fine, scroll, double-click to type); *Modulate* multiplies
   the tempo by a fraction and ⇅ flips it back.
 - **Clocks:** A is the main clock. Add B, C… at a ratio or factor of it (1.01 phases slowly), or

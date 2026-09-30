@@ -105,6 +105,21 @@ against main) or `free` (its own `bpm`). Ratio and factor clocks follow main tem
 | `lo`, `hi` | 0–127 (0, 127) | only keys in this range pass (a zone; the key as played) |
 | `delay` | 0–16 beats of the main tempo, quarter steps (0) | delay notes (and note-offs) |
 
+**lfo** — a MIDI CC wave on the control bus (not an output). Live maps it to a parameter (MIDI
+Map mode); tell the performer which channel/cc you used and what it's meant to move, since the
+mapping is done by hand in Live.
+
+| param | values (default) | meaning |
+|---|---|---|
+| `shape` | sine, triangle, saw up, saw down, square, random, smooth random (sine) | wave |
+| `rate` | sync, free (sync) | sync: a cycle per num/den beats of `clock`, lined up with the bar; free: `hz` |
+| `num`, `den` | 1–64, 1–32 (4, 1) | cycle length in beats, for sync |
+| `hz` | 0.01–20 (0.25) | cycles per second, for free |
+| `phase` | 0–1 (0) | start point in the cycle |
+| `low`, `high` | 0–127 (0, 127) | CC range (low > high inverts) |
+| `channel`, `cc` | 1–16 (1), 0–127 (1) | where it goes on the control bus |
+| `clock` | clock id (0) | for sync |
+
 ### Musical building blocks
 
 - **Polyrhythm:** generators on one clock with different `num/den` (1/1 against 3/4 meet every 3 beats).

@@ -65,7 +65,8 @@ function buildCard(gen) {
     outputSel.value = model.dests.has(gen.dest) ? gen.dest : 0;
   };
 
-  const fields = [el('label', { textContent: 'output' }), outputSel];
+  const specs = model.types.get(gen.type) ?? [];
+  const fields = specs.noOutput ? [] : [el('label', { textContent: 'output' }), outputSel];
   const updaters = {}, learners = {}, refreshers = [];
   const conditional = [];  // rows shown only for some values of another param
   const applyShow = () => conditional.forEach(({ show, els }) => {
@@ -73,7 +74,6 @@ function buildCard(gen) {
     els.forEach((e) => { e.hidden = !visible; });
   });
 
-  const specs = model.types.get(gen.type) ?? [];
   const byName = Object.fromEntries(specs.map((s) => [s.name, s]));
   for (const spec of specs) {
     if (spec.section) fields.push(el('div', { className: 'section', textContent: spec.section }));
@@ -85,7 +85,9 @@ function buildCard(gen) {
       const num = paramControl(spec, (v) => set('num', v)), den = paramControl(byName.den, (v) => set('den', v));
       updaters.num = (v) => { num.update(v); showBeats(); };
       updaters.den = (v) => { den.update(v); showBeats(); };
-      fields.push(el('label', { textContent: 'step' }), el('div', { className: 'row' }, num.control, '/', den.control, beats));
+      const row = el('div', { className: 'row' }, num.control, '/', den.control, beats);
+      fields.push(el('label', { textContent: spec.label ?? 'step' }), row);
+      if (spec.show) conditional.push({ show: spec.show, els: [fields[fields.length - 2], row] });
       continue;
     }
     const c = paramControl(spec, (v) => set(spec.name, v), (on) => osc.send('/gen/learn', gen.id, spec.name, on ? 1 : 0));

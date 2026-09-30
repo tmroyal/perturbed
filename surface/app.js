@@ -72,6 +72,7 @@ const handlers = {
   },
   '/gen/label': (type, name, label) => { const s = specOf(type, name); if (s) s.label = label; },
   '/gen/section': (type, name, title) => { const s = specOf(type, name); if (s) s.section = title; },
+  '/gen/action': (type, name) => { const specs = model.types.get(type); if (specs) (specs.actions ??= []).push(name); },
   '/gen/nooutput': (type) => { const specs = model.types.get(type); if (specs) specs.noOutput = true; },
   '/gen/show': (type, name, param, ...values) => {
     const s = specOf(type, name);

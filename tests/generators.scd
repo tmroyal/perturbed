@@ -233,6 +233,14 @@ Routine {
 	v = ~ccs.collect(_[2]);
 	check.(v.size >= 10 and: { v.every { |x| x.inclusivelyBetween(10, 100) } } and: { v.asSet.size >= 8 },
 		"lfo sine: % values in 10..100".format(v.size));
+	// Send button: one value now, from/to in turn, transport stopped
+	~ccs.clear;
+	[[\low, 10], [\high, 100]].do { |m| brain.sendMsg('/gen/set', genId, *m) };
+	brain.sendMsg('/gen/do', genId, "Send");
+	0.05.wait;
+	brain.sendMsg('/gen/do', genId, "Send");
+	0.1.wait;
+	check.(~ccs.asArray == [[3, 21, 100], [3, 21, 10]], "lfo Send: to, then from (%)".format(~ccs));
 	brain.sendMsg('/gen/remove', genId);
 	0.1.wait;
 	if(fail) { "GENERATORS FAILED".postln; 1.exit } { "GENERATORS PASSED".postln; 0.exit };

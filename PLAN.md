@@ -338,5 +338,6 @@ dropped after a misunderstanding: the goal is movement in the *sound*.
   in the type → `/gen/nooutput`).
 - **`/cc <channel> <cc> <value>`** sends one value at once: for mapping in Live without an LFO
   running, and for anything else (Claude, patches) that wants to set a CC.
-- **Later:** a "send once" button on the card for mapping; LFO-to-LFO modulation; showing the
-  current value on the card.
+- **Send** on the card sends one value now (from/to in turn), for mapping without playing. Built
+  on a generic mechanism: a type's `actions` become card buttons (`/gen/action`, `/gen/do`).
+- **Later:** LFO-to-LFO modulation; showing the current value on the card.

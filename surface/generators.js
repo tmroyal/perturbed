@@ -103,6 +103,7 @@ function buildCard(gen) {
     el('header', {},
       led,
       el('h2', { textContent: `${typeLabel(gen.type)} ${gen.id}` }),
+      ...(specs.actions ?? []).map((a) => el('button', { className: 'power', textContent: a, onclick: () => osc.send('/gen/do', gen.id, a) })),
       power,
       el('button', { className: 'close', textContent: '×', title: 'Remove', onclick: () => osc.send('/gen/remove', gen.id) })),
     el('div', { className: 'fields' }, ...fields));

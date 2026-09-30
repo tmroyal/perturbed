@@ -53,7 +53,8 @@ first (the brain lists the MIDI inputs it found in the terminal). The first run 
   accent, random, drift, ramp, pattern, humanize).
 - **Passthrough:** *+ Passthrough* plays the keyboard into an output: transposed, zoned, delayed.
 - **LFOs:** *+ Lfo* sends a MIDI CC wave (synced to the beat or free) on the control bus. To make
-  it move something in Live: ⌘M, click the parameter, turn the LFO on until Live learns it, ⌘M.
+  it move something in Live: ⌘M, click the parameter, press the card's **Send** (or let the LFO
+  run) until Live learns it, ⌘M.
   The range of each mapping is set in Live's mapping browser.
 - **Tempo:** the dial (drag, shift for fine, scroll, double-click to type); *Modulate* multiplies
   the tempo by a fraction and ⇅ flips it back.

@@ -1,6 +1,7 @@
 // lfo — a low-frequency oscillator sent as MIDI control changes on the control bus (config
 // `control`), not to an output. In Live, map it with MIDI Map mode (⌘M, click a parameter, let the
-// LFO move) or a plugin's MIDI learn; `/cc` sends one value, for mapping while it's off.
+// LFO move) or a plugin's MIDI learn. The card's Send button sends one value (from/to in turn),
+// for mapping without playing.
 //
 // Rate is like Ableton's LFO: sync = one cycle per num/den beats of its clock, counted from the
 // grid origin (so it lines up with Live's bars); free = cycles per second from play. It sends about
@@ -24,6 +25,13 @@ showWhen: (num: [\rate, "sync"], den: [\rate, "sync"], clock: [\rate, "sync"], h
 labels: (rate: "rate", num: "cycle", hz: "Hz", low: "from", high: "to"),
 sections: (shape: "Wave", low: "Range", channel: "MIDI CC", clock: "Clock"),
 restartOn: [\clock],
+actions: (
+	// one value now, alternating from/to so a mapped parameter visibly moves
+	Send: { |g, p|
+		g[\sendTo] = (g[\sendTo] ? false).not;
+		~cc.(p[\channel], p[\cc], if(g[\sendTo]) { p[\high] } { p[\low] }, true);
+	},
+),
 
 run: { |g, p|
 	var t0 = thisThread.seconds, last = nil;

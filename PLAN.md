@@ -338,8 +338,8 @@ prob, delay, ...), so a static setup evolves without hands.
   params can follow one LFO; a param follows at most one.
 - **Brain:** the effective value = base + depth × lfo(beats), clipped to the param's range and
   rounded to its step; read when the generator uses the param (at each onset), so no extra
-  scheduling. First version: params that restart the generator (num, den, clock) can't be
-  modulated; add them later with a rule (change only where old and new grids meet).
+  scheduling. Params that restart the generator (num, den, clock) are never modulated
+  (decided).
 - **Saved** in performance files (LFOs + assignments); in the protocol (`/lfo/*`, `/gen/mod`).
 - **Relation to existing modes:** velocity `drift` and `ramp` are LFO shapes on velocity; keep
   them, but they could become presets of this later. Sending an LFO to Live as MIDI CC (to move

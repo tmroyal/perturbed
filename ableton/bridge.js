@@ -1,4 +1,4 @@
-// bridge.js — the Perturbed Bridge (Max for Live), PLAN §0.2. Joins the brain as one more
+// bridge.js — the Perturbed Bridge (Max for Live), PLAN §6.4. Joins the brain as one more
 // surface and reports Live's tracks that listen to the brain's IAC buses, so the app can make
 // outputs from them.
 //

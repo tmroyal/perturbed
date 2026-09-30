@@ -1,5 +1,5 @@
 // demo.scd — plays ~10 s on a running brain's default destinations (Piano 1, Piano 2) so you can
-// hear REAPER respond: C4 in quarter notes on Piano 1, E4/G4 in 3/4 and 2/3 on Piano 2.
+// hear Live respond: C4 in quarter notes on Piano 1, E4/G4 in 3/4 and 2/3 on Piano 2.
 // Run in a second terminal while the brain runs:  sclang tests/demo.scd
 (
 var brain = NetAddr("127.0.0.1", 57120);

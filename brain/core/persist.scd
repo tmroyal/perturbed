@@ -1,5 +1,5 @@
 // persist.scd — save/load a performance as JSON: tempo, clocks, chord, destinations, generators.
-// Plugin state lives in the REAPER project, not here. Loading replaces everything and stops the
+// Plugin state lives in the Live Set, not here. Loading replaces everything and stops the
 // transport; generators keep their active flag, so pressing play resumes the piece.
 (
 ~savePerformance = { |path|

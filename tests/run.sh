@@ -1,6 +1,6 @@
 #!/bin/sh
 # Starts the brain in test mode, runs the timing, generator and protocol tests against it, stops the brain.
-# Sends MIDI on IAC Bus 1 channels 1–2: anything listening there (REAPER) will play it.
+# Sends MIDI on IAC Bus 1 channels 1–2 (Live tracks listening there will play it) and CCs on Bus 2.
 cd "$(dirname "$0")/.."
 # The test brain gets its own port so tests never touch a live brain on 57120.
 export PERFORMED_PORT=57140

@@ -24,6 +24,9 @@ var observers = [];
 var sent = null;       // the last /live/tracks args sent, to send only changes
 var unmatched = {};    // IAC inputs already reported as matching no port
 
+var DEBUG = 0;         // trace Live API steps to the Max Console
+function trace() { if (DEBUG) post("perturbed ·", arrayfromargs(arguments).join(" "), "\n"); }
+
 function send() { outlet(0, arrayfromargs(arguments)); }
 function squash(s) { return String(s).toLowerCase().replace(/[^a-z0-9]/g, ""); }
 
@@ -36,10 +39,16 @@ var pinger = new Task(function () {
 pinger.interval = 2000;
 
 function bang() {   // from live.thisdevice
+	if (ready) return;
 	ready = true;
+	trace("Live API ready");
 	pinger.repeat();
 	rescan();
 }
+
+// After an edit (autowatch reload) live.thisdevice won't bang again: start if the API already works.
+var boot = new Task(function () { if (new LiveAPI("live_set").id != 0) bang(); }, this);
+boot.schedule(500);
 
 function notifydeleted() { send("/live/tracks/clear"); }
 
@@ -85,10 +94,12 @@ function rescan() {
 	if (!ready) return;
 	var song = new LiveAPI("live_set");
 	var n = song.getcount("tracks");
+	trace("rescan:", n, "tracks");
 	var ids = [], report = [];
 	for (var i = 0; i < n; i++) {
 		var t = new LiveAPI("live_set tracks " + i);
 		ids.push(t.id);
+		trace("track", i, "id", t.id, "midi in", t.get("has_midi_input"), "input", t.get("input_routing_type"));
 		if (t.get("has_midi_input")[0] != 1) continue;
 		var type = dictProp(t, "input_routing_type");
 		var port = type ? ports.indexOf(squash(type.display_name)) + 1 : 0;
@@ -116,9 +127,11 @@ function rescan() {
 // Watch the track list, and each track's name, input and instrument.
 function observe(ids) {
 	trackIds = ids.join();
+	trace("clearing", observers.length, "observers");
 	observers.forEach(function (o) { o.property = ""; });
 	observers = [];
 	var watch = function (path, prop) {
+		trace("observe", path, prop);
 		var o = new LiveAPI(changed, path);
 		o.property = prop;
 		observers.push(o);

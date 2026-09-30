@@ -15,8 +15,8 @@ tempo. Claude arranges the instrument; it does **not** rewrite the app. Its brie
 
 ## 0. Migration: REAPER → Ableton Live (in progress)
 
-**Status (2026-09-28):** 0.1 done (a hand-made set plays the brain), 0.2 steps 1–2 built (the bridge
-connects and reports Live's tracks; the app makes outputs from them; step 2 to verify in Live), 0.3 done (LinkClock, verified with Live),
+**Status (2026-09-28):** 0.1 done (a hand-made set plays the brain), 0.2 steps 1–2 done (the bridge
+connects and reports Live's tracks; the app makes outputs from them; verified in Live), 0.3 done (LinkClock, verified with Live),
 0.4 done (REAPER removed).
 
 **Why.** Live is what gets used for live performance; REAPER isn't used often enough to be the
@@ -42,7 +42,7 @@ sends MIDI on IAC buses to whatever listens, so the pivot is almost entirely on 
 - **Verify:** `tests/demo.scd` plays on both tracks; `tests/run.sh` still passes (it plays on
   Bus 1 ch 1–2, so Live will sound it, as REAPER did).
 
-### 0.2 The Perturbed Bridge (Max for Live) *(step 1 done; step 2 built, to verify)*
+### 0.2 The Perturbed Bridge (Max for Live) *(steps 1–2 done)*
 
 A Max for Live device, **Perturbed Bridge**, lives on a track in the set. It speaks the brain's
 OSC protocol as one more surface, so the brain needs no Live-specific code. Step 1 (done): it
@@ -56,7 +56,7 @@ one), follows brain restarts, and logs outputs to the Max Console.
   app) and receives the snapshot and live updates. It only acts on outputs (`/dest`,
   `/dest/removed`) and the transport; it ignores the rest.
 
-**Step 2 — outputs from Live's tracks (built; verify in Live).** Live is where tracks are made; the bridge only
+**Step 2 — outputs from Live's tracks (done).** Live is where tracks are made; the bridge only
 *reads* them (sturdier than creating them, and instruments are loaded by hand anyway), and the app
 turns them into outputs:
 

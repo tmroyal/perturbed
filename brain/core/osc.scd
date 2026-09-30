@@ -40,6 +40,7 @@
 //   /gen/show         <type> <param> <otherParam> <value>...   show param only for those values
 //   /gen/label        <type> <param> <label>     display name
 //   /gen/action       <type> <name>              the type has an action: show a button
+//   /gen/slider       <type> <param> lin|log     show the param as a slider
 //   /gen/nooutput     <type>                     the type plays into no output (hide the output menu)
 //   /gen/section      <type> <param> <title>     param starts a new titled group
 //   /gen/learn        <id> <param> 1|0           learning started / ended

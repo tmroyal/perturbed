@@ -23,6 +23,7 @@ params: [
 	~clockParam,
 ],
 output: false,
+sliders: (hz: \log, phase: \lin),
 showWhen: (num: [\rate, "sync"], den: [\rate, "sync"], clock: [\rate, "sync"], hz: [\rate, "free"]),
 labels: (rate: "rate", num: "cycle", hz: "Hz", low: "from", high: "to", port: "bus"),
 sections: (shape: "Wave", low: "Range", port: "MIDI CC", clock: "Clock"),

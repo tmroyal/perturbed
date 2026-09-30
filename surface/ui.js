@@ -34,14 +34,18 @@ function numberInput(min, max, onChange, step = 1) {
 }
 
 // Slider with a typed field beside it; set(v) shows a value unless the user is dragging or typing.
-function slider(min, max, onChange) {
-  const input = el('input', { type: 'range', min, max, step: 1 });
-  const field = numberInput(min, max, (v) => { input.value = v; onChange(v); });
+// log: logarithmic travel (for frequencies). The slider runs 0..1000 and maps to min..max.
+function slider(min, max, onChange, { step = 1, log = false } = {}) {
+  const toPos = (v) => 1000 * (log ? Math.log(v / min) / Math.log(max / min) : (v - min) / (max - min));
+  const fromPos = (p) => { const t = p / 1000; return log ? min * (max / min) ** t : min + (max - min) * t; };
+  const round = (v) => Math.min(max, Math.max(min, +(Math.round(v / step) * step).toFixed(4)));
+  const input = el('input', { type: 'range', min: 0, max: 1000, step: 1 });
+  const field = numberInput(min, max, (v) => { input.value = toPos(v); onChange(v); }, step);
   field.classList.add('value');
   input.addEventListener('pointerdown', () => { input.dataset.dragging = '1'; });
   input.addEventListener('pointerup', () => { delete input.dataset.dragging; });
-  input.addEventListener('input', () => { field.value = input.value; onChange(parseInt(input.value)); });
-  const set = (v) => { if (!editing(input)) input.value = v; if (!editing(field)) field.value = v; };
+  input.addEventListener('input', () => { const v = round(fromPos(+input.value)); field.value = v; onChange(v); });
+  const set = (v) => { if (!editing(input)) input.value = toPos(v); if (!editing(field)) field.value = v; };
   return { root: el('div', { className: 'row' }, input, field), set };
 }
 

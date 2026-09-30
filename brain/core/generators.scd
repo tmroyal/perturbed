@@ -15,6 +15,8 @@
 //   sections:  (param: "Title") params that start a new titled group on the surface
 //   restartOn: params whose change restarts `run` (re-quantizes to the new grid)
 //   actions:   (Name: { |g, p| }) buttons on the card; pressing one runs it (/gen/do)
+//   sliders:   (param: \lin | \log) range params shown as a slider (+ field); by default a range
+//              wider than 32 is a slider, others a number field, and num/den always fields
 //   output:    false for types that don't play into an output (lfo); the surface hides the menu
 // Shared building blocks: core/pitch.scd (which note), core/rhythm.scd (which grid steps play),
 // core/velocity.scd (how loud).
@@ -115,6 +117,7 @@
 		(type[\labels] ? ()).keysValuesDo { |param, label| ~send.('/gen/label', name, param, label) };
 		(type[\sections] ? ()).keysValuesDo { |param, title| ~send.('/gen/section', name, param, title) };
 		if(type[\output] == false) { ~send.('/gen/nooutput', name) };
+		(type[\sliders] ? ()).keysValuesDo { |param, scale| ~send.('/gen/slider', name, param, scale) };
 		(type[\actions] ? ()).keys.asArray.sort.do { |a| ~send.('/gen/action', name, a) };
 	};
 };

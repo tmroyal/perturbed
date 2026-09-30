@@ -37,8 +37,8 @@ function paramControl(spec, send, learn) {
       return { control: sel, update: (v) => { sel.value = v; } };
     }
     case 'range': {
-      if (max - min <= 32) return plain(numberInput(min, max, send, step));
-      const s = slider(min, max, send);
+      if (!spec.slider && (max - min <= 32 || spec.field)) return plain(numberInput(min, max, send, step));
+      const s = slider(min, max, send, { step, log: spec.slider === 'log' });
       return { control: s.root, update: s.set };
     }
     default: {  // text
@@ -79,7 +79,8 @@ function buildCard(gen) {
       // the grid step as num / den beats, with the result shown
       const beats = el('span', { className: 'hint' });
       const showBeats = () => { beats.textContent = `= ${+(gen.params.num / gen.params.den).toFixed(3)} beat`; };
-      const num = paramControl(spec, (v) => set('num', v)), den = paramControl(byName.den, (v) => set('den', v));
+      const asField = (s) => ({ ...s, field: true });  // num/den are always number fields (a slider doesn't fit the row)
+      const num = paramControl(asField(spec), (v) => set('num', v)), den = paramControl(asField(byName.den), (v) => set('den', v));
       updaters.num = (v) => { num.update(v); showBeats(); };
       updaters.den = (v) => { den.update(v); showBeats(); };
       const row = el('div', { className: 'row' }, num.control, '/', den.control, beats);

@@ -2,11 +2,12 @@
 // goes (learn, the chord, key-driven generators), and learn itself.
 (
 // Connect every source, keep only the chosen inputs' messages (config `inputs`; default: all
-// but the IAC Driver, whose buses carry the brain's own output). Call after ~midiInit.
+// but the IAC Driver, whose buses carry the brain's own output, and Max's virtual "from Max"
+// ports, which appear when Live runs a Max for Live device). Call after ~midiInit.
 ~keyboardInit = {
 	~inputUids = MIDIClient.sources.select { |e|
 		~config[\inputs] !? { |ins| ins.any { |pair| e.device == pair[0] and: { e.name == pair[1] } } }
-		?? { e.device != "IAC Driver" };
+		?? { e.device != "IAC Driver" and: { e.device.beginsWith("from Max").not } };
 	}.collect(_.uid);
 	MIDIIn.connectAll;
 	MIDIdef.noteOn(\keyOn, { |vel, note, ch, src| if(~inputUids.includes(src)) { ~key.(note, vel) } });

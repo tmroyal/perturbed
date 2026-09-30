@@ -2,9 +2,9 @@
 //
 // ports: MIDI outputs, as [device, name]. SuperCollider on macOS can't create virtual ports,
 //        so the brain sends to IAC buses (Audio MIDI Setup → IAC Driver). Destination port 1
-//        is the first entry, and so on. REAPER tracks listen to the same buses.
+//        is the first entry, and so on. Live tracks listen to the same buses.
 // inputs: MIDI inputs to listen to (keyboard, controllers), as [device, name]; nil = every input
-//         except the IAC Driver, whose buses carry the brain's own output.
+//         except the IAC Driver, whose buses carry the brain's own output, and Max's "from Max" ports.
 // latency: seconds between logical time and when notes sound; MIDI is timestamped this far ahead.
 // destinations: created at boot (not in test mode): [name, port, channel, instrument].
 (

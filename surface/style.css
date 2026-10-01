@@ -103,10 +103,15 @@ button.learn.on { background: var(--nord12); border-color: var(--nord12); color:
 #clocks, #outputs { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
 #clocks { margin-bottom: 28px; }
 .clock, .output { display: flex; align-items: center; gap: 8px; background: var(--nord2); border-radius: 6px; padding: 6px 8px 6px 12px; min-height: 42px; }
-.clock { flex-wrap: wrap; }
+.clock { gap: 6px; }
+.clock select { padding: 4px 2px; }
+.clock .rotary { gap: 4px; }
+.clock .rotary input[type=number] { width: 60px; }
 .clock .name, .output .name { color: var(--nord6); font-weight: 600; flex: none; }
 .clock .name { width: 14px; }
-.clock input[type=number] { width: 48px; }
+.clock > input[type=number] { width: 44px; }
+/* the dials and typing do the work: the spinner arrows only steal room for digits */
+.clock input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .clock .tempo { color: var(--nord8); font-variant-numeric: tabular-nums; margin-left: auto; }
 .clock.main .tempo { margin-right: 26px; }
 .output .route { color: var(--nord4); opacity: .7; font-size: 12px; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -1,9 +1,9 @@
 # Perturbed — plan
 
 Perturbed is an algorithmic performance toolbox: generators on shared clocks read the chord you
-play and send MIDI to instruments in Ableton Live, played from the Perturbed app (§6 describes
-the system). Claude runs in a drawer in the app (§6.6) and sets up the running performance with the `perturbed`
-command (§6.7). **Next: the same as an MCP server (§1).**
+play and send MIDI to instruments in Ableton Live, played from the Perturbed app (§5 describes
+the system). Claude runs in a drawer in the app (§5.6) and sets up the running performance with the `perturbed`
+command (§5.7). **Next: to be chosen from §1 (Claude goes further) and §2 (ideas).**
 
 **The idea.** A performer describes the piece they want to play ("two pianos phasing on an
 arpeggio of whatever I play, a slow bass on the lowest note, echo my right hand an octave up")
@@ -13,28 +13,9 @@ tempo. Claude arranges the instrument; it does **not** rewrite the app. Its brie
 
 ---
 
-## 1. Next: an MCP server for the setup tools
+## 1. Later: Claude goes further
 
-The `perturbed` CLI (§6.7) works; next, the same commands as an MCP server, so Claude in the drawer
-sees typed tools with each setting's range and options instead of reading AGENTS.md and shell
-help.
-
-- **Server:** `tools/mcp.js` (stdio), built on `tools/lib/brain.js`, one connection to the brain
-  kept open (no /hello per call). Tools mirror the CLI: `state`, `schema`, `add_generator`,
-  `set_generator`, `remove_generator`, `outputs` (add/remove/from Live), `clocks`, `tempo`,
-  `chord`, `cc`, `save`, `load`; play/stop only as explicit tools the guardrails mention.
-- **Schemas from the brain:** tool input schemas are built from `/gen/schema` at startup (types,
-  settings, ranges, choices), so a new generator type shows up as tool options without code.
-- **Drawer:** registered for the drawer's Claude only (`claude --mcp-config` next to
-  `--settings`), allowed in `agent-settings.json`. AGENTS.md then points to the tools first.
-- **Done when:** in the drawer, "two phasing arpeggios on Piano 1 and 2" is done through the tools,
-  and the CLI stays for scripts and humans.
-
----
-
-## 2. Later: Claude goes further
-
-### 2.1 AdHoc generators
+### 1.1 AdHoc generators
 
 Claude writes a one-off generator type for the piece at hand (a strum, a tintinnabuli voice, a
 canon of another generator), called **AdHoc**.
@@ -49,9 +30,9 @@ canon of another generator), called **AdHoc**.
 - A performance file that uses an AdHoc type records it, so saving/opening carries the type along
   (copy the type file next to the performance, or embed its source).
 
-### 2.2 Claude and Live
+### 1.2 Claude and Live
 
-Claude sets up the sound side too, through the bridge (§6.4): new protocol messages (e.g.
+Claude sets up the sound side too, through the bridge (§5.4): new protocol messages (e.g.
 `/live/track/volume`, `/live/record`, `/live/clip/launch`) that the brain forwards and the bridge
 carries out with the Live API, exposed as `perturbed live ...` commands. Instruments stay loaded
 by hand (the Live API can't load third-party plugins). The Live Set is saved alongside the
@@ -59,9 +40,9 @@ performance file (it holds instruments and their state).
 
 ---
 
-## 3. Ideas to shape
+## 2. Ideas to shape
 
-### 3.1 Generator groups
+### 2.1 Generator groups
 
 Gather generators into named groups so a layer of the piece can be handled as one thing.
 
@@ -77,7 +58,7 @@ Gather generators into named groups so a layer of the piece can be handled as on
 - **Files and Claude:** groups saved in performance files; a natural unit for Claude to set up
   ("add a group of three canon voices") and, later, for AdHoc generators.
 
-### 3.2 Audio processing: clip → script → clip
+### 2.2 Audio processing: clip → script → clip
 
 Process Live's audio clips outside Live and bring the result back as a new clip (Live 12.4,
 so the Live API can create audio clips from files).
@@ -95,11 +76,11 @@ so the Live API can create audio clips from files).
   surface shows a pending/done state.
 - **Claude:** processes are small scripts like generator types, so Claude can write one for the
   moment ("stretch 8x, freeze the attack, reverse the tail"), run it, and the clip appears:
-  AdHoc processes, alongside AdHoc generators (§2.1).
+  AdHoc processes, alongside AdHoc generators (§1.1).
 
 ---
 
-## 4. Backlog
+## 3. Backlog
 
 - **More generator types:** chord/strum (plays the whole chord or a voicing; settles "multiple
   notes per generator"), canon/echo of another generator, walk, phase, additive process, tone
@@ -110,6 +91,10 @@ so the Live API can create audio clips from files).
   modulation.
 - **Swing** as a rhythm-timing feel.
 - **LFOs:** LFO-to-LFO modulation (rate, depth); the current value shown on the card.
+- **MCP server** for the setup tools, only if Claude should reach Perturbed from outside the drawer
+  (Claude Desktop or the app, which have no shell). Not for the drawer: the CLI already checks
+  settings and lists options, and tools would cost context every session. `tools/lib/brain.js` is
+  ready to be wrapped.
 - **Live:** Link start/stop sync (Live's transport follows Play, for recording a performance);
   outputs that *are* Live's tracks (auto-sync, instead of one click each; needs a rule for
   opening performance files: match outputs to tracks by name, flag missing ones).
@@ -123,7 +108,7 @@ so the Live API can create audio clips from files).
 
 ---
 
-## 5. Working on Perturbed (developers)
+## 4. Working on Perturbed (developers)
 
 - `./tests/run.sh` (~40 s) starts a test brain on port 57140 and runs the timing, generator, CLI and
   protocol tests; it plays MIDI on IAC Bus 1 channels 1–2 and sends CCs on Bus 2. Keep it green
@@ -153,9 +138,9 @@ so the Live API can create audio clips from files).
 
 ---
 
-## 6. The system today (reference)
+## 5. The system today (reference)
 
-### 6.1 Architecture
+### 5.1 Architecture
 
 ```
  MIDI keyboard ──MIDI──▶ ┌──────────────────────────────┐ ──MIDI notes──▶ Ableton Live
@@ -179,7 +164,7 @@ clocks, references, live changes), which needs one shared model of musical state
 architectures don't provide that, but DAWs are good at hosting, mixing and saving plugin state.
 (The first proof of concept, SC hosting VSTs directly, is in `archive/`.)
 
-### 6.2 Concepts
+### 5.2 Concepts
 
 - **Chord:** one current chord, latched. Auto: every chord played replaces it on release. Arm:
   only the next chord after pressing Arm. Clear empties it.
@@ -193,7 +178,7 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   rhythm every/euclid/random/phrase; velocity set/accent/random/drift/ramp/pattern + humanize.
 - **passthrough:** the keyboard into an output, transposed, zoned (lowest..highest), optionally
   delayed by beats; works with the transport stopped.
-- **lfo:** a MIDI CC wave on a control bus (§6.5): sine, triangle, saw up/down, square, random,
+- **lfo:** a MIDI CC wave on a control bus (§5.5): sine, triangle, saw up/down, square, random,
   smooth random; rate sync (num/den beats per cycle on a clock) or free (Hz); phase; from/to;
   bus, channel, cc. ~50 values a second, only on change. **Send** sends one value (from/to in
   turn) for mapping without playing.
@@ -201,7 +186,7 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   or a free bpm; all share the grid origin. Metric modulation multiplies the main tempo by a fraction.
 - **Outputs** (the brain's *destinations*): (IAC port, channel) pairs, one Live track each.
 
-### 6.3 Timing and Link
+### 5.3 Timing and Link
 
 - The main clock is a LinkClock (quantum 4, latency = the MIDI latency), so Live and Perturbed
   share tempo and bar phase; tempo changes go both ways. Test mode uses a fresh TempoClock per
@@ -214,7 +199,7 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   MIDI is timestamped 50 ms ahead (`latency`); surface feedback (`/beat`, `/note`) is sent at the
   same delay so it lines up with the sound. Passthrough notes and `/cc` go out immediately.
 
-### 6.4 Live setup and the Perturbed Bridge
+### 5.4 Live setup and the Perturbed Bridge
 
 - **Live settings (once):** IAC Bus 1 and 2 inputs with **Track** on (Remote off); the control
   buses *Perturbed CTL 1* and *2* with **Remote** on (Track off); the keyboard's Track input off
@@ -229,7 +214,7 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   The Outputs pane lists tracks that aren't outputs yet under *In Live* (**+**, *Add all*) and
   marks outputs no track listens to with **!**. The bridge only reads; it never makes tracks.
 
-### 6.5 Control buses and MIDI mapping
+### 5.5 Control buses and MIDI mapping
 
 - CCs (LFOs, `/cc <bus> <channel> <cc> <value>`) go to IAC buses of their own (config `control`:
   *Perturbed CTL 1*, *CTL 2*), never to an output, so they can't collide with notes. A missing
@@ -237,7 +222,7 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
 - In Live, MIDI Map mode (⌘M, click a parameter, press the LFO's **Send**) maps any parameter,
   with a min/max per mapping in the mapping browser; plugins' own MIDI learn works too.
 
-### 6.6 The Claude drawer
+### 5.6 The Claude drawer
 
 - **Claude** in the transport bar (or ⌘`) slides up a terminal running Claude Code in the repo with
   `PERTURBED_AGENT=1`, so it follows AGENTS.md as the performance assistant. Drag the top edge to
@@ -249,13 +234,13 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
 - `surface/agent-settings.json` (passed with `claude --settings`) allows edits in `performances/`
   and denies them in the app's code and docs, so AGENTS.md's rules are enforced, not just asked.
 
-### 6.7 The perturbed command
+### 5.7 The perturbed command
 
 - `tools/perturbed` (Node) changes the running performance from the shell: `state`, `schema`,
   `add`/`set`/`on`/`off`/`remove`/`do` for generators, `output add|remove|live`,
   `clock add|set|remove`, `tempo`, `scale`, `chord`, `cc`, `play`/`stop`, `save`/`load`
   (`tools/perturbed help`). Built for Claude in the drawer (allowed in `agent-settings.json`).
-- `tools/lib/brain.js` does the work, for reuse by an MCP server: a short-lived surface (`/hello`,
+- `tools/lib/brain.js` does the work: a short-lived surface (`/hello`,
   mirror the snapshot, send intents and wait for their echo, `/bye`). Settings are checked against
   the type schema before sending (the brain stores what it gets), and errors list what's allowed.
   Outputs and clocks by name or id; notes by name or number.

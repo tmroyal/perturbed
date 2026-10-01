@@ -1,5 +1,5 @@
-// brain.js — a client for the brain's OSC protocol (brain/core/osc.scd) for tools: the perturbed
-// CLI now, an MCP server later. It joins as a short-lived surface: /hello, mirror the snapshot and
+// brain.js — a client for the brain's OSC protocol (brain/core/osc.scd) for tools (the perturbed
+// CLI). It joins as a short-lived surface: /hello, mirror the snapshot and
 // updates into a model, send intents and wait for the brain's echo, /bye.
 //
 // Settings are checked against the type schema before sending (the brain stores what it gets),
@@ -48,10 +48,16 @@ class Brain {
     const b = new Brain();
     await new Promise((r) => b.sock.bind(0, r));
     const end = b.waitFor('/state/end', () => true, timeout)
-      .catch(() => fail(`the brain isn't answering on port ${PORT}: is Perturbed running?`));
+      .catch(() => { b.sock.close(); fail(`the brain isn't answering on port ${PORT}: is Perturbed running?`); });
     b.send('/hello');
     await end;
+    b.bootId = await b.ping();
     return b;
+  }
+
+  // The brain's boot id, or null if it doesn't answer (a new id means it restarted: reconnect).
+  async ping(ms = 800) {
+    try { return (await this.request('/ping', [], '/pong', () => true, ms))[0]; } catch { return null; }
   }
 
   close() {
@@ -202,9 +208,14 @@ class Brain {
 
   // --- generators ---
   async addGen(typeName, settings = {}) {
-    this.type(typeName);
+    const t = this.type(typeName);
     const before = new Set(this.model.gens.keys());
+    // the brain sends /gen, then every default as /gen/param: wait for the last one, so the echoes
+    // of our settings can't be confused with the defaults still arriving
+    const last = t.params[t.params.length - 1]?.name;
+    const defaults = this.waitFor('/gen/param', (gid, name) => !before.has(gid) && name === last);
     const [id] = await this.request('/gen/add', [typeName], '/gen', (gid) => !before.has(gid));
+    if (last) await defaults;
     await this.setGen(id, settings);
     return this.state().generators.find((g) => g.id === id);
   }

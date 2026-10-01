@@ -20,7 +20,7 @@ change it.
 
 - **Do not edit the app:** nothing under `brain/`, `surface/`, `ableton/`, `tests/`, and not
   README/PLAN/AGENTS. If what the performer wants needs a new kind of generator or a code change,
-  say so and suggest they ask a developer (AdHoc generators, written by you, are planned: PLAN §2.1).
+  say so and suggest they ask a developer (AdHoc generators, written by you, are planned: PLAN §1.1).
 - **You may write** performance files in `performances/`.
 - **The performer owns play/stop.** Don't start or stop the transport unless asked
   (`tools/perturbed play`/`stop` exist for when they do).

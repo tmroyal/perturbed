@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// perturbed — set up the running performance from the shell (PLAN §1). Talks to the brain like the
+// perturbed — set up the running performance from the shell (PLAN §5.7). Talks to the brain like the
 // app does, so every change shows on the surface at once. Built for Claude in the drawer, usable by
 // anyone. PERFORMED_PORT picks the brain (default 57120).
 const { Brain, PerturbedError } = require('./lib/brain');

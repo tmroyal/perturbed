@@ -3,7 +3,7 @@
 Perturbed is an algorithmic performance toolbox: generators on shared clocks read the chord you
 play and send MIDI to instruments in Ableton Live, played from the Perturbed app (§5 describes
 the system). Claude runs in a drawer in the app (§5.6) and sets up the running performance with the `perturbed`
-command (§5.7). **Next: to be chosen from §1 (Claude goes further) and §2 (ideas).**
+command (§5.7). **Next: AdHoc generators and the library (§1.1).**
 
 **The idea.** A performer describes the piece they want to play ("two pianos phasing on an
 arpeggio of whatever I play, a slow bass on the lowest note, echo my right hand an octave up")
@@ -30,20 +30,24 @@ and brought back later ("that rolling strum from last week").
   Claude may write only here (`agent-settings.json`); `brain/types/` stays the developer's.
 - **Versions:** rewriting a type keeps the old one (`adhoc/old/<name>-<date>.scd`), so revising
   never loses something that worked.
-- **In use vs. in the library:** the library isn't loaded wholesale (the add buttons would fill
-  up). A type is *loaded* into the running brain on demand: it then gets its `+` button and cards
-  like any type. Loading is hot (`/adhoc/load <name>`): the brain reads the file and resends the
-  schema; running generators keep running; reloading an edited type updates its schema.
+- **Favorites (decided):** the library holds *every* type, built-in (`brain/types/`) and AdHoc
+  alike; **favorites are the add bar** (a `+` button each), the rest is one click away in the
+  *Library* menu, where ☆/★ toggles a favorite. Built-ins start as favorites and can be unstarred;
+  new AdHoc types start unstarred but stay on the bar for the session they were loaded in. Favorites
+  are the performer's, not the piece's: one file, `adhoc/favorites.json`.
+- **Loading:** favorites load at boot; others load on demand, hot (`/adhoc/load <name>`): the brain
+  reads the file and resends the schema; running generators keep running; reloading an edited type
+  updates its schema and restarts its generators, keeping their settings.
 - **Isolation:** a type that fails to load or throws in `run` must not take the brain down: load
   inside `try`, keep the previous version on error, stop just the failing generator, and report
   the error (`/error`) so Claude sees it in the terminal and can fix it.
 - **Recall for a piece:** a performance file that uses AdHoc types embeds a copy of each one's
   source. Opening it loads those copies, so the piece sounds as it did even if the library version
   changed since; if they differ, the surface offers the library's newer version.
-- **Bringing one back:** the surface gets a *Library* menu next to the add buttons (name and
-  description per type; picking one loads it and adds a generator). `perturbed adhoc list`
-  (names, descriptions, dates, pieces), `adhoc show <name>`, `adhoc load <name>`, so Claude can
-  search the library by what the performer remembers.
+- **Bringing one back:** the *Library* menu lists favorites, then built-ins, then AdHoc types
+  newest first, each with its description; picking one loads it and adds a generator.
+  `perturbed adhoc list` (names, descriptions, stars), `adhoc show <name>`, `adhoc load <name>`,
+  `favorite`/`unfavorite <name>`, so Claude can search the library by what the performer remembers.
 - **Graduating:** a type that keeps coming back can move to `brain/types/` (a developer task:
   tests, AGENTS.md table).
 

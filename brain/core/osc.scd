@@ -16,8 +16,11 @@
 //   /chord/clear
 //   /gen/add          <type>                     brain assigns the id
 //   /gen/remove       <id>
-//   /gen/set          <id> <param> <value>       param = active | dest | a type param
+//   /gen/set          <id> <param> <value>       param = active | dest | group | a type param
 //   /gen/learn        <id> <param> 1|0           the next key played sets param
+//   /group/add        [<name>]                   brain assigns the id
+//   /group/set        <id> name|on|solo|collapsed <value>     see core/groups.scd
+//   /group/remove     <id>                       its generators stay, ungrouped
 //   /clock/add                                   brain assigns the id and name (B, C, ...)
 //   /clock/set        <id> mode|num|den|factor|bpm <value>     see core/clock.scd
 //   /clock/remove     <id>
@@ -53,7 +56,9 @@
 //   /dest/removed     <id>
 //   /live/tracks      (<name> <port> <channel> <instrument>)...   as received from the bridge
 //   /live/tracks/clear                           no bridge (Live's tracks unknown)
-//   /gen              <id> <type> <dest> <active>
+//   /gen              <id> <type> <dest> <active> <group>
+//   /group            <id> <name> <on> <solo> <collapsed>
+//   /group/removed    <id>
 //   /gen/param        <id> <param> <value>
 //   /gen/removed      <id>
 //   /beat             <beat>                     latency-aligned with the sound
@@ -77,6 +82,7 @@
 	~sendChord.();
 	~sendSchema.();
 	~clocks.keys.asArray.sort.do { |id| ~sendClock.(~clocks[id]) };
+	~groups.keys.asArray.sort.do { |id| ~sendGroup.(~groups[id]) };
 	~dests.keys.asArray.sort.do { |id| ~sendDest.(~dests[id]) };
 	~sendLiveTracks.();
 	~gens.keys.asArray.sort.do { |id| ~sendGen.(~gens[id]); ~sendParams.(~gens[id]) };
@@ -115,6 +121,10 @@
 	OSCdef(\genRemove, { |msg| ~removeGen.(msg[1].asInteger) }, '/gen/remove');
 	OSCdef(\genLearn, { |msg| ~learnGen.(msg[1].asInteger, msg[2], msg[3].asInteger == 1) }, '/gen/learn');
 	OSCdef(\genSet, { |msg| ~gens[msg[1].asInteger] !? { |g| ~setGen.(g, msg[2], msg[3]) } }, '/gen/set');
+
+	OSCdef(\groupAdd, { |msg| ~addGroup.(msg[1]) }, '/group/add');
+	OSCdef(\groupSet, { |msg| ~groups[msg[1].asInteger] !? { |gr| ~setGroup.(gr, msg[2], msg[3]) } }, '/group/set');
+	OSCdef(\groupRemove, { |msg| ~removeGroup.(msg[1].asInteger) }, '/group/remove');
 
 	OSCdef(\clockAdd, { ~addClock.() }, '/clock/add');
 	OSCdef(\clockSet, { |msg| ~clocks[msg[1].asInteger] !? { |c| ~setClock.(c, msg[2], msg[3]) } }, '/clock/set');

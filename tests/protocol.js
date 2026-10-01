@@ -165,10 +165,24 @@ sock.bind(0, async () => {
     send('/gen/add', 'passthrough');
     const [passGen] = await pg;
     send('/gen/set', passGen, 'delay', 0.5);
+    // a group (renamed, collapsed, off) with the generator in it
+    const grp = next('/group', (id, name) => name === 'Layer');
+    send('/group/add', 'Layer');
+    const [groupId] = await grp;
+    const grpSet = next('/group', (id, name, on, solo, collapsed) => id === groupId && name === 'Pianos' && !on && collapsed);
+    send('/group/set', groupId, 'name', 'Pianos');
+    send('/group/set', groupId, 'on', 0);
+    send('/group/set', groupId, 'collapsed', 1);
+    await grpSet;
+    const inGroup = next('/gen', (id, t, d, a, gr) => id === savedGen && gr === groupId);
+    send('/gen/set', savedGen, 'group', groupId);
+    await inGroup;
+    check(true, 'group add/set echoed; /gen carries the group');
     await new Promise((r) => setTimeout(r, 100));
     send('/save', file);
     await new Promise((r) => setTimeout(r, 200));
     send('/gen/remove', savedGen);
+    send('/group/remove', groupId);
     send('/dest/remove', savedDest);
     send('/chord/clear');
     send('/chord/mode', 'auto');
@@ -184,6 +198,8 @@ sock.bind(0, async () => {
     check(has('/chord', (mode, armed, ...ps) => mode === 'arm' && ps.join() === '62,65,69'), 'load restores chord and mode');
     check(has('/dest', (id, name, port, ch, inst) => id === savedDest && name === 'saved' && ch === 3 && inst === 'Pianoteq 9'), 'load restores destinations');
     check(has('/gen', (id, t, d) => id === savedGen && d === savedDest), 'load restores generators with their dest');
+    check(has('/group', (id, name, on, solo, collapsed) => id === groupId && name === 'Pianos' && !on && collapsed === 1)
+      && has('/gen', (id, t, d, a, gr) => id === savedGen && gr === groupId), 'load restores groups and membership');
     check(has('/gen/param', (id, p, v) => id === savedGen && p === 'num' && v === 5)
       && has('/gen/param', (id, p, v) => id === savedGen && p === 'source' && v === 'arpeggio')
       && has('/gen/param', (id, p, v) => id === savedGen && p === 'rate' && Math.abs(v - 0.25) < 1e-6), 'load restores params');

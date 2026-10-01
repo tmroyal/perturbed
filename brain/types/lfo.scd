@@ -54,7 +54,9 @@ run: { |g, p|
 			"smooth random", { rnd.(c) + ((rnd.(c + 1) - rnd.(c)) * (0.5 - (0.5 * cos(pi * f)))) },
 			{ 0.5 + (0.5 * sin(2pi * f)) });
 		var v = (p[\low].asFloat + ((p[\high].asFloat - p[\low].asFloat) * u)).round.asInteger;
-		if(v != last) { ~cc.(~lfoPort.(p), p[\channel].asString.asInteger, p[\cc], v); last = v };
+		if(~sounds.(g).not) { last = nil } {  // muted by its group: silent, and resends when back
+			if(v != last) { ~cc.(~lfoPort.(p), p[\channel].asString.asInteger, p[\cc], v); last = v };
+		};
 		(0.02 * thisThread.clock.tempo).wait;
 	};
 },

@@ -1,6 +1,7 @@
 // generators.scd — generator lifecycle and the shared ~strike.
 //
-// A generator: (id, typeName, type, p: params, active, dest: dest id or 0, task, sounding, held).
+// A generator: (id, typeName, type, p: params, active, dest: dest id or 0, group: group id or 0,
+// task, sounding, held). Whether it sounds also depends on its group (core/groups.scd: ~sounds).
 // Types live in brain/types/, one file each (filename = type name), evaluating to:
 //   params:    [[name, default, kind, ...kind args], ...]  also the surface's schema;
 //              kind = range (min max [step]) | note | choice (options...) | text | clock
@@ -24,13 +25,17 @@
 ~gens = ();
 ~nextGenId = 1;
 
-// Releases the generator's previous note and plays the new one at the same logical time.
+// Releases the generator's previous note and plays the new one at the same logical time. A
+// generator muted by its group (or another group's solo) only releases.
 ~strike = { |g, note, vel|
 	var d = ~dests[g[\dest]];
 	g[\sounding] !? { |sn| ~noteOff.(sn[0], sn[1]) };
-	d !? { ~noteOn.(d, note, vel) };
-	g[\sounding] = d !? { [d, note] };
-	~sendLate.('/note', g[\id], note, vel);
+	g[\sounding] = nil;
+	if(~sounds.(g)) {
+		d !? { ~noteOn.(d, note, vel) };
+		g[\sounding] = d !? { [d, note] };
+		~sendLate.('/note', g[\id], note, vel);
+	};
 };
 
 ~release = { |g|
@@ -69,7 +74,7 @@
 	if(type.isNil) { "unknown generator type %".format(typeName).warn; nil } {
 		id = ~nextGenId;
 		~nextGenId = id + 1;
-		g = (id: id, typeName: typeName.asSymbol, type: type, p: (), active: false, dest: 0, held: ());
+		g = (id: id, typeName: typeName.asSymbol, type: type, p: (), active: false, dest: 0, group: 0, held: ());
 		type[\params].do { |spec| g[\p][spec[0]] = spec[1] };
 		~gens[id] = g;
 		~sendGen.(g);
@@ -96,6 +101,11 @@
 		g[\dest] = val.asInteger;
 		~sendGen.(g);
 	}
+	{ key == \group } {
+		g[\group] = if(~groups.includesKey(val.asInteger)) { val.asInteger } { 0 };
+		if(~sounds.(g).not) { ~release.(g); ~releaseHeld.(g) };
+		~sendGen.(g);
+	}
 	{ g[\p].includesKey(key) } {
 		g[\p][key] = val;
 		if(g[\task].notNil and: { (g[\type][\restartOn] ? []).includes(key) }) { ~startGen.(g) };
@@ -104,7 +114,7 @@
 	{ "gen %: unknown param %".format(g[\id], key).warn };
 };
 
-~sendGen = { |g| ~send.('/gen', g[\id], g[\typeName], g[\dest], g[\active].binaryValue) };
+~sendGen = { |g| ~send.('/gen', g[\id], g[\typeName], g[\dest], g[\active].binaryValue, g[\group] ? 0) };
 
 ~sendParams = { |g|
 	g[\type][\params].do { |spec| ~send.('/gen/param', g[\id], spec[0], g[\p][spec[0]]) };

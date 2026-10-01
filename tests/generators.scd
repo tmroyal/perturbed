@@ -203,6 +203,35 @@ Routine {
 	brain.sendMsg('/chord/mode', "auto");
 	0.1.wait;
 
+	// --- groups: off and soloed-out mute (no notes); two solos both sound; removing ungroups ---
+	OSCdef(\group, { |msg| ~groupId = msg[1] }, '/group');
+	brain.sendMsg('/gen/add', "basic");
+	0.1.wait;
+	[[\num, 1], [\den, 4], [\active, 1]].do { |m| brain.sendMsg('/gen/set', genId, *m) };
+	brain.sendMsg('/group/add', "g");
+	0.1.wait;
+	~g = ~groupId;
+	brain.sendMsg('/gen/set', genId, \group, ~g);
+	0.1.wait;
+	~count = { var n; notes.clear; brain.sendMsg('/transport/play', 1); 0.4.wait; brain.sendMsg('/transport/play', 0); 0.1.wait; notes.size };
+	check.(~count.() >= 4, "group on: plays");
+	brain.sendMsg('/group/set', ~g, \on, 0); 0.05.wait;
+	check.(~count.() == 0, "group off: silent");
+	brain.sendMsg('/group/set', ~g, \on, 1);
+	brain.sendMsg('/group/add', "h");
+	0.1.wait;
+	~h = ~groupId;
+	brain.sendMsg('/group/set', ~h, \solo, 1); 0.05.wait;
+	check.(~count.() == 0, "another group soloed: silent");
+	brain.sendMsg('/group/set', ~g, \solo, 1); 0.05.wait;
+	check.(~count.() >= 4, "its group soloed too: plays");
+	brain.sendMsg('/group/remove', ~g); 0.05.wait;
+	check.(~count.() == 0, "group removed: ungrouped, silenced by h's solo");
+	brain.sendMsg('/group/remove', ~h); 0.05.wait;
+	check.(~count.() >= 4, "no groups: plays");
+	brain.sendMsg('/gen/remove', genId);
+	0.1.wait;
+
 	// --- control changes ---
 	~ccs.clear;
 	brain.sendMsg('/cc', 1, 3, 20, 99);

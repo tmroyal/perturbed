@@ -17,7 +17,8 @@ sections: (octave: "Transpose", lo: "Zone", delay: "Delay"),
 
 key: { |g, p, note, vel|
 	var d = ~dests[g[\dest]], out = note + (12 * p[\octave].asInteger) + p[\semitone].asInteger;
-	var pass = note.inclusivelyBetween(p[\lo].asInteger, p[\hi].asInteger) and: { out.inclusivelyBetween(0, 127) };
+	var pass = note.inclusivelyBetween(p[\lo].asInteger, p[\hi].asInteger) and: { out.inclusivelyBetween(0, 127) }
+		and: { ~sounds.(g) };  // muted by its group: no new notes
 	var play = {
 		if(vel > 0) {
 			g[\held][note] !? { |h| ~noteOff.(h[0], h[1], true) };

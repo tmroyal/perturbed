@@ -15,20 +15,37 @@ tempo. Claude arranges the instrument; it does **not** rewrite the app. Its brie
 
 ## 1. Later: Claude goes further
 
-### 1.1 AdHoc generators
+### 1.1 AdHoc generators and their library
 
 Claude writes a one-off generator type for the piece at hand (a strum, a tintinnabuli voice, a
-canon of another generator), called **AdHoc**.
+canon of another generator), called **AdHoc**. Nothing Claude writes is thrown away: every AdHoc
+type goes into a **library**, so a good one can be recalled for a piece, and any one can be found
+and brought back later ("that rolling strum from last week").
 
-- AdHoc types live in `brain/adhoc/` (git-ignored, per performance), never in `brain/types/`.
-  The app's own types stay the performer's and the developer's; AGENTS.md keeps Claude out of them.
-- **Hot reload:** a `/reload` message re-reads type files and resends the schema, so a new type
-  appears as a `+ …` button at once; running generators keep running. The surface already builds
-  cards from the schema, so no surface code is needed.
+- **The library:** `adhoc/` at the repo root, tracked in git (it's the performer's material, not
+  scratch), one file per type: `adhoc/<name>.scd`, the same format as `brain/types/`. A header
+  says what it is, so it can be found later:
+  `// rolling-strum — strums the chord upward, spread in beats, accent on the top note`
+  `// made 2026-10-01 for "Winter piece"; changes: …`
+  Claude may write only here (`agent-settings.json`); `brain/types/` stays the developer's.
+- **Versions:** rewriting a type keeps the old one (`adhoc/old/<name>-<date>.scd`), so revising
+  never loses something that worked.
+- **In use vs. in the library:** the library isn't loaded wholesale (the add buttons would fill
+  up). A type is *loaded* into the running brain on demand: it then gets its `+` button and cards
+  like any type. Loading is hot (`/adhoc/load <name>`): the brain reads the file and resends the
+  schema; running generators keep running; reloading an edited type updates its schema.
 - **Isolation:** a type that fails to load or throws in `run` must not take the brain down: load
-  inside `try`, keep the previous version on error, and report the error back to the terminal.
-- A performance file that uses an AdHoc type records it, so saving/opening carries the type along
-  (copy the type file next to the performance, or embed its source).
+  inside `try`, keep the previous version on error, stop just the failing generator, and report
+  the error (`/error`) so Claude sees it in the terminal and can fix it.
+- **Recall for a piece:** a performance file that uses AdHoc types embeds a copy of each one's
+  source. Opening it loads those copies, so the piece sounds as it did even if the library version
+  changed since; if they differ, the surface offers the library's newer version.
+- **Bringing one back:** the surface gets a *Library* menu next to the add buttons (name and
+  description per type; picking one loads it and adds a generator). `perturbed adhoc list`
+  (names, descriptions, dates, pieces), `adhoc show <name>`, `adhoc load <name>`, so Claude can
+  search the library by what the performer remembers.
+- **Graduating:** a type that keeps coming back can move to `brain/types/` (a developer task:
+  tests, AGENTS.md table).
 
 ### 1.2 Claude and Live
 

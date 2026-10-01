@@ -54,6 +54,9 @@ first (the brain lists the MIDI inputs it found in the terminal). The first run 
   space). Set where its pitch comes from (a note or the chord: index, lowest, highest, arpeggio,
   permute), its rhythm (every, euclid, random, phrase on a num/den grid) and velocity (set,
   accent, random, drift, ramp, pattern, humanize).
+- **Groups:** *+ Group* makes a section; put generators in it with their *group* menu. **On/Off**
+  and **Solo** mute without losing time (a group comes back on the beat); ▸ folds it away to a
+  header with a light per generator. Click the name to rename.
 - **Passthrough:** *+ Passthrough* plays the keyboard into an output: transposed, zoned, delayed.
 - **LFOs:** *+ Lfo* sends a MIDI CC wave (synced to the beat or free) on a control bus (menu). To make
   it move something in Live: ⌘M, click the parameter, press the card's **Send** (or let the LFO

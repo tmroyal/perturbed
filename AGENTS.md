@@ -50,6 +50,11 @@ tools/perturbed add lfo shape=triangle num=16 den=1 port="Perturbed CTL 1" chann
 tools/perturbed save performances/<name>.json           # load replaces everything
 ```
 
+**Build pieces in groups,** one per layer (`tools/perturbed group add "Phasing pianos"`, then
+`group="Phasing pianos"` on its generators). The performer brings layers in and out with the
+group's On/Off and Solo, which mute without losing time, and folds finished groups away; fold the
+ones you set up (`group set "Phasing pianos" collapsed=on`) so the surface stays readable.
+
 Notes are MIDI numbers or names (C4 = 60); outputs and clocks can be named (`output="Piano 1"`,
 `clock=B`). Add generators off, set them up, then turn them on (or leave that to the performer).
 `tools/perturbed help` lists every command.
@@ -72,14 +77,18 @@ stops the transport; generators keep their on/off state, so Play starts the piec
   "destinations": [                   // outputs: one Live MIDI track each
     {"id": 1, "name": "Piano 1", "port": 1, "channel": 1, "instrument": "Pianoteq 9"}
   ],
+  "groups": [                         // optional: layers the performer switches, solos and folds
+    {"id": 1, "name": "Phasing pianos", "on": true, "solo": false, "collapsed": true}
+  ],
   "generators": [
-    {"id": 1, "type": "basic", "dest": 1, "active": true, "params": {"source": "arpeggio"}}
+    {"id": 1, "type": "basic", "dest": 1, "group": 1, "active": true, "params": {"source": "arpeggio"}}
   ]
 }
 ```
 
 (Comments are for this document only; JSON files can't contain them.) Params left out keep their
-defaults. `dest` is an output id (0 = none); `active` true means on.
+defaults. `dest` is an output id (0 = none), `group` a group id (0 = none); `active` true means on.
+A generator sounds when it's on, its group is on, and no other group is soloed.
 
 **Outputs.** `port` is an IAC bus (1 = Bus 1, 2 = Bus 2), `channel` 1–16. Each output is a Live
 MIDI track the performer makes (MIDI From that bus and channel, Monitor In, an instrument

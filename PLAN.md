@@ -3,7 +3,7 @@
 Perturbed is an algorithmic performance toolbox: generators on shared clocks read the chord you
 play and send MIDI to instruments in Ableton Live, played from the Perturbed app (§5 describes
 the system). Claude runs in a drawer in the app (§5.6) and sets up the running performance with the `perturbed`
-command (§5.7). **Next: to be chosen from §1 (Claude goes further) and §2 (ideas).**
+command (§5.7). **Next: group pins (§2.1).**
 
 **The idea.** A performer describes the piece they want to play ("two pianos phasing on an
 arpeggio of whatever I play, a slow bass on the lowest note, echo my right hand an octave up")
@@ -42,21 +42,17 @@ performance file (it holds instruments and their state).
 
 ## 2. Ideas to shape
 
-### 2.1 Generator groups
+### 2.1 Group pins (next)
 
-Gather generators into named groups so a layer of the piece can be handled as one thing.
+Groups (§5.8) exist; next, **pins**: any member setting can be pinned to the group's header, so a
+folded group shows just the controls played live (like Ableton's rack macros), the rest hidden.
 
-- **Rules (decided):** a generator is in at most one group; groups don't nest.
-- **Solo (decided):** soloing a group silences every generator outside it (their routines keep
-  running, so they come back in time when solo is released); more than one group can be soloed.
-- **Switch together:** one On/Off (and later a fade) for the whole group, e.g. bring in "the
-  phasing pianos" in one move.
-- **Shared settings:** a group can set params for all its members (output, clock, num/den,
-  velocity), with members free to override.
-- **Surface:** groups as collapsible sections of the generator grid, with the group's controls
-  in its header.
-- **Files and Claude:** groups saved in performance files; a natural unit for Claude to set up
-  ("add a group of three canon voices") and, later, for AdHoc generators.
+- A pin is (generator, setting); the header shows its control (number, slider or menu, as on the
+  card) with a short label ("Basic 1 velocity", renamable).
+- Pin from the card (a small pin button by each setting); unpin from the header.
+- Saved with the group in performance files; `perturbed group pin|unpin`.
+- Later: one pin driving the same setting on several members; shared group settings (output,
+  clock, velocity for all members); fades for On/Off.
 
 ### 2.2 Audio processing: clip → script → clip
 
@@ -242,3 +238,17 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   Outputs and clocks by name or id; notes by name or number.
 - Protocol support: `/bye` unregisters a surface; `/saved` confirms a save; `/error` reports a
   failed save/load. `PERFORMED_PORT` points it at another brain (the tests use 57140).
+
+### 5.8 Groups
+
+- A named set of generators (each in at most one; no nesting) with **On/Off**, **Solo** and
+  **folded** (`brain/core/groups.scd`). A generator sounds when it's on, its group is on, and no
+  group is soloed or its group is (`~sounds`); gates sit in `~strike`, passthrough's key handler
+  and the lfo loop. Off and soloed-out are mutes: routines keep running, held notes are released,
+  so a group comes back on the grid.
+- Protocol: `/group/add [name]`, `/group/set <id> name|on|solo|collapsed <v>`, `/group/remove`
+  (generators stay, ungrouped); `/gen/set <id> group <gid>`; echoes `/group …`, `/group/removed`,
+  and `/gen` carries the group. Saved in performance files, folding included.
+- Surface (`surface/groups.js`): a section per group with header (fold, name, summary of member
+  lights and outputs when folded, On, Solo, ×); a *group* menu on each card; cards that are on but
+  muted are dimmed. CLI: `group add|set|remove`, `group=` on generators, `sounding` in `state`.

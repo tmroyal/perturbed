@@ -15,6 +15,11 @@ const HELP = `perturbed — change the running performance
   remove <id>
   do <id> <action>                   press a card button (lfo: Send)
 
+  group add [name] [on= solo= collapsed=]   a group: switch, solo and fold several generators
+  group set <name|id> on=on|off solo=on|off collapsed=on|off name=...
+  group remove <name|id>             (its generators stay, ungrouped)
+  set <id> group=<name|id|none>      put a generator in a group (also: add basic group=...)
+
   output add <name> <port> <channel> [instrument]
   output remove <name|id>
   output live [<track name>|all]     make Live's tracks (from the bridge) outputs
@@ -54,6 +59,13 @@ async function run(b, [cmd, ...a]) {
     case 'on': case 'off': need(a, 1, `${cmd} <id>`); return print(await b.setGen(a[0], { active: cmd }));
     case 'remove': need(a, 1, 'remove <id>'); await b.removeGen(a[0]); return print(`removed generator ${a[0]}`);
     case 'do': need(a, 2, 'do <id> <action>'); await b.action(a[0], a[1]); return print(`${a[1]} on generator ${a[0]}`);
+    case 'group': {
+      const [sub, ...r] = a;
+      if (sub === 'add') { const named = r[0] && !r[0].includes('='); return print(await b.addGroup(named ? r[0] : undefined, settings(named ? r.slice(1) : r))); }
+      if (sub === 'set') { need(r, 2, 'group set <name|id> setting=value ...'); return print(await b.setGroup(r[0], settings(r.slice(1)))); }
+      if (sub === 'remove') { need(r, 1, 'group remove <name|id>'); await b.removeGroup(r[0]); return print(`removed group ${r[0]}`); }
+      throw new PerturbedError('usage: perturbed group add|set|remove ...');
+    }
     case 'output': {
       const [sub, ...r] = a;
       if (sub === 'add') { need(r, 3, 'output add <name> <port> <channel> [instrument]'); return print(await b.addOutput(...r)); }

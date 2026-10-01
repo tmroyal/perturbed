@@ -8,7 +8,8 @@ const model = {
   clocks: new Map(), // id -> { id, name, mode, num, den, factor, bpm, tempo }  (A = main, implicit)
   dests: new Map(),  // id -> { id, name, port, channel, instrument }
   live: null,        // Live's tracks on the brain's buses [{ name, port, channel, instrument }]; null = no bridge
-  gens: new Map(),   // id -> { id, type, dest, active, params, card }
+  gens: new Map(),   // id -> { id, type, dest, active, group, params, card }
+  groups: new Map(), // id -> { id, name, on, solo, collapsed }
 };
 let inSnapshot = false;
 
@@ -50,7 +51,7 @@ const handlers = {
   },
   '/state/begin': () => {
     inSnapshot = true;
-    model.types.clear(); model.clocks.clear(); model.dests.clear(); model.gens.clear();
+    model.types.clear(); model.clocks.clear(); model.dests.clear(); model.gens.clear(); model.groups.clear();
     model.live = null;
   },
   '/state/end': () => {
@@ -99,12 +100,20 @@ const handlers = {
   },
   '/live/tracks/clear': () => { model.live = null; live(renderOutputs); },
 
-  '/gen': (id, type, dest, active) => {
+  '/gen': (id, type, dest, active, group = 0) => {
     let gen = model.gens.get(id);
     if (!gen) model.gens.set(id, gen = { id, type, params: {}, card: null });
-    Object.assign(gen, { dest, active: !!active });
-    live(() => { if (gen.card) gen.card.render(); else mountCard(gen); });
+    const moved = gen.group !== group;
+    Object.assign(gen, { dest, active: !!active, group });
+    live(() => { if (!gen.card) mountCard(gen); else { gen.card.render(); if (moved) placeCard(gen); } renderGroupSummaries(); });
   },
+  '/group': (id, name, on, solo, collapsed) => {
+    const known = model.groups.get(id);
+    const g = { id, name, on: !!on, solo: !!solo, collapsed: !!collapsed };
+    model.groups.set(id, g);
+    live(() => (known ? updateGroup(g) : renderGroups()));
+  },
+  '/group/removed': (id) => { model.groups.delete(id); renderGroups(); },
   '/gen/param': (id, name, value) => {
     const gen = model.gens.get(id);
     if (!gen) return;
@@ -112,10 +121,10 @@ const handlers = {
     live(() => gen.card?.param(name, value));
   },
   '/gen/learn': (id, name, on) => model.gens.get(id)?.card?.learning(name, !!on),
-  '/gen/removed': (id) => { model.gens.get(id)?.card?.root.remove(); model.gens.delete(id); },
+  '/gen/removed': (id) => { model.gens.get(id)?.card?.root.remove(); model.gens.delete(id); renderGroupSummaries(); },
 
   '/beat': (b) => { if (model.playing) showBeat(b); },
-  '/note': (id) => model.gens.get(id)?.card?.flash(),
+  '/note': (id) => { model.gens.get(id)?.card?.flash(); flashSummary(id); },
 };
 osc.on(({ addr, args }) => handlers[addr]?.(...args));
 

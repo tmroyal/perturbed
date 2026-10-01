@@ -36,6 +36,17 @@ try {
 
   check(json('on', String(g.id)).active === true && json('off', String(g.id)).active === false, 'on / off');
 
+  const grp = json('group', 'add', 'Layer A');
+  const inG = json('set', String(g.id), 'group=Layer A', 'active=on');
+  check(inG.group?.name === 'Layer A' && inG.sounding, 'group add; generator into it by name, sounding');
+  json('group', 'set', 'Layer A', 'on=off', 'collapsed=on');
+  const muted = json('state');
+  check(muted.groups.some((x) => x.name === 'Layer A' && !x.on && x.collapsed) && muted.generators.find((x) => x.id === g.id).sounding === false,
+    'group off: generator still on, not sounding');
+  run('group', 'remove', 'Layer A');
+  run('off', String(g.id));
+  check(json('state').generators.find((x) => x.id === g.id).group === null && grp.id > 0, 'group remove: generator ungrouped');
+
   const c = json('clock', 'add', 'mode=factor', 'factor=1.01');
   check(c.mode === 'factor' && Math.abs(c.factor - 1.01) < 1e-3, `clock add (${c.name})`);
   check(json('set', String(g.id), `clock=${c.name}`).params.clock === c.id, 'generator onto the clock by name');

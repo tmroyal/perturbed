@@ -33,7 +33,7 @@ class Brain {
       playing: false, tempo: 0, ports: [],
       chord: { mode: 'auto', armed: false, pitches: [] },
       types: new Map(),   // name -> { params: [spec], output: bool, actions: [] }
-      clocks: new Map(), dests: new Map(), gens: new Map(), live: null,
+      clocks: new Map(), dests: new Map(), gens: new Map(), groups: new Map(), live: null,
     };
     this.sock.on('message', (buf) => {
       let msg;
@@ -94,7 +94,9 @@ class Brain {
     };
     const spec = (t, p) => type(t).params.find((s) => s.name === p);
     switch (addr) {
-      case '/state/begin': m.types.clear(); m.clocks.clear(); m.dests.clear(); m.gens.clear(); m.live = null; break;
+      case '/state/begin': m.types.clear(); m.clocks.clear(); m.dests.clear(); m.gens.clear(); m.groups.clear(); m.live = null; break;
+      case '/group': m.groups.set(a[0], { id: a[0], name: a[1], on: !!a[2], solo: !!a[3], collapsed: !!a[4] }); break;
+      case '/group/removed': m.groups.delete(a[0]); break;
       case '/transport': m.playing = !!a[0]; m.tempo = a[1]; break;
       case '/ports': m.ports = a; break;
       case '/chord': m.chord = { mode: a[0], armed: !!a[1], pitches: a.slice(2) }; break;
@@ -110,7 +112,7 @@ class Brain {
       case '/dest/removed': m.dests.delete(a[0]); break;
       case '/live/tracks': m.live = []; for (let i = 0; i + 3 < a.length; i += 4) m.live.push({ name: a[i], port: a[i + 1], channel: a[i + 2], instrument: a[i + 3] }); break;
       case '/live/tracks/clear': m.live = null; break;
-      case '/gen': { const g = m.gens.get(a[0]) ?? { id: a[0], params: {} }; Object.assign(g, { type: a[1], dest: a[2], active: !!a[3] }); m.gens.set(a[0], g); break; }
+      case '/gen': { const g = m.gens.get(a[0]) ?? { id: a[0], params: {} }; Object.assign(g, { type: a[1], dest: a[2], active: !!a[3], group: a[4] ?? 0 }); m.gens.set(a[0], g); break; }
       case '/gen/param': { const g = m.gens.get(a[0]); if (g) g.params[a[1]] = a[2]; break; }
       case '/gen/removed': m.gens.delete(a[0]); break;
     }
@@ -132,6 +134,12 @@ class Brain {
     const c = m.clocks.get(+v) ?? [...m.clocks.values()].find((x) => x.name.toUpperCase() === String(v).toUpperCase());
     return c ? c.id : fail(`no clock "${v}" (clocks: A (main)${[...m.clocks.values()].map((x) => `, ${x.name}`).join('')})`);
   }
+  group(v) {
+    const m = this.model;
+    if (v === 0 || v === '0' || v === 'none') return 0;
+    const g = m.groups.get(+v) ?? [...m.groups.values()].find((x) => x.name.toLowerCase() === String(v).toLowerCase());
+    return g ? g.id : fail(`no group "${v}" (groups: ${[...m.groups.values()].map((x) => `${x.id} ${x.name}`).join(', ') || 'none'})`);
+  }
   type(name) {
     return this.model.types.get(name) ?? fail(`no generator type "${name}" (types: ${[...this.model.types.keys()].join(', ')})`);
   }
@@ -143,9 +151,10 @@ class Brain {
       return on ?? fail(`active is on or off, not "${value}"`);
     }
     if (param === 'output' || param === 'dest') return this.dest(value);
+    if (param === 'group') return this.group(value);
     const t = this.type(g.type);
     const s = t.params.find((p) => p.name === param)
-      ?? fail(`${g.type} has no setting "${param}" (settings: active, ${t.output ? 'output, ' : ''}${t.params.map((p) => p.name).join(', ')})`);
+      ?? fail(`${g.type} has no setting "${param}" (settings: active, group, ${t.output ? 'output, ' : ''}${t.params.map((p) => p.name).join(', ')})`);
     switch (s.kind) {
       case 'choice': {
         const opt = s.args.find((o) => String(o).toLowerCase() === String(value).toLowerCase());
@@ -177,12 +186,21 @@ class Brain {
         ...[...m.clocks.values()].map((c) => ({ ...c, tempo: +c.tempo.toFixed(3) }))],
       outputs: [...m.dests.values()],
       live_tracks: m.live,  // Live's tracks on the brain's buses (null: no bridge)
+      groups: [...m.groups.values()],
       generators: [...m.gens.values()].map((g) => ({
-        id: g.id, type: g.type, active: g.active,
+        id: g.id, type: g.type, active: g.active, sounding: this.sounds(g),
+        group: g.group ? { id: g.group, name: m.groups.get(g.group)?.name ?? null } : null,
         ...(this.model.types.get(g.type)?.output === false ? {} : { output: g.dest ? { id: g.dest, name: destName(g.dest) } : null }),
         params: g.params,
       })),
     };
+  }
+
+  // whether a generator sounds: on, its group on, and not soloed out (core/groups.scd)
+  sounds(g) {
+    const gr = this.model.groups.get(g.group);
+    const anySolo = [...this.model.groups.values()].some((x) => x.solo);
+    return g.active && (!gr || gr.on) && (!anySolo || !!gr?.solo);
   }
 
   schema(only) {
@@ -226,7 +244,7 @@ class Brain {
     const entries = Object.entries(settings).sort(([a], [b]) => (a === 'active') - (b === 'active'));
     const checked = entries.map(([p, v]) => [p === 'output' ? 'dest' : p, this.coerce(g, p, v)]);
     for (const [p, v] of checked) {
-      if (p === 'active' || p === 'dest') await this.request('/gen/set', [g.id, p, v], '/gen', (gid) => gid === g.id);
+      if (p === 'active' || p === 'dest' || p === 'group') await this.request('/gen/set', [g.id, p, v], '/gen', (gid) => gid === g.id);
       else await this.request('/gen/set', [g.id, p, v], '/gen/param', (gid, name) => gid === g.id && name === p);
     }
     return this.state().generators.find((x) => x.id === g.id);
@@ -271,6 +289,32 @@ class Brain {
     const added = [];
     for (const t of pick) added.push(await this.addOutput(t.name, t.port, t.channel, t.instrument));
     return added;
+  }
+
+  // --- groups ---
+  async addGroup(name, settings = {}) {
+    const before = new Set(this.model.groups.keys());
+    const args = name ? [String(name)] : [];
+    const [id] = await this.request('/group/add', args, '/group', (gid) => !before.has(gid));
+    return Object.keys(settings).length ? this.setGroup(id, settings) : this.model.groups.get(id);
+  }
+
+  // settings: name, on (on|off), solo (on|off), collapsed (on|off)
+  async setGroup(v, settings) {
+    const id = this.group(v);
+    if (!id) fail('which group?');
+    const flag = (k, val) => ({ on: 1, true: 1, 1: 1, yes: 1, off: 0, false: 0, 0: 0, no: 0 }[String(val).toLowerCase()] ?? fail(`${k} is on or off, not "${val}"`));
+    for (const [k, val] of Object.entries(settings)) {
+      if (!['name', 'on', 'solo', 'collapsed'].includes(k)) fail(`groups have name, on, solo, collapsed, not "${k}"`);
+      await this.request('/group/set', [id, k, k === 'name' ? String(val) : flag(k, val)], '/group', (gid) => gid === id);
+    }
+    return this.model.groups.get(id);
+  }
+
+  async removeGroup(v) {
+    const id = this.group(v);
+    if (!id) fail('which group?');
+    await this.request('/group/remove', [id], '/group/removed', (gid) => gid === id);
   }
 
   // --- clocks ---

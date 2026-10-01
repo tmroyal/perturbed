@@ -79,6 +79,7 @@ function renderOutputs() {
   }));
   renderLiveTracks();
   model.gens.forEach((g) => g.card?.refreshOutputs());
+  renderGroupSummaries();
 }
 
 // Live's tracks that aren't outputs yet (a track on "All Channels" can't be one: it needs a channel).

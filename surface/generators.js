@@ -62,8 +62,16 @@ function buildCard(gen) {
     outputSel.value = model.dests.has(gen.dest) ? gen.dest : 0;
   };
 
+  const groupSel = el('select');
+  groupSel.addEventListener('change', () => set('group', parseInt(groupSel.value)));
+  const refreshGroups = () => {
+    groupSel.replaceChildren(new Option('—', 0), ...[...model.groups.values()].map((g) => new Option(g.name, g.id)));
+    groupSel.value = model.groups.has(gen.group) ? gen.group : 0;
+  };
+
   const specs = model.types.get(gen.type) ?? [];
-  const fields = specs.noOutput ? [] : [el('label', { textContent: 'output' }), outputSel];
+  const fields = [...(specs.noOutput ? [] : [el('label', { textContent: 'output' }), outputSel]),
+    el('label', { textContent: 'group' }), groupSel];
   const updaters = {}, learners = {}, refreshers = [];
   const conditional = [];  // rows shown only for some values of another param
   const applyShow = () => conditional.forEach(({ show, els }) => {
@@ -114,7 +122,9 @@ function buildCard(gen) {
       power.classList.toggle('on', gen.active);
       power.textContent = gen.active ? 'On' : 'Off';
       root.classList.toggle('active', gen.active);
+      root.classList.toggle('silenced', gen.active && !sounds(gen));  // on, but muted by a group
       refreshOutputs();
+      refreshGroups();
     },
     param: (name, value) => { updaters[name]?.(value); applyShow(); },
     learning: (name, on) => learners[name]?.(on),
@@ -126,15 +136,18 @@ function mountCard(gen) {
   gen.card = buildCard(gen);
   gen.card.render();
   for (const [k, v] of Object.entries(gen.params)) gen.card.param(k, v);
-  $('grid').append(gen.card.root);
+  placeCard(gen);
 }
 
 function renderGens() {
-  $('grid').replaceChildren();
+  model.gens.forEach((g) => { g.card = null; });
+  renderGroups();
   model.gens.forEach(mountCard);
+  renderGroupSummaries();
 }
 
 function renderTypes() {
   $('add-gen').replaceChildren(...[...model.types.keys()].map((type) =>
-    el('button', { textContent: `+ ${typeLabel(type)}`, onclick: () => osc.send('/gen/add', type) })));
+    el('button', { textContent: `+ ${typeLabel(type)}`, onclick: () => osc.send('/gen/add', type) })),
+  el('button', { textContent: '+ Group', title: 'A group: switch, solo and fold away several generators at once', onclick: () => osc.send('/group/add') }));
 }

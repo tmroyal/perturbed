@@ -95,7 +95,8 @@ class Brain {
     const spec = (t, p) => type(t).params.find((s) => s.name === p);
     switch (addr) {
       case '/state/begin': m.types.clear(); m.clocks.clear(); m.dests.clear(); m.gens.clear(); m.groups.clear(); m.live = null; break;
-      case '/group': m.groups.set(a[0], { id: a[0], name: a[1], on: !!a[2], solo: !!a[3], collapsed: !!a[4] }); break;
+      case '/group': m.groups.set(a[0], { id: a[0], name: a[1], on: !!a[2], solo: !!a[3], collapsed: !!a[4], pins: m.groups.get(a[0])?.pins ?? [] }); break;
+      case '/group/pins': { const g = m.groups.get(a[0]); if (g) { g.pins = []; for (let i = 1; i + 1 < a.length; i += 2) g.pins.push({ generator: a[i], setting: a[i + 1] }); } break; }
       case '/group/removed': m.groups.delete(a[0]); break;
       case '/transport': m.playing = !!a[0]; m.tempo = a[1]; break;
       case '/ports': m.ports = a; break;
@@ -308,6 +309,18 @@ class Brain {
       if (!['name', 'on', 'solo', 'collapsed'].includes(k)) fail(`groups have name, on, solo, collapsed, not "${k}"`);
       await this.request('/group/set', [id, k, k === 'name' ? String(val) : flag(k, val)], '/group', (gid) => gid === id);
     }
+    return this.model.groups.get(id);
+  }
+
+  // Pin a member's setting to the group's header (range, choice and note settings).
+  async pin(groupRef, genId, param, on = true) {
+    const id = this.group(groupRef), g = this.gen(genId);
+    if (!id) fail('which group?');
+    if (g.group !== id) fail(`generator ${g.id} isn't in that group (put it there first: set ${g.id} group=...)`);
+    const s = this.type(g.type).params.find((p) => p.name === param);
+    if (on && !(s && ['range', 'choice', 'note'].includes(s.kind))) fail(`${g.type} has no pinnable setting "${param}" (numbers, menus and notes)`);
+    const want = (gid, ...flat) => gid === id && flat.some((x, i) => i % 2 === 0 && x === g.id && flat[i + 1] === param) === on;
+    await this.request(on ? '/group/pin' : '/group/unpin', [id, g.id, param], '/group/pins', want);
     return this.model.groups.get(id);
   }
 

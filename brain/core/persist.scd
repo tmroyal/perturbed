@@ -47,6 +47,7 @@
 	(perf["groups"] ? []).do { |saved|
 		var gr = ~addGroup.(saved["name"], saved["id"].asInteger);
 		[\on, \solo, \collapsed].do { |k| gr[k] = saved[k.asString] == "true" };
+		gr[\pins] = (saved["pins"] ? []).collect { |p| [p[0].asInteger, p[1].asSymbol] };  // checked against the generators below
 	};
 	perf["generators"].do { |saved|
 		var id, g;
@@ -61,6 +62,7 @@
 			g[\active] = saved["active"] == "true";
 		};
 	};
+	~groups.do { |gr| gr[\pins] = gr[\pins].select { |p| ~gens[p[0]] !? { |g| g[\group] == gr[\id] } ? false } };
 	~nextDestId = (~dests.keys.maxItem ? 0) + 1;
 	~nextGenId = (~gens.keys.maxItem ? 0) + 1;
 	~sendState.();

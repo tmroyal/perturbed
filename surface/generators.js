@@ -72,7 +72,7 @@ function buildCard(gen) {
   const specs = model.types.get(gen.type) ?? [];
   const fields = [...(specs.noOutput ? [] : [el('label', { textContent: 'output' }), outputSel]),
     el('label', { textContent: 'group' }), groupSel];
-  const updaters = {}, learners = {}, refreshers = [];
+  const updaters = {}, learners = {}, refreshers = [], pins = {};
   const conditional = [];  // rows shown only for some values of another param
   const applyShow = () => conditional.forEach(({ show, els }) => {
     const visible = show.values.includes(String(gen.params[show.param]));
@@ -98,6 +98,12 @@ function buildCard(gen) {
     }
     const c = paramControl(spec, (v) => set(spec.name, v), (on) => osc.send('/gen/learn', gen.id, spec.name, on ? 1 : 0));
     const label = el('label', { textContent: spec.label ?? spec.name });
+    if (['range', 'choice', 'note'].includes(spec.kind)) {
+      // ◇ pins the setting to the group's header (shown only while the card is in a group)
+      const pin = el('button', { className: 'pin-toggle', textContent: '◇', title: 'Pin to the group\'s header', onclick: () => togglePin(gen, spec.name) });
+      pins[spec.name] = pin;
+      label.prepend(pin);
+    }
     updaters[spec.name] = c.update;
     if (c.learning) learners[spec.name] = c.learning;
     if (c.refresh) refreshers.push(c.refresh);
@@ -123,6 +129,12 @@ function buildCard(gen) {
       power.textContent = gen.active ? 'On' : 'Off';
       root.classList.toggle('active', gen.active);
       root.classList.toggle('silenced', gen.active && !sounds(gen));  // on, but muted by a group
+      root.classList.toggle('grouped', !!gen.group);
+      for (const [param, pin] of Object.entries(pins)) {
+        const on = isPinned(gen, param);
+        pin.classList.toggle('on', on);
+        pin.textContent = on ? '◆' : '◇';
+      }
       refreshOutputs();
       refreshGroups();
     },

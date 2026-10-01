@@ -6,6 +6,10 @@
 // group is soloed. Off and soloed-out are mutes: routines keep running and only stop sounding (a
 // held note is released), so a group comes back on the grid, in phase. `collapsed` is the
 // surface's view, kept here so performance files open tidy.
+//
+// Pins: member settings shown on the group's header, so a folded group still offers the controls
+// played live (like a rack's macros): [[genId, param], ...]. Only range, choice and note settings
+// of the group's own generators; a generator leaving the group (or removed) takes its pins along.
 (
 ~groups = ();
 ~nextGroupId = 1;
@@ -14,7 +18,7 @@
 	var gr;
 	id = id ?? { ~nextGroupId };
 	~nextGroupId = max(~nextGroupId, id + 1);
-	gr = (id: id, name: (name ?? { "Group %".format(id) }).asString, on: true, solo: false, collapsed: false);
+	gr = (id: id, name: (name ?? { "Group %".format(id) }).asString, on: true, solo: false, collapsed: false, pins: []);
 	~groups[id] = gr;
 	~sendGroup.(gr);
 	gr;
@@ -37,6 +41,31 @@
 		~send.('/group/removed', id);
 	};
 };
+
+~pin = { |gr, genId, param|
+	var g = ~gens[genId.asInteger], spec;
+	param = param.asSymbol;
+	spec = g !? { g[\type][\params].detect { |s| s[0] == param } };
+	if(g.notNil and: { g[\group] == gr[\id] } and: { spec.notNil } and: { [\range, \choice, \note].includes(spec[2]) }
+		and: { gr[\pins].any { |p| p[0] == g[\id] and: { p[1] == param } }.not }) {
+		gr[\pins] = gr[\pins].add([g[\id], param]);
+		~sendPins.(gr);
+	};
+};
+
+~unpin = { |gr, genId, param|
+	gr[\pins] = gr[\pins].reject { |p| p[0] == genId.asInteger and: { p[1] == param.asSymbol } };
+	~sendPins.(gr);
+};
+
+// A generator left its group or is gone: its pins go.
+~dropPins = { |genId|
+	~groups.do { |gr|
+		if(gr[\pins].any { |p| p[0] == genId }) { gr[\pins] = gr[\pins].reject { |p| p[0] == genId }; ~sendPins.(gr) };
+	};
+};
+
+~sendPins = { |gr| ~send.('/group/pins', gr[\id], *gr[\pins].flatten) };
 
 ~sounds = { |g|
 	var gr = ~groups[g[\group] ? 0];

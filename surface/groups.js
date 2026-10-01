@@ -1,6 +1,7 @@
 // groups.js — generator groups on the surface: a section per group, with a header to rename it,
-// switch it (On/Off), solo it, fold it away and remove it. Folded, a group shows only its header and
-// a summary: one light per member (flashing on its notes) and the outputs it plays into. The brain
+// switch it (On/Off), solo it, add to it, fold it away and remove it. Folded, a group shows only its
+// header, a summary (one light per member, flashing on its notes, and its outputs) and its pins:
+// member settings pinned from the cards (the ◇ by a setting), the controls played live. The brain
 // owns all of it, folding included (it's saved with the performance).
 
 // Whether a generator sounds (mirrors the brain's ~sounds in core/groups.scd).
@@ -13,6 +14,30 @@ function sounds(gen) {
 const groupBodies = new Map();    // group id -> the grid its cards go in
 const summaryLeds = new Map();    // gen id -> its light in a folded group's summary
 const summaries = new Map();      // group id -> summary element
+const pinUpdaters = new Map();    // "genId:param" -> update(value) of its pinned control
+
+const isPinned = (gen, param) => model.groups.get(gen.group)?.pins.some(([id, p]) => id === gen.id && p === param) ?? false;
+function togglePin(gen, param) {
+  if (gen.group) osc.send(isPinned(gen, param) ? '/group/unpin' : '/group/pin', gen.group, gen.id, param);
+}
+
+// The pinned controls under a group's header: the same control as on the card, labelled.
+function pinRow(g) {
+  const row = el('div', { className: 'group-pins' });
+  for (const [genId, param] of g.pins) {
+    const gen = model.gens.get(genId), spec = gen && specOf(gen.type, param);
+    if (!spec) continue;
+    const c = paramControl(spec, (v) => osc.send('/gen/set', genId, param, v), (on) => osc.send('/gen/learn', genId, param, on ? 1 : 0));
+    c.update(gen.params[param]);
+    pinUpdaters.set(`${genId}:${param}`, c.update);
+    row.append(el('div', { className: 'pin' },
+      // the setting's own name: card labels ("value", "from") rely on the card's sections for context
+      el('label', { textContent: `${typeLabel(gen.type)} ${genId} · ${param}` }),
+      c.control,
+      el('button', { className: 'close', textContent: '×', title: 'Unpin', onclick: () => osc.send('/group/unpin', g.id, genId, param) })));
+  }
+  return row;
+}
 
 // Puts a card in its group's grid (or the ungrouped one).
 function placeCard(gen) {
@@ -38,6 +63,7 @@ function groupSection(g) {
       el('button', { className: `power${g.on ? ' on' : ''}`, textContent: g.on ? 'On' : 'Off', title: 'Switch the group (a mute: it keeps time)', onclick: () => set('on', g.on ? 0 : 1) }),
       el('button', { className: `solo${g.solo ? ' on' : ''}`, textContent: 'Solo', title: 'Only soloed groups sound', onclick: () => set('solo', g.solo ? 0 : 1) }),
       el('button', { className: 'close', textContent: '×', title: 'Remove the group (its generators stay)', onclick: () => osc.send('/group/remove', g.id) })),
+    pinRow(g),
     body);
 }
 
@@ -56,7 +82,7 @@ function addInto(g) {
 
 // Rebuilds the sections; cards are moved, not rebuilt.
 function renderGroups() {
-  groupBodies.clear(); summaries.clear();
+  groupBodies.clear(); summaries.clear(); pinUpdaters.clear();
   $('grid').replaceChildren(el('div', { className: 'gen-grid', id: 'ungrouped' }), ...[...model.groups.values()].map(groupSection));
   model.gens.forEach((gen) => { placeCard(gen); gen.card?.render(); });
   renderGroupSummaries();

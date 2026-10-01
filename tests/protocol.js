@@ -183,6 +183,12 @@ sock.bind(0, async () => {
     send('/gen/set', savedGen, 'group', groupId);
     await inGroup;
     check(true, 'group add/set echoed; /gen carries the group');
+    const pinned = next('/group/pins', (id, ...p) => id === groupId && p.join() === `${savedGen},num,${savedGen},source`);
+    send('/group/pin', groupId, savedGen, 'num');
+    send('/group/pin', groupId, savedGen, 'source');
+    send('/group/pin', groupId, savedGen, 'phrase');  // text: not pinnable
+    await pinned;
+    check(true, 'pins echoed in order (text settings refused)');
     await new Promise((r) => setTimeout(r, 100));
     send('/save', file);
     await new Promise((r) => setTimeout(r, 200));
@@ -205,6 +211,11 @@ sock.bind(0, async () => {
     check(has('/gen', (id, t, d) => id === savedGen && d === savedDest), 'load restores generators with their dest');
     check(has('/group', (id, name, on, solo, collapsed) => id === groupId && name === 'Pianos' && !on && collapsed === 1)
       && has('/gen', (id, t, d, a, gr) => id === savedGen && gr === groupId), 'load restores groups and membership');
+    check(has('/group/pins', (id, ...p) => id === groupId && p.join() === `${savedGen},num,${savedGen},source`), 'load restores pins');
+    const unpinned = next('/group/pins', (id, ...p) => id === groupId && p.length === 0);
+    send('/gen/set', savedGen, 'group', 0);
+    await unpinned;
+    check(true, 'leaving the group drops its pins');
     check(has('/gen/param', (id, p, v) => id === savedGen && p === 'num' && v === 5)
       && has('/gen/param', (id, p, v) => id === savedGen && p === 'source' && v === 'arpeggio')
       && has('/gen/param', (id, p, v) => id === savedGen && p === 'rate' && Math.abs(v - 0.25) < 1e-6), 'load restores params');

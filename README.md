@@ -56,7 +56,9 @@ first (the brain lists the MIDI inputs it found in the terminal). The first run 
   accent, random, drift, ramp, pattern, humanize).
 - **Groups:** *+ Group* makes a section; put generators in it with their *group* menu. **On/Off**
   and **Solo** mute without losing time (a group comes back on the beat); ▸ folds it away to a
-  header with a light per generator. Click the name to rename.
+  header with a light per generator. Click the name to rename; **+** in the header adds a
+  generator straight into the group. **◇** by a card's setting pins it to the group's header, so it
+  stays at hand when the group is folded.
 - **Passthrough:** *+ Passthrough* plays the keyboard into an output: transposed, zoned, delayed.
 - **LFOs:** *+ Lfo* sends a MIDI CC wave (synced to the beat or free) on a control bus (menu). To make
   it move something in Live: ⌘M, click the parameter, press the card's **Send** (or let the LFO

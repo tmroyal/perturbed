@@ -3,7 +3,7 @@
 Perturbed is an algorithmic performance toolbox: generators on shared clocks read the chord you
 play and send MIDI to instruments in Ableton Live, played from the Perturbed app (§5 describes
 the system). Claude runs in a drawer in the app (§5.6) and sets up the running performance with the `perturbed`
-command (§5.7). **Next: group pins (§2.1).**
+command (§5.7). **Next: to be chosen from §1 (Claude goes further) and §2 (ideas).**
 
 **The idea.** A performer describes the piece they want to play ("two pianos phasing on an
 arpeggio of whatever I play, a slow bass on the lowest note, echo my right hand an octave up")
@@ -42,17 +42,14 @@ performance file (it holds instruments and their state).
 
 ## 2. Ideas to shape
 
-### 2.1 Group pins (next)
+### 2.1 More for groups
 
-Groups (§5.8) exist; next, **pins**: any member setting can be pinned to the group's header, so a
-folded group shows just the controls played live (like Ableton's rack macros), the rest hidden.
+Groups with pins exist (§5.8). Possible next steps, none scheduled:
 
-- A pin is (generator, setting); the header shows its control (number, slider or menu, as on the
-  card) with a short label ("Basic 1 velocity", renamable).
-- Pin from the card (a small pin button by each setting); unpin from the header.
-- Saved with the group in performance files; `perturbed group pin|unpin`.
-- Later: one pin driving the same setting on several members; shared group settings (output,
-  clock, velocity for all members); fades for On/Off.
+- **Drag and drop** cards between groups.
+- **Renamable pins**, and one pin driving the same setting on several members (a macro).
+- **Shared group settings:** output, clock or velocity for all members, members free to override.
+- **Fades** for On/Off instead of an instant mute.
 
 ### 2.2 Audio processing: clip → script → clip
 
@@ -249,6 +246,11 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
 - Protocol: `/group/add [name]`, `/group/set <id> name|on|solo|collapsed <v>`, `/group/remove`
   (generators stay, ungrouped); `/gen/set <id> group <gid>`; echoes `/group …`, `/group/removed`,
   and `/gen` carries the group. Saved in performance files, folding included.
+- **Pins:** member settings (range, choice, note) shown under the group's header, folded or not,
+  as the same controls as on the card: `/group/pin|unpin <id> <genId> <param>`, echoed as
+  `/group/pins <id> (<genId> <param>)...` (sent after the generators in a snapshot). A generator
+  leaving the group or removed takes its pins along. Pinned from the card's ◇.
 - Surface (`surface/groups.js`): a section per group with header (fold, name, summary of member
-  lights and outputs when folded, On, Solo, ×); a *group* menu on each card; cards that are on but
-  muted are dimmed. CLI: `group add|set|remove`, `group=` on generators, `sounding` in `state`.
+  lights and outputs when folded, + to add a generator into it, On, Solo, ×) and its pins; a
+  *group* menu on each card; cards that are on but muted are dimmed. CLI: `group add|set|remove|
+  pin|unpin`, `group=` on generators, `sounding` in `state`.

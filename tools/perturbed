@@ -18,6 +18,8 @@ const HELP = `perturbed — change the running performance
   group add [name] [on= solo= collapsed=]   a group: switch, solo and fold several generators
   group set <name|id> on=on|off solo=on|off collapsed=on|off name=...
   group remove <name|id>             (its generators stay, ungrouped)
+  group pin <name|id> <gen id> <setting>     show a member's setting on the group's header
+  group unpin <name|id> <gen id> <setting>
   set <id> group=<name|id|none>      put a generator in a group (also: add basic group=...)
 
   output add <name> <port> <channel> [instrument]
@@ -64,6 +66,7 @@ async function run(b, [cmd, ...a]) {
       if (sub === 'add') { const named = r[0] && !r[0].includes('='); return print(await b.addGroup(named ? r[0] : undefined, settings(named ? r.slice(1) : r))); }
       if (sub === 'set') { need(r, 2, 'group set <name|id> setting=value ...'); return print(await b.setGroup(r[0], settings(r.slice(1)))); }
       if (sub === 'remove') { need(r, 1, 'group remove <name|id>'); await b.removeGroup(r[0]); return print(`removed group ${r[0]}`); }
+      if (sub === 'pin' || sub === 'unpin') { need(r, 3, `group ${sub} <name|id> <gen id> <setting>`); return print(await b.pin(r[0], r[1], r[2], sub === 'pin')); }
       throw new PerturbedError('usage: perturbed group add|set|remove ...');
     }
     case 'output': {

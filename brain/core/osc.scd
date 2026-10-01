@@ -21,6 +21,8 @@
 //   /group/add        [<name>]                   brain assigns the id
 //   /group/set        <id> name|on|solo|collapsed <value>     see core/groups.scd
 //   /group/remove     <id>                       its generators stay, ungrouped
+//   /group/pin        <id> <genId> <param>       show a member's setting on the group's header
+//   /group/unpin      <id> <genId> <param>
 //   /clock/add                                   brain assigns the id and name (B, C, ...)
 //   /clock/set        <id> mode|num|den|factor|bpm <value>     see core/clock.scd
 //   /clock/remove     <id>
@@ -59,6 +61,7 @@
 //   /gen              <id> <type> <dest> <active> <group>
 //   /group            <id> <name> <on> <solo> <collapsed>
 //   /group/removed    <id>
+//   /group/pins       <id> (<genId> <param>)...  the group's pins, in order
 //   /gen/param        <id> <param> <value>
 //   /gen/removed      <id>
 //   /beat             <beat>                     latency-aligned with the sound
@@ -86,6 +89,7 @@
 	~dests.keys.asArray.sort.do { |id| ~sendDest.(~dests[id]) };
 	~sendLiveTracks.();
 	~gens.keys.asArray.sort.do { |id| ~sendGen.(~gens[id]); ~sendParams.(~gens[id]) };
+	~groups.keys.asArray.sort.do { |id| ~sendPins.(~groups[id]) };  // after the generators they point at
 	~send.('/state/end');
 };
 
@@ -124,6 +128,8 @@
 
 	OSCdef(\groupAdd, { |msg| ~addGroup.(msg[1]) }, '/group/add');
 	OSCdef(\groupSet, { |msg| ~groups[msg[1].asInteger] !? { |gr| ~setGroup.(gr, msg[2], msg[3]) } }, '/group/set');
+	OSCdef(\groupPin, { |msg| ~groups[msg[1].asInteger] !? { |gr| ~pin.(gr, msg[2], msg[3]) } }, '/group/pin');
+	OSCdef(\groupUnpin, { |msg| ~groups[msg[1].asInteger] !? { |gr| ~unpin.(gr, msg[2], msg[3]) } }, '/group/unpin');
 	OSCdef(\groupRemove, { |msg| ~removeGroup.(msg[1].asInteger) }, '/group/remove');
 
 	OSCdef(\clockAdd, { ~addClock.() }, '/clock/add');

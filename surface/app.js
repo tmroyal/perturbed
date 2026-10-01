@@ -9,7 +9,7 @@ const model = {
   dests: new Map(),  // id -> { id, name, port, channel, instrument }
   live: null,        // Live's tracks on the brain's buses [{ name, port, channel, instrument }]; null = no bridge
   gens: new Map(),   // id -> { id, type, dest, active, group, params, card }
-  groups: new Map(), // id -> { id, name, on, solo, collapsed }
+  groups: new Map(), // id -> { id, name, on, solo, collapsed, pins: [[genId, param], ...] }
 };
 let inSnapshot = false;
 
@@ -109,16 +109,23 @@ const handlers = {
   },
   '/group': (id, name, on, solo, collapsed) => {
     const known = model.groups.get(id);
-    const g = { id, name, on: !!on, solo: !!solo, collapsed: !!collapsed };
+    const g = { id, name, on: !!on, solo: !!solo, collapsed: !!collapsed, pins: known?.pins ?? [] };
     model.groups.set(id, g);
     live(() => (known ? updateGroup(g) : renderGroups()));
+  },
+  '/group/pins': (id, ...flat) => {
+    const g = model.groups.get(id);
+    if (!g) return;
+    g.pins = [];
+    for (let i = 0; i + 1 < flat.length; i += 2) g.pins.push([flat[i], flat[i + 1]]);
+    live(renderGroups);
   },
   '/group/removed': (id) => { model.groups.delete(id); renderGroups(); },
   '/gen/param': (id, name, value) => {
     const gen = model.gens.get(id);
     if (!gen) return;
     gen.params[name] = value;
-    live(() => gen.card?.param(name, value));
+    live(() => { gen.card?.param(name, value); pinUpdaters.get(`${id}:${name}`)?.(value); });
   },
   '/gen/learn': (id, name, on) => model.gens.get(id)?.card?.learning(name, !!on),
   '/gen/removed': (id) => { model.gens.get(id)?.card?.root.remove(); model.gens.delete(id); renderGroupSummaries(); },

@@ -96,6 +96,20 @@ input[type=range]::-webkit-slider-thumb {
 button.solo.on { background: var(--nord13); border-color: var(--nord13); color: var(--nord0); }
 .card.silenced { opacity: .45; }
 
+/* --- pins: a card's settings shown on its group's header --- */
+.pin-toggle { display: none; background: none; border: none; padding: 0 4px 0 0; color: var(--nord3); font-size: 11px; }
+.card.grouped .pin-toggle { display: inline; visibility: hidden; }
+.card.grouped .fields label:hover .pin-toggle, .pin-toggle.on { visibility: visible; }
+.pin-toggle:hover { background: none; color: var(--nord8); }
+.pin-toggle.on { color: var(--nord13); }
+.group-pins { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0 0 12px 30px; }
+.group-pins:empty { display: none; }
+.group.collapsed .group-pins { margin-bottom: 0; margin-top: 4px; }
+.group-pins .pin { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.group-pins .pin label { color: var(--nord9); font-size: 12px; white-space: nowrap; }
+.group-pins .pin .row { min-width: 160px; }
+.group-pins .pin input[type=range] { min-width: 90px; }
+
 /* --- cards --- */
 .card { background: var(--nord1); border-radius: 8px; padding: 14px 16px; border-top: 3px solid var(--nord3); }
 .gen.active { border-top-color: var(--nord8); }

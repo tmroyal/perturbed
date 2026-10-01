@@ -85,7 +85,7 @@
 };
 
 ~removeGen = { |id|
-	~gens.removeAt(id) !? { |g| ~stopGen.(g); ~releaseHeld.(g); ~send.('/gen/removed', id) };
+	~gens.removeAt(id) !? { |g| ~stopGen.(g); ~releaseHeld.(g); ~dropPins.(id); ~send.('/gen/removed', id) };
 };
 
 ~setGen = { |g, key, val|
@@ -103,6 +103,7 @@
 		~sendGen.(g);
 	}
 	{ key == \group } {
+		if(val.asInteger != g[\group]) { ~dropPins.(g[\id]) };
 		g[\group] = if(~groups.includesKey(val.asInteger)) { val.asInteger } { 0 };
 		if(~sounds.(g).not) { ~release.(g); ~releaseHeld.(g) };
 		~sendGen.(g);

@@ -53,7 +53,9 @@ tools/perturbed save performances/<name>.json           # load replaces everythi
 **Build pieces in groups,** one per layer (`tools/perturbed group add "Phasing pianos"`, then
 `group="Phasing pianos"` on its generators). The performer brings layers in and out with the
 group's On/Off and Solo, which mute without losing time, and folds finished groups away; fold the
-ones you set up (`group set "Phasing pianos" collapsed=on`) so the surface stays readable.
+ones you set up (`group set "Phasing pianos" collapsed=on`) so the surface stays readable. Pin
+the few settings worth playing live to the group's header (`group pin "Phasing pianos" 3 velocity`):
+they stay visible when the group is folded.
 
 Notes are MIDI numbers or names (C4 = 60); outputs and clocks can be named (`output="Piano 1"`,
 `clock=B`). Add generators off, set them up, then turn them on (or leave that to the performer).
@@ -78,7 +80,8 @@ stops the transport; generators keep their on/off state, so Play starts the piec
     {"id": 1, "name": "Piano 1", "port": 1, "channel": 1, "instrument": "Pianoteq 9"}
   ],
   "groups": [                         // optional: layers the performer switches, solos and folds
-    {"id": 1, "name": "Phasing pianos", "on": true, "solo": false, "collapsed": true}
+    {"id": 1, "name": "Phasing pianos", "on": true, "solo": false, "collapsed": true,
+     "pins": [[1, "velocity"]]}            // [generator id, setting] shown on the folded header
   ],
   "generators": [
     {"id": 1, "type": "basic", "dest": 1, "group": 1, "active": true, "params": {"source": "arpeggio"}}

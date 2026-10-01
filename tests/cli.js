@@ -39,6 +39,11 @@ try {
   const grp = json('group', 'add', 'Layer A');
   const inG = json('set', String(g.id), 'group=Layer A', 'active=on');
   check(inG.group?.name === 'Layer A' && inG.sounding, 'group add; generator into it by name, sounding');
+  const pinned = json('group', 'pin', 'Layer A', String(g.id), 'velocity');
+  check(pinned.pins.some((p) => p.generator === g.id && p.setting === 'velocity'), 'group pin');
+  const badPin = run('group', 'pin', 'Layer A', String(g.id), 'phrase');
+  check(!badPin.ok && /no pinnable setting/.test(badPin.out), 'text settings can\'t be pinned');
+  check(json('group', 'unpin', 'Layer A', String(g.id), 'velocity').pins.length === 0, 'group unpin');
   json('group', 'set', 'Layer A', 'on=off', 'collapsed=on');
   const muted = json('state');
   check(muted.groups.some((x) => x.name === 'Layer A' && !x.on && x.collapsed) && muted.generators.find((x) => x.id === g.id).sounding === false,

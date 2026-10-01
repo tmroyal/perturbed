@@ -15,6 +15,8 @@ const { encode, decode } = require('./osc');
 // --- app ---
 const sock = dgram.createSocket('udp4');
 let win;
+// The window can be gone while the pty or socket still produce output (quitting): drop it then.
+const toRenderer = (channel, ...args) => { if (win && !win.isDestroyed()) win.webContents.send(channel, ...args); };
 
 function createWindow() {
   win = new BrowserWindow({
@@ -25,6 +27,7 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
   });
   win.loadFile('index.html');
+  win.on('closed', () => { win = null; term?.kill(); });
   // renderer errors go to the terminal too
   win.webContents.on('console-message', (e, ...old) => {
     const { level, message, sourceId, lineNumber } = e.message !== undefined ? e : { level: old[0], message: old[1], lineNumber: old[2], sourceId: old[3] };
@@ -60,15 +63,15 @@ ipcMain.on('term:start', (_e, cols, rows) => {
   term = pty.spawn(shell, ['-l', '-i', '-c', `claude --settings '${AGENT_SETTINGS}'; exec ${shell} -l -i`], {
     name: 'xterm-256color', cols, rows, cwd: ROOT, env,
   });
-  term.onData((d) => win?.webContents.send('term:data', d));
-  term.onExit(() => { term = null; win?.webContents.send('term:exit'); });
+  term.onData((d) => toRenderer('term:data', d));
+  term.onExit(() => { term = null; toRenderer('term:exit'); });
 });
 ipcMain.on('term:input', (_e, d) => term?.write(d));
 ipcMain.on('term:resize', (_e, cols, rows) => { try { term?.resize(cols, rows); } catch {} });
 app.on('before-quit', () => term?.kill());
 
 sock.on('message', (msg) => {
-  try { win?.webContents.send('osc', decode(msg)); } catch (e) { console.error('bad OSC', e); }
+  try { toRenderer('osc', decode(msg)); } catch (e) { console.error('bad OSC', e); }
 });
 sock.bind(LISTEN_PORT);
 

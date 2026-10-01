@@ -69,12 +69,13 @@
 	~release.(g);
 };
 
-~addGen = { |typeName|
+~addGen = { |typeName, group = 0|
 	var type = ~types[typeName.asSymbol], id, g;
 	if(type.isNil) { "unknown generator type %".format(typeName).warn; nil } {
 		id = ~nextGenId;
 		~nextGenId = id + 1;
-		g = (id: id, typeName: typeName.asSymbol, type: type, p: (), active: false, dest: 0, group: 0, held: ());
+		g = (id: id, typeName: typeName.asSymbol, type: type, p: (), active: false, dest: 0, held: (),
+			group: if(~groups.includesKey(group.asInteger)) { group.asInteger } { 0 });
 		type[\params].do { |spec| g[\p][spec[0]] = spec[1] };
 		~gens[id] = g;
 		~sendGen.(g);

@@ -88,6 +88,11 @@ input[type=range]::-webkit-slider-thumb {
 .group-summary .led.on { background: var(--nord3); }
 .group-summary .hint { overflow: hidden; text-overflow: ellipsis; margin-left: 6px; }
 .group-head button.power, .group-head button.solo { padding: 3px 12px; font-size: 12px; min-width: 48px; }
+.group-head select.add-into {
+  width: 34px; padding: 2px 0; text-align: center; text-align-last: center; font-size: 15px; font-weight: 600;
+  background: var(--nord2); border-color: var(--nord3); border-radius: 6px; cursor: pointer; appearance: none;
+}
+.group-head select.add-into:hover { background: var(--nord3); }
 button.solo.on { background: var(--nord13); border-color: var(--nord13); color: var(--nord0); }
 .card.silenced { opacity: .45; }
 

@@ -14,7 +14,7 @@
 //   /chord/arm        1|0                        in arm mode: the next chord played replaces the current one
 //   /chord/set        <pitch>...                 set the current chord directly
 //   /chord/clear
-//   /gen/add          <type>                     brain assigns the id
+//   /gen/add          <type> [<group>]           brain assigns the id; optionally into a group
 //   /gen/remove       <id>
 //   /gen/set          <id> <param> <value>       param = active | dest | group | a type param
 //   /gen/learn        <id> <param> 1|0           the next key played sets param
@@ -117,7 +117,7 @@
 	OSCdef(\chordSet, { |msg| ~setChord.(msg[1..]) }, '/chord/set');
 	OSCdef(\chordClear, { ~setChord.([]) }, '/chord/clear');
 
-	OSCdef(\genAdd, { |msg| ~addGen.(msg[1]) }, '/gen/add');
+	OSCdef(\genAdd, { |msg| ~addGen.(msg[1], msg[2] ? 0) }, '/gen/add');
 	OSCdef(\genRemove, { |msg| ~removeGen.(msg[1].asInteger) }, '/gen/remove');
 	OSCdef(\genLearn, { |msg| ~learnGen.(msg[1].asInteger, msg[2], msg[3].asInteger == 1) }, '/gen/learn');
 	OSCdef(\genSet, { |msg| ~gens[msg[1].asInteger] !? { |g| ~setGen.(g, msg[2], msg[3]) } }, '/gen/set');

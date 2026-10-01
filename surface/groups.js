@@ -34,10 +34,24 @@ function groupSection(g) {
       el('button', { className: 'fold', textContent: g.collapsed ? '▸' : '▾', title: g.collapsed ? 'Unfold' : 'Fold away', onclick: () => set('collapsed', g.collapsed ? 0 : 1) }),
       name,
       summary,
+      addInto(g),
       el('button', { className: `power${g.on ? ' on' : ''}`, textContent: g.on ? 'On' : 'Off', title: 'Switch the group (a mute: it keeps time)', onclick: () => set('on', g.on ? 0 : 1) }),
       el('button', { className: `solo${g.solo ? ' on' : ''}`, textContent: 'Solo', title: 'Only soloed groups sound', onclick: () => set('solo', g.solo ? 0 : 1) }),
       el('button', { className: 'close', textContent: '×', title: 'Remove the group (its generators stay)', onclick: () => osc.send('/group/remove', g.id) })),
     body);
+}
+
+// "+": a menu of generator types; picking one adds it straight into the group.
+function addInto(g) {
+  const sel = el('select', { className: 'add-into', title: 'Add a generator to this group' });
+  sel.add(new Option('+', ''));
+  for (const type of model.types.keys()) sel.add(new Option(typeLabel(type), type));
+  sel.addEventListener('change', () => {
+    if (sel.value) osc.send('/gen/add', sel.value, g.id);
+    sel.value = '';
+    if (g.collapsed) osc.send('/group/set', g.id, 'collapsed', 0);  // show what was added
+  });
+  return sel;
 }
 
 // Rebuilds the sections; cards are moved, not rebuilt.

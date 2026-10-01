@@ -174,6 +174,11 @@ sock.bind(0, async () => {
     send('/group/set', groupId, 'on', 0);
     send('/group/set', groupId, 'collapsed', 1);
     await grpSet;
+    const born = next('/gen', (id, t, d, a, gr) => t === 'lfo' && gr === groupId);
+    send('/gen/add', 'lfo', groupId);
+    const [bornId] = await born;
+    check(true, '/gen/add <type> <group> adds straight into the group');
+    send('/gen/remove', bornId);
     const inGroup = next('/gen', (id, t, d, a, gr) => id === savedGen && gr === groupId);
     send('/gen/set', savedGen, 'group', groupId);
     await inGroup;

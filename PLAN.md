@@ -91,10 +91,6 @@ so the Live API can create audio clips from files).
   modulation.
 - **Swing** as a rhythm-timing feel.
 - **LFOs:** LFO-to-LFO modulation (rate, depth); the current value shown on the card.
-- **MCP server** for the setup tools, only if Claude should reach Perturbed from outside the drawer
-  (Claude Desktop or the app, which have no shell). Not for the drawer: the CLI already checks
-  settings and lists options, and tools would cost context every session. `tools/lib/brain.js` is
-  ready to be wrapped.
 - **Live:** Link start/stop sync (Live's transport follows Play, for recording a performance);
   outputs that *are* Live's tracks (auto-sync, instead of one click each; needs a rule for
   opening performance files: match outputs to tracks by name, flag missing ones).

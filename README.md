@@ -4,15 +4,17 @@ An algorithmic performance instrument. You play chords on a MIDI keyboard; gener
 shared clocks turn them into arpeggios, permutations, euclidean rhythms, phasing and polytempo
 layers, and send the MIDI to instruments in Ableton Live. You shape it all live from the Perturbed app.
 
-Next up: Claude inside the app, setting up a performance from a description of the piece
-([PLAN.md](PLAN.md), [AGENTS.md](AGENTS.md)).
+**Claude** (the button, or ⌘`) opens a drawer running Claude Code as a performance assistant:
+describe the piece and it sets up the performance ([AGENTS.md](AGENTS.md)).
 
 ## Requirements
 
 - macOS, [SuperCollider](https://supercollider.github.io/) 3.14 in `/Applications`
 - [Ableton Live](https://www.ableton.com/) with the instruments you want (the defaults use
   Pianoteq 9); Max for Live for the bridge device (optional so far)
-- Node.js (for the app); ImageMagick only to regenerate the icon
+- Node.js (for the app) and Xcode command-line tools (to build the drawer's terminal);
+  ImageMagick only to regenerate the icon
+- [Claude Code](https://claude.com/claude-code), logged in, for the Claude drawer
 - A MIDI keyboard
 
 ## One-time setup

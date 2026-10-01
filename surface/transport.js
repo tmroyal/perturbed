@@ -2,7 +2,7 @@
 const togglePlay = () => osc.send('/transport/play', model.playing ? 0 : 1);
 $('play').onclick = togglePlay;
 document.addEventListener('keydown', (e) => {
-  const typing = ['INPUT', 'SELECT'].includes(e.target.tagName) && e.target.type !== 'range';
+  const typing = ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName) && e.target.type !== 'range';  // TEXTAREA: the terminal
   if (e.code === 'Space' && !typing) { e.preventDefault(); $('play').blur(); togglePlay(); }
 });
 

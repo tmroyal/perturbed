@@ -1,4 +1,5 @@
 :root {
+  --drawer-h: 40vh;
   /* Nord */
   --nord0: #2E3440; --nord1: #3B4252; --nord2: #434C5E; --nord3: #4C566A;
   --nord4: #D8DEE9; --nord5: #E5E9F0; --nord6: #ECEFF4;
@@ -123,3 +124,15 @@ button.learn.on { background: var(--nord12); border-color: var(--nord12); color:
 #output-form { border-top-color: var(--nord15); }
 #output-form button { margin-top: 12px; width: 100%; }
 #sidebar > .hint { white-space: normal; }
+
+/* --- Claude drawer --- */
+#claude.on { background: var(--nord15); border-color: var(--nord15); color: var(--nord0); }
+#drawer {
+  position: fixed; left: 0; right: 0; bottom: 0; height: var(--drawer-h); z-index: 10;
+  display: flex; flex-direction: column; background: var(--nord0); border-top: 1px solid var(--nord3);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, .35);
+}
+#drawer-handle { height: 6px; cursor: ns-resize; flex: none; background: var(--nord1); }
+#drawer-handle:hover { background: var(--nord3); }
+#term { flex: 1; min-height: 0; padding: 6px 0 0 10px; }
+body.drawer-open #main { padding-bottom: var(--drawer-h); }

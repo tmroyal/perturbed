@@ -2,7 +2,8 @@
 
 Perturbed is an algorithmic performance toolbox: generators on shared clocks read the chord you
 play and send MIDI to instruments in Ableton Live, played from the Perturbed app (§6 describes
-the system). **Next: Claude inside the app (§1).**
+the system). Claude runs in a drawer in the app (§6.6). **Next: tools so it can set up the running
+performance directly (§1).**
 
 **The idea.** A performer describes the piece they want to play ("two pianos phasing on an
 arpeggio of whatever I play, a slow bass on the lowest note, echo my right hand an octave up")
@@ -12,31 +13,12 @@ tempo. Claude arranges the instrument; it does **not** rewrite the app. Its brie
 
 ---
 
-## 1. Next: Claude in Perturbed
+## 1. Next: setup tools — Claude drives the brain
 
-### 1.1 A terminal drawer running Claude Code
 
-- **Renderer:** [xterm.js](https://xtermjs.org/) in a drawer that slides up from the bottom of the
-  window (toggle with a shortcut, e.g. ⌘`), so it stays out of the way while playing.
-- **Main process:** [node-pty](https://github.com/microsoft/node-pty) spawns a login shell running
-  `claude` with the repo as its working directory and `PERTURBED_AGENT=1` in the environment (so
-  AGENTS.md knows it is the performance assistant). Bytes flow over the existing IPC bridge
-  (`preload.js` gains a `term` channel next to `osc` and `files`).
-- **Permissions:** a Claude Code settings file for the drawer that allows writing only in
-  `performances/` and denies edits to the app, so AGENTS.md's rules are enforced, not just asked.
-- **Build:** node-pty is a native module and must be compiled against Electron's Node ABI:
-  `@electron/rebuild` in `surface/`, which needs Xcode command-line tools. Add it to the install
-  step in `run.sh`, next to the Electron binary check.
-- **Lifecycle:** one terminal per window; the pty is killed when the window closes. Resizing the
-  drawer resizes the pty (xterm fit addon → `pty.resize`).
-- **Auth:** the `claude` CLI uses the user's existing login; nothing to configure.
-- **Done when:** the drawer opens, Claude Code runs in it, and it can read the repo and AGENTS.md.
-
-### 1.2 Setup tools: Claude drives the brain
-
-Claude sets up performances through the brain's OSC protocol, the same one the surface uses, so
-everything it does appears live on the surface and the performer can adjust it by hand. (Until
-then it writes performance files for the performer to Open.)
+Claude (in the drawer, §6.6) sets up performances through the brain's OSC protocol, the same one
+the surface uses, so everything it does appears live on the surface and the performer can adjust
+it by hand. (Until then it writes performance files for the performer to Open.)
 
 - **Step 1 — `tools/perturbed` CLI** (Node, reusing `surface/osc.js`): small commands Claude can
   call from its shell, each printing the brain's reply:
@@ -262,3 +244,15 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   bus is silent, with a warning at boot. Test mode sends CCs to Bus 2.
 - In Live, MIDI Map mode (⌘M, click a parameter, press the LFO's **Send**) maps any parameter,
   with a min/max per mapping in the mapping browser; plugins' own MIDI learn works too.
+
+### 6.6 The Claude drawer
+
+- **Claude** in the transport bar (or ⌘`) slides up a terminal running Claude Code in the repo with
+  `PERTURBED_AGENT=1`, so it follows AGENTS.md as the performance assistant. Drag the top edge to
+  resize; the session keeps running while the drawer is closed; when Claude exits a shell stays,
+  and after the shell exits any key starts a new session.
+- xterm.js in the renderer (`surface/terminal.js`), node-pty in the main process (`main.js`, IPC
+  channels `term:*`, exposed as `shell` in `preload.js`). node-pty is built against Electron by
+  `run.sh` (`electron-rebuild`, needs Xcode command-line tools).
+- `surface/agent-settings.json` (passed with `claude --settings`) allows edits in `performances/`
+  and denies them in the app's code and docs, so AGENTS.md's rules are enforced, not just asked.

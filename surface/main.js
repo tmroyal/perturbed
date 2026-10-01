@@ -1,7 +1,9 @@
-// Electron main process: owns the UDP socket (57130) and translates between OSC and the renderer.
+// Electron main process: owns the UDP socket (57130) and translates between OSC and the renderer,
+// and runs the Claude drawer's terminal (a pty running Claude Code as the performance assistant).
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const dgram = require('dgram');
 const path = require('path');
+const pty = require('node-pty');
 
 // ports can be moved (PERFORMED_PORT, PERFORMED_SURFACE_PORT) to run a second copy beside a performance
 const SC = { host: '127.0.0.1', port: +(process.env.PERFORMED_PORT || 57120) };
@@ -41,6 +43,29 @@ ipcMain.handle('pick-file', async (_e, mode) => {
 });
 
 ipcMain.on('osc', (_e, addr, args) => sock.send(encode(addr, args), SC.port, SC.host));
+
+// --- the Claude drawer: Claude Code in the repo, as the performance assistant (AGENTS.md, set by
+// PERTURBED_AGENT=1), with agent-settings.json limiting its edits to performances/. When Claude
+// exits, a shell stays open in the drawer. ---
+const ROOT = path.join(__dirname, '..');
+const AGENT_SETTINGS = path.join(__dirname, 'agent-settings.json');
+let term = null;
+
+ipcMain.on('term:start', (_e, cols, rows) => {
+  if (term) return;
+  const shell = process.env.SHELL || '/bin/zsh';
+  // a fresh session even if Perturbed was started from inside another Claude Code session
+  const env = { ...process.env, PERTURBED_AGENT: '1' };
+  delete env.CLAUDECODE; delete env.CLAUDE_CODE_CHILD_SESSION; delete env.CLAUDE_CODE_ENTRYPOINT;
+  term = pty.spawn(shell, ['-l', '-i', '-c', `claude --settings '${AGENT_SETTINGS}'; exec ${shell} -l -i`], {
+    name: 'xterm-256color', cols, rows, cwd: ROOT, env,
+  });
+  term.onData((d) => win?.webContents.send('term:data', d));
+  term.onExit(() => { term = null; win?.webContents.send('term:exit'); });
+});
+ipcMain.on('term:input', (_e, d) => term?.write(d));
+ipcMain.on('term:resize', (_e, cols, rows) => { try { term?.resize(cols, rows); } catch {} });
+app.on('before-quit', () => term?.kill());
 
 sock.on('message', (msg) => {
   try { win?.webContents.send('osc', decode(msg)); } catch (e) { console.error('bad OSC', e); }

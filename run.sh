@@ -5,8 +5,12 @@ cd "$(dirname "$0")"
 SCLANG=/Applications/SuperCollider.app/Contents/MacOS/sclang
 
 # npm may skip Electron's postinstall, which downloads the actual binary
-if [ ! -d surface/node_modules/electron/dist ]; then
+if [ ! -d surface/node_modules/electron/dist ] || [ ! -d surface/node_modules/@xterm/xterm ]; then
   (cd surface && npm install && node node_modules/electron/install.js) || exit 1
+fi
+# the Claude drawer's pty (node-pty) is a native module, built against Electron (needs Xcode tools)
+if [ ! -f surface/node_modules/node-pty/build/Release/pty.node ]; then
+  (cd surface && npx electron-rebuild -f -w node-pty) || exit 1
 fi
 # the surface runs as Perturbed.app (Electron renamed; see surface/build-app.sh)
 APP=build/Perturbed.app

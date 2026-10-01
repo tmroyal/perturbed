@@ -3,7 +3,7 @@
 This repo is **Perturbed**, an algorithmic performance instrument (see [README.md](README.md)).
 Agents work here in one of two roles. Check which one you are in before doing anything.
 
-- **Performance assistant** — you were started from the terminal inside the Perturbed app
+- **Performance assistant** — you were started from the Claude drawer inside the Perturbed app
   (`PERTURBED_AGENT=1` is set in your environment). Follow *Setting up performances* below.
 - **Developer** — you were started in this repo to change Perturbed itself. Follow
   *Developing Perturbed* at the end, and [PLAN.md](PLAN.md).
@@ -34,7 +34,7 @@ Write a performance file to `performances/<name>.json` (format below), then ask 
 open it (**Open…** in the transport bar). Opening replaces the current performance and stops the
 transport; generators keep their on/off state, so Play starts the piece.
 
-A `tools/perturbed` command for changing the running performance directly is planned (PLAN §1.2);
+A `tools/perturbed` command for changing the running performance directly is planned (PLAN §1);
 until it exists, performance files are the way. `performances/example.json` is a complete,
 working example.
 

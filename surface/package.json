@@ -7,8 +7,14 @@
     "start": "electron ."
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
     "electron": "^44.4.5"
   },
   "productName": "Perturbed",
-  "description": "Perturbed: the performance surface"
+  "description": "Perturbed: the performance surface",
+  "dependencies": {
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "node-pty": "^1.1.0"
+  }
 }

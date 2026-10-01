@@ -42,16 +42,7 @@ performance file (it holds instruments and their state).
 
 ## 2. Ideas to shape
 
-### 2.1 More for groups
-
-Groups with pins exist (§5.8). Possible next steps, none scheduled:
-
-- **Drag and drop** cards between groups.
-- **Renamable pins**, and one pin driving the same setting on several members (a macro).
-- **Shared group settings:** output, clock or velocity for all members, members free to override.
-- **Fades** for On/Off instead of an instant mute.
-
-### 2.2 Audio processing: clip → script → clip
+### 2.1 Audio processing: clip → script → clip
 
 Process Live's audio clips outside Live and bring the result back as a new clip (Live 12.4,
 so the Live API can create audio clips from files).
@@ -84,6 +75,9 @@ so the Live API can create audio clips from files).
   modulation.
 - **Swing** as a rhythm-timing feel.
 - **LFOs:** LFO-to-LFO modulation (rate, depth); the current value shown on the card.
+- **Groups:** drag and drop cards between groups; renamable pins, and one pin driving the same
+  setting on several members (a macro); shared group settings (output, clock, velocity for all
+  members); fades for On/Off.
 - **Live:** Link start/stop sync (Live's transport follows Play, for recording a performance);
   outputs that *are* Live's tracks (auto-sync, instead of one click each; needs a rule for
   opening performance files: match outputs to tracks by name, flag missing ones).

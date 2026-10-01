@@ -1,5 +1,5 @@
 #!/bin/sh
-# Starts the brain in test mode, runs the timing, generator and protocol tests against it, stops the brain.
+# Starts the brain in test mode, runs the timing, generator, protocol and CLI tests against it, stops the brain.
 # Sends MIDI on IAC Bus 1 channels 1–2 (Live tracks listening there will play it) and CCs on Bus 2.
 cd "$(dirname "$0")/.."
 # The test brain gets its own port so tests never touch a live brain on 57120.
@@ -26,6 +26,8 @@ echo "$OUT" | grep -E "^(ok|FAIL|GENERATORS|ERROR)"
 echo "$OUT" | grep -q "GENERATORS PASSED" || status=1
 
 limit 10 node tests/protocol.js || status=1
+limit 30 node tests/cli.js || status=1
 
-grep -E "ERROR|WARNING: [^A]" "$LOG" && echo "(brain log: $LOG)"
+# (cli.js loads a missing file on purpose: that warning is expected)
+grep -E "ERROR|WARNING: [^A]" "$LOG" | grep -v "load failed\|_FileLength" && echo "(brain log: $LOG)"
 exit $status

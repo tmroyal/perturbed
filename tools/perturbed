@@ -1,0 +1,99 @@
+#!/usr/bin/env node
+// perturbed — set up the running performance from the shell (PLAN §1). Talks to the brain like the
+// app does, so every change shows on the surface at once. Built for Claude in the drawer, usable by
+// anyone. PERFORMED_PORT picks the brain (default 57120).
+const { Brain, PerturbedError } = require('./lib/brain');
+
+const HELP = `perturbed — change the running performance
+
+  state                              everything, as JSON (generators, outputs, clocks, chord, Live tracks)
+  schema [type]                      generator types and their settings (ranges, options), as JSON
+
+  add <type> [setting=value ...]     add a generator (basic, passthrough, lfo); prints it
+  set <id> setting=value ...         change settings; also active=on|off, output=<name|id|none>
+  on <id> | off <id>                 switch a generator
+  remove <id>
+  do <id> <action>                   press a card button (lfo: Send)
+
+  output add <name> <port> <channel> [instrument]
+  output remove <name|id>
+  output live [<track name>|all]     make Live's tracks (from the bridge) outputs
+
+  clock add [mode=ratio|factor|free num= den= factor= bpm=]
+  clock set <B|id> setting=value ...
+  clock remove <B|id>
+
+  tempo <bpm>                        main clock (A)
+  scale <num> <den>                  metric modulation: tempo × num/den
+  chord <note ...>                   set the chord (MIDI numbers or names: C4 E4 G4)
+  chord clear | chord mode auto|arm
+  cc <bus> <channel> <cc> <value>    one MIDI CC on a control bus (1 = Perturbed CTL 1)
+  play | stop                        (the performer owns these: only when asked)
+  save <file> | load <file>          performance files (load replaces everything)
+
+Notes are MIDI numbers or names (C4 = 60). Values with spaces need quotes: set 2 phrase="1 2 1".`;
+
+// "a=1" "b=two words" -> { a: '1', b: 'two words' }; also accepts "a 1 b 2"
+function settings(args) {
+  if (args.every((a) => a.includes('='))) return Object.fromEntries(args.map((a) => [a.slice(0, a.indexOf('=')), a.slice(a.indexOf('=') + 1)]));
+  if (args.length % 2) throw new PerturbedError(`settings come as name=value (got: ${args.join(' ')})`);
+  const o = {};
+  for (let i = 0; i < args.length; i += 2) o[args[i]] = args[i + 1];
+  return o;
+}
+
+const need = (args, n, usage) => { if (args.length < n) throw new PerturbedError(`usage: perturbed ${usage}`); };
+const print = (v) => console.log(typeof v === 'string' ? v : JSON.stringify(v, null, 2));
+
+async function run(b, [cmd, ...a]) {
+  switch (cmd) {
+    case 'state': return print(b.state());
+    case 'schema': return print(b.schema(a[0]));
+    case 'add': need(a, 1, 'add <type> [setting=value ...]'); return print(await b.addGen(a[0], settings(a.slice(1))));
+    case 'set': need(a, 2, 'set <id> setting=value ...'); return print(await b.setGen(a[0], settings(a.slice(1))));
+    case 'on': case 'off': need(a, 1, `${cmd} <id>`); return print(await b.setGen(a[0], { active: cmd }));
+    case 'remove': need(a, 1, 'remove <id>'); await b.removeGen(a[0]); return print(`removed generator ${a[0]}`);
+    case 'do': need(a, 2, 'do <id> <action>'); await b.action(a[0], a[1]); return print(`${a[1]} on generator ${a[0]}`);
+    case 'output': {
+      const [sub, ...r] = a;
+      if (sub === 'add') { need(r, 3, 'output add <name> <port> <channel> [instrument]'); return print(await b.addOutput(...r)); }
+      if (sub === 'remove') { need(r, 1, 'output remove <name|id>'); await b.removeOutput(r[0]); return print(`removed output ${r[0]}`); }
+      if (sub === 'live') return print(await b.outputsFromLive(r[0] ?? 'all'));
+      throw new PerturbedError('usage: perturbed output add|remove|live ...');
+    }
+    case 'clock': {
+      const [sub, ...r] = a;
+      if (sub === 'add') return print(await b.addClock(settings(r)));
+      if (sub === 'set') { need(r, 2, 'clock set <B|id> setting=value ...'); return print(await b.setClock(r[0], settings(r.slice(1)))); }
+      if (sub === 'remove') { need(r, 1, 'clock remove <B|id>'); await b.removeClock(r[0]); return print(`removed clock ${r[0]}`); }
+      throw new PerturbedError('usage: perturbed clock add|set|remove ...');
+    }
+    case 'tempo': need(a, 1, 'tempo <bpm>'); return print(`tempo ${await b.tempo(a[0])}`);
+    case 'scale': need(a, 2, 'scale <num> <den>'); return print(`tempo ${await b.scale(a[0], a[1])}`);
+    case 'chord':
+      if (a[0] === 'clear') { await b.chordClear(); return print('chord cleared'); }
+      if (a[0] === 'mode') { need(a, 2, 'chord mode auto|arm'); await b.chordMode(a[1]); return print(`chord mode ${a[1]}`); }
+      need(a, 1, 'chord <note ...>'); return print(await b.chord(a));
+    case 'cc': need(a, 4, 'cc <bus> <channel> <cc> <value>'); b.cc(...a); return print(`cc ${a[2]} = ${a[3]} on bus ${a[0]} ch ${a[1]}`);
+    case 'play': await b.play(true); return print('playing');
+    case 'stop': await b.play(false); return print('stopped');
+    case 'save': need(a, 1, 'save <file>'); return print(`saved ${await b.save(a[0])}`);
+    case 'load': need(a, 1, 'load <file>'); return print(`loaded ${await b.load(a[0])}`);
+    default: throw new PerturbedError(cmd ? `unknown command "${cmd}"\n\n${HELP}` : HELP);
+  }
+}
+
+(async () => {
+  const args = process.argv.slice(2);
+  if (!args.length || ['help', '-h', '--help'].includes(args[0])) { console.log(HELP); return; }
+  let b;
+  try {
+    b = await Brain.connect();
+    await run(b, args);
+  } catch (e) {
+    console.error(e instanceof PerturbedError ? `perturbed: ${e.message}` : e.stack);
+    process.exitCode = 1;
+  } finally {
+    await b?.close();
+  }
+})();

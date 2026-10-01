@@ -2,8 +2,8 @@
 
 Perturbed is an algorithmic performance toolbox: generators on shared clocks read the chord you
 play and send MIDI to instruments in Ableton Live, played from the Perturbed app (§6 describes
-the system). Claude runs in a drawer in the app (§6.6). **Next: tools so it can set up the running
-performance directly (§1).**
+the system). Claude runs in a drawer in the app (§6.6) and sets up the running performance with the `perturbed`
+command (§6.7). **Next: the same as an MCP server (§1).**
 
 **The idea.** A performer describes the piece they want to play ("two pianos phasing on an
 arpeggio of whatever I play, a slow bass on the lowest note, echo my right hand an octave up")
@@ -13,30 +13,22 @@ tempo. Claude arranges the instrument; it does **not** rewrite the app. Its brie
 
 ---
 
-## 1. Next: setup tools — Claude drives the brain
+## 1. Next: an MCP server for the setup tools
 
+The `perturbed` CLI (§6.7) works; next, the same commands as an MCP server, so Claude in the drawer
+sees typed tools with each setting's range and options instead of reading AGENTS.md and shell
+help.
 
-Claude (in the drawer, §6.6) sets up performances through the brain's OSC protocol, the same one
-the surface uses, so everything it does appears live on the surface and the performer can adjust
-it by hand. (Until then it writes performance files for the performer to Open.)
-
-- **Step 1 — `tools/perturbed` CLI** (Node, reusing `surface/osc.js`): small commands Claude can
-  call from its shell, each printing the brain's reply:
-  - `perturbed state` — the current snapshot as JSON (generators, params, outputs, clocks, chord,
-    Live's tracks)
-  - `perturbed schema` — generator types and their params (kinds, ranges, choices, labels)
-  - `perturbed add <type>`, `perturbed set <id> <param> <value>`, `perturbed remove <id>`
-  - `perturbed output add <name> <port> <channel> <instrument>`, `perturbed clock add|set|remove`
-  - `perturbed tempo <bpm>`, `perturbed load <file>`, `perturbed save <file>`
-  - `perturbed chord <pitch>...` (set the chord for auditioning), `perturbed cc <bus> <ch> <cc> <value>`
-  It talks to the brain on a port of its own (the brain accepts any sender that says `/hello`).
-- **Step 2 — MCP server** (optional, once the CLI shows which moves matter): the same commands as
-  typed tools, so Claude sees parameter ranges and choices without reading AGENTS.md.
-- **Guardrails:** tools can only send protocol messages, so Claude cannot break the brain. It
-  should not start or stop the transport unless asked (the performer owns play/stop), and it
-  saves a performance before replacing one (`perturbed save performances/before-<time>.json`).
-- **Done when:** from the drawer, "set up two phasing arpeggios on Piano 1 and 2" produces working
-  generators on the surface without the performer touching anything but Play.
+- **Server:** `tools/mcp.js` (stdio), built on `tools/lib/brain.js`, one connection to the brain
+  kept open (no /hello per call). Tools mirror the CLI: `state`, `schema`, `add_generator`,
+  `set_generator`, `remove_generator`, `outputs` (add/remove/from Live), `clocks`, `tempo`,
+  `chord`, `cc`, `save`, `load`; play/stop only as explicit tools the guardrails mention.
+- **Schemas from the brain:** tool input schemas are built from `/gen/schema` at startup (types,
+  settings, ranges, choices), so a new generator type shows up as tool options without code.
+- **Drawer:** registered for the drawer's Claude only (`claude --mcp-config` next to
+  `--settings`), allowed in `agent-settings.json`. AGENTS.md then points to the tools first.
+- **Done when:** in the drawer, "two phasing arpeggios on Piano 1 and 2" is done through the tools,
+  and the CLI stays for scripts and humans.
 
 ---
 
@@ -133,7 +125,7 @@ so the Live API can create audio clips from files).
 
 ## 5. Working on Perturbed (developers)
 
-- `./tests/run.sh` (~30 s) starts a test brain on port 57140 and runs the timing, generator and
+- `./tests/run.sh` (~40 s) starts a test brain on port 57140 and runs the timing, generator, CLI and
   protocol tests; it plays MIDI on IAC Bus 1 channels 1–2 and sends CCs on Bus 2. Keep it green
   and short.
 - The OSC protocol's authoritative list is the header of `brain/core/osc.scd`.
@@ -256,3 +248,16 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   `run.sh` (`electron-rebuild`, needs Xcode command-line tools).
 - `surface/agent-settings.json` (passed with `claude --settings`) allows edits in `performances/`
   and denies them in the app's code and docs, so AGENTS.md's rules are enforced, not just asked.
+
+### 6.7 The perturbed command
+
+- `tools/perturbed` (Node) changes the running performance from the shell: `state`, `schema`,
+  `add`/`set`/`on`/`off`/`remove`/`do` for generators, `output add|remove|live`,
+  `clock add|set|remove`, `tempo`, `scale`, `chord`, `cc`, `play`/`stop`, `save`/`load`
+  (`tools/perturbed help`). Built for Claude in the drawer (allowed in `agent-settings.json`).
+- `tools/lib/brain.js` does the work, for reuse by an MCP server: a short-lived surface (`/hello`,
+  mirror the snapshot, send intents and wait for their echo, `/bye`). Settings are checked against
+  the type schema before sending (the brain stores what it gets), and errors list what's allowed.
+  Outputs and clocks by name or id; notes by name or number.
+- Protocol support: `/bye` unregisters a surface; `/saved` confirms a save; `/error` reports a
+  failed save/load. `PERFORMED_PORT` points it at another brain (the tests use 57140).

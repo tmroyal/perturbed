@@ -68,13 +68,15 @@ first (the brain lists the MIDI inputs it found in the terminal). The first run 
 ## Develop
 
 ```
-./tests/run.sh      # ~30 s: timing, generator and protocol tests on a separate test brain
+./tests/run.sh      # ~40 s: timing, generator, protocol and CLI tests on a separate test brain
 ```
 
 ```
 brain/     SuperCollider: clocks, chord, generators, MIDI, OSC protocol (the authority)
   types/     generator types (basic, passthrough); a new file here is a new generator
-surface/   the Perturbed app (Electron): ui, transport, generators, sidebar, app (state + protocol)
+surface/   the Perturbed app (Electron): ui, transport, generators, sidebar, app (state + protocol),
+           terminal (the Claude drawer)
+tools/     perturbed: change the running performance from the shell (tools/perturbed help)
 ableton/   the Live set and the Perturbed Bridge (Max for Live: bridge.js)
 tests/     run.sh and the tests it runs
 performances/  saved performances

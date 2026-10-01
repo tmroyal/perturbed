@@ -22,21 +22,42 @@ change it.
   README/PLAN/AGENTS. If what the performer wants needs a new kind of generator or a code change,
   say so and suggest they ask a developer (AdHoc generators, written by you, are planned: PLAN §2.1).
 - **You may write** performance files in `performances/`.
-- **The performer owns play/stop.** Don't start or stop the transport unless asked.
-- **Don't lose work.** Before replacing the current performance, save it
-  (e.g. `performances/before-<time>.json`) or confirm with the performer.
+- **The performer owns play/stop.** Don't start or stop the transport unless asked
+  (`tools/perturbed play`/`stop` exist for when they do).
+- **Don't lose work.** Before replacing the current performance (`load`, or removing most of it),
+  save it (`tools/perturbed save performances/before-<time>.json`) or confirm with the performer.
 - Explain what you set up in musical terms (which generator plays what, against what) so the
   performer can adjust it by hand on the surface.
 
 ### How to set up a performance
 
-Write a performance file to `performances/<name>.json` (format below), then ask the performer to
-open it (**Open…** in the transport bar). Opening replaces the current performance and stops the
-transport; generators keep their on/off state, so Play starts the piece.
+Use **`tools/perturbed`** to change the running performance directly: every change shows on the
+performer's surface at once, and they can adjust it by hand. Start with `tools/perturbed state`
+(what's there now) and `tools/perturbed schema` (every setting's range and options). Settings are
+checked before they're sent, and errors say what's allowed.
 
-A `tools/perturbed` command for changing the running performance directly is planned (PLAN §1);
-until it exists, performance files are the way. `performances/example.json` is a complete,
-working example.
+```sh
+tools/perturbed state                                   # generators, outputs, clocks, chord, Live tracks (JSON)
+tools/perturbed add basic source=arpeggio direction=up-down num=1 den=4 output="Piano 1"
+tools/perturbed set 3 rhythm=euclid pulses=5 steps=8 velMode=accent
+tools/perturbed on 3                                    # off 3, remove 3
+tools/perturbed clock add mode=factor factor=1.01       # then: set 3 clock=B
+tools/perturbed output live "Rhodes"                    # a Live track (from the bridge) -> an output
+tools/perturbed output add "Piano 3" 1 3 "Pianoteq 9"
+tools/perturbed tempo 84                                # scale 3 2 for metric modulation
+tools/perturbed chord C3 G3 E4 B4                       # audition a chord; the performer's playing replaces it
+tools/perturbed add lfo shape=triangle num=16 den=1 port="Perturbed CTL 1" channel=1 cc=20
+tools/perturbed save performances/<name>.json           # load replaces everything
+```
+
+Notes are MIDI numbers or names (C4 = 60); outputs and clocks can be named (`output="Piano 1"`,
+`clock=B`). Add generators off, set them up, then turn them on (or leave that to the performer).
+`tools/perturbed help` lists every command.
+
+**Whole pieces** can also be a performance file in `performances/` (format below) that the
+performer opens (**Open…**), or `tools/perturbed load <file>`. Loading replaces everything and
+stops the transport; generators keep their on/off state, so Play starts the piece.
+`performances/example.json` is a complete, working example.
 
 ### Performance file format
 
@@ -137,7 +158,7 @@ mapping is done by hand in Live.
 
 Read [PLAN.md](PLAN.md): what's next, the backlog, the system reference and the gotchas.
 
-- Run `./tests/run.sh` (~30 s) after changes; keep it green and short. It uses its own brain on
+- Run `./tests/run.sh` (~40 s) after changes; keep it green and short. It uses its own brain on
   port 57140, so it doesn't touch a running performance.
 - The brain is authoritative; the surface renders what it reports. New generator types need only
   a file in `brain/types/` (the surface builds cards from the schema); reuse the pitch, rhythm and

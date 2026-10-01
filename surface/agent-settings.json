@@ -2,17 +2,27 @@
   "permissions": {
     "allow": [
       "Edit(performances/**)",
-      "Write(performances/**)"
+      "Write(performances/**)",
+      "Bash(tools/perturbed:*)",
+      "Bash(./tools/perturbed:*)"
     ],
     "deny": [
-      "Edit(brain/**)", "Write(brain/**)",
-      "Edit(surface/**)", "Write(surface/**)",
-      "Edit(ableton/**)", "Write(ableton/**)",
-      "Edit(tests/**)", "Write(tests/**)",
-      "Edit(tools/**)", "Write(tools/**)",
-      "Edit(archive/**)", "Write(archive/**)",
-      "Edit(*.md)", "Write(*.md)",
-      "Edit(run.sh)", "Write(run.sh)"
+      "Edit(brain/**)",
+      "Write(brain/**)",
+      "Edit(surface/**)",
+      "Write(surface/**)",
+      "Edit(ableton/**)",
+      "Write(ableton/**)",
+      "Edit(tests/**)",
+      "Write(tests/**)",
+      "Edit(tools/**)",
+      "Write(tools/**)",
+      "Edit(archive/**)",
+      "Write(archive/**)",
+      "Edit(*.md)",
+      "Write(*.md)",
+      "Edit(run.sh)",
+      "Write(run.sh)"
     ]
   }
 }

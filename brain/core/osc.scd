@@ -5,6 +5,7 @@
 //   /hello            [<port>]                   register; brain replies with a full snapshot
 //                                                (to <port> if given: for senders like Max's udpsend,
 //                                                whose source port isn't the one they listen on)
+//   /bye              [<port>]                   unregister (short-lived surfaces: tools/perturbed)
 //   /ping             [<port>]                   brain replies /pong to the sender only
 //   /transport/play   1|0                        play restarts at beat 0
 //   /transport/tempo  <bpm>
@@ -33,6 +34,8 @@
 // Brain → surfaces (on the sender's address):
 //   /state/begin, /state/end                     frame a full snapshot
 //   /pong             <bootId>                   bootId changes when the brain restarts: re-/hello
+//   /saved            <path>                     a /save was written
+//   /error            <message>                  an intent failed (e.g. /load of a bad file)
 //   /transport        <playing> <bpm>
 //   /ports            <name>...                  MIDI outputs; destination port n = nth name
 //   /chord            <mode> <armed> <pitch>...
@@ -95,6 +98,8 @@
 		~sendState.();
 	}, '/hello');
 
+	OSCdef(\bye, { |msg, time, addr| addr = ~replyAddr.(msg, addr); ~surfaces = ~surfaces.reject(_ == addr) }, '/bye');
+
 	OSCdef(\ping, { |msg, time, addr| ~replyAddr.(msg, addr).sendMsg('/pong', ~bootId) }, '/ping');
 
 	OSCdef(\play, { |msg| ~setPlaying.(msg[1].asInteger == 1) }, '/transport/play');
@@ -124,9 +129,15 @@
 	OSCdef(\liveTracksClear, { ~setLiveTracks.(nil) }, '/live/tracks/clear');
 	OSCdef(\destRemove, { |msg| ~removeDest.(msg[1].asInteger) }, '/dest/remove');
 
-	OSCdef(\save, { |msg| ~savePerformance.(msg[1].asString) }, '/save');
+	OSCdef(\save, { |msg|
+		try { ~savePerformance.(msg[1].asString); ~send.('/saved', msg[1].asString) } { |e|
+			"save failed: %".format(e.errorString).warn; ~send.('/error', "save failed: " ++ e.errorString);
+		};
+	}, '/save');
 	OSCdef(\load, { |msg|
-		try { ~loadPerformance.(msg[1].asString) } { |e| "load failed: %".format(e.errorString).warn };
+		try { ~loadPerformance.(msg[1].asString) } { |e|
+			"load failed: %".format(e.errorString).warn; ~send.('/error', "load failed: " ++ e.errorString);
+		};
 	}, '/load');
 };
 )

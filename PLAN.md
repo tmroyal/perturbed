@@ -69,11 +69,9 @@ so the Live API can create audio clips from files).
 - **More generator types:** chord/strum (plays the whole chord or a voicing; settles "multiple
   notes per generator"), canon/echo of another generator, walk, phase, additive process, tone
   row, cloud, drone. Some of these may start life as AdHoc types and graduate to `brain/types/`.
-- **Other note sources:** scale (root + scale → pitches over a range), sequence, transforms
-  (transpose, invert, subset) of the chord.
+- **Other note sources:** sequence, transforms (transpose, invert, subset) of the chord.
 - **Controllers:** CC mapping (MiniLab knobs) to any generator parameter; generator-to-generator
   modulation.
-- **Swing** as a rhythm-timing feel.
 - **LFOs:** LFO-to-LFO modulation (rate, depth); the current value shown on the card.
 - **Groups:** drag and drop cards between groups; renamable pins, and one pin driving the same
   setting on several members (a macro); shared group settings (output, clock, velocity for all
@@ -81,6 +79,8 @@ so the Live API can create audio clips from files).
 - **Live:** Link start/stop sync (Live's transport follows Play, for recording a performance);
   outputs that *are* Live's tracks (auto-sync, instead of one click each; needs a rule for
   opening performance files: match outputs to tracks by name, flag missing ones).
+- **Parked (not wanted for now):** scales as a note source (root + scale → pitches over a range);
+  swing as a rhythm feel.
 - **Open questions:**
   - Pedal gestures for the chord (sustain pedal to latch or arm).
   - Metric modulation at the next beat instead of immediately.

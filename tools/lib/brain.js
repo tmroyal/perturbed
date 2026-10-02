@@ -5,7 +5,10 @@
 // Settings are checked against the type schema before sending (the brain stores what it gets),
 // and errors say what's allowed, so a caller (often Claude) can correct itself.
 const dgram = require('dgram');
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
+const { spawnSync } = require('child_process');
 const { encode, decode } = require('../../surface/osc');
 
 const PORT = +(process.env.PERFORMED_PORT || 57120);
@@ -18,6 +21,11 @@ const noteName = (p) => `${NOTE_NAMES[p % 12]}${Math.floor(p / 12) - 1}`;
 
 class PerturbedError extends Error {}
 const fail = (msg) => { throw new PerturbedError(msg); };
+
+// on/off settings (active, a group's on, solo, collapsed) -> 1 | 0
+const FLAG = { on: 1, true: 1, 1: 1, yes: 1, off: 0, false: 0, 0: 0, no: 0 };
+const listed = (map) => [...map.values()].map((x) => `${x.id} ${x.name}`).join(', ') || 'none';
+const flag = (name, v) => FLAG[String(v).toLowerCase()] ?? fail(`${name} is on or off, not "${v}"`);
 
 // "C4", "F#3", "Bb2" or a MIDI number -> MIDI number (C4 = 60)
 function parseNote(v) {
@@ -89,6 +97,12 @@ class Brain {
     return done;
   }
 
+  // Sends an add intent; resolves with the new object's id (the first echo with an id not in map).
+  async create(addr, args, echo, map) {
+    const before = new Set(map.keys());
+    return (await this.request(addr, args, echo, (id) => !before.has(id)))[0];
+  }
+
   // --- the model, kept up to date from what the brain reports (like surface/app.js) ---
   apply({ addr, args: a }) {
     const m = this.model;
@@ -128,23 +142,17 @@ class Brain {
   gen(id) {
     return this.model.gens.get(+id) ?? fail(`no generator ${id} (generators: ${[...this.model.gens.keys()].join(', ') || 'none'})`);
   }
-  dest(v) {
-    const m = this.model;
-    if (v === 0 || v === '0' || v === 'none') return 0;
-    const d = m.dests.get(+v) ?? [...m.dests.values()].find((x) => x.name.toLowerCase() === String(v).toLowerCase());
-    return d ? d.id : fail(`no output "${v}" (outputs: ${[...m.dests.values()].map((x) => `${x.id} ${x.name}`).join(', ') || 'none'})`);
+  // An output, clock or group by id or name (any case) -> its id; 0, '0' and the `none` words -> 0.
+  find(map, v, what, listed, none = ['none']) {
+    if (v === 0 || v === '0' || none.includes(String(v).toLowerCase())) return 0;
+    const x = map.get(+v) ?? [...map.values()].find((o) => o.name.toLowerCase() === String(v).toLowerCase());
+    return x ? x.id : fail(`no ${what} "${v}" (${what}s: ${listed})`);
   }
+  dest(v) { return this.find(this.model.dests, v, 'output', listed(this.model.dests)); }
+  group(v) { return this.find(this.model.groups, v, 'group', listed(this.model.groups)); }
   clock(v) {
-    const m = this.model;
-    if (v === 0 || v === '0' || String(v).toUpperCase() === 'A' || v === 'main') return 0;
-    const c = m.clocks.get(+v) ?? [...m.clocks.values()].find((x) => x.name.toUpperCase() === String(v).toUpperCase());
-    return c ? c.id : fail(`no clock "${v}" (clocks: A (main)${[...m.clocks.values()].map((x) => `, ${x.name}`).join('')})`);
-  }
-  group(v) {
-    const m = this.model;
-    if (v === 0 || v === '0' || v === 'none') return 0;
-    const g = m.groups.get(+v) ?? [...m.groups.values()].find((x) => x.name.toLowerCase() === String(v).toLowerCase());
-    return g ? g.id : fail(`no group "${v}" (groups: ${[...m.groups.values()].map((x) => `${x.id} ${x.name}`).join(', ') || 'none'})`);
+    const names = [...this.model.clocks.values()].map((x) => `, ${x.name}`).join('');
+    return this.find(this.model.clocks, v, 'clock', `A (main)${names}`, ['a', 'main']);
   }
   type(name) {
     return this.model.types.get(name) ?? fail(this.model.library.has(name)
@@ -152,16 +160,15 @@ class Brain {
       : `no generator type "${name}" (library: ${[...this.model.library.keys()].join(', ')})`);
   }
 
+  param(typeName, name) { return this.type(typeName).params.find((p) => p.name === name); }
+
   // A generator setting, checked and converted for the brain.
   coerce(g, param, value) {
-    if (param === 'active') {
-      const on = { on: 1, true: 1, 1: 1, off: 0, false: 0, 0: 0 }[String(value).toLowerCase()];
-      return on ?? fail(`active is on or off, not "${value}"`);
-    }
+    if (param === 'active') return flag('active', value);
     if (param === 'output' || param === 'dest') return this.dest(value);
     if (param === 'group') return this.group(value);
     const t = this.type(g.type);
-    const s = t.params.find((p) => p.name === param)
+    const s = this.param(g.type, param)
       ?? fail(`${g.type} has no setting "${param}" (settings: active, group, ${t.output ? 'output, ' : ''}${t.params.map((p) => p.name).join(', ')})`);
     switch (s.kind) {
       case 'choice': {
@@ -276,14 +283,12 @@ class Brain {
     port = +port; channel = +channel;
     if (!(port >= 1 && port <= this.model.ports.length)) fail(`port is 1 to ${this.model.ports.length} (${this.model.ports.map((p, i) => `${i + 1} = ${p}`).join(', ')})`);
     if (!(channel >= 1 && channel <= 16)) fail('channel is 1 to 16');
-    const before = new Set(this.model.dests.keys());
-    const [id] = await this.request('/dest/add', [String(name), port, channel, String(instrument)], '/dest', (did) => !before.has(did));
+    const id = await this.create('/dest/add', [String(name), port, channel, String(instrument)], '/dest', this.model.dests);
     return this.model.dests.get(id);
   }
 
   async removeOutput(v) {
-    const id = this.dest(v);
-    if (!id) fail('which output?');
+    const id = this.dest(v) || fail('which output?');
     await this.request('/dest/remove', [id], '/dest/removed', (did) => did === id);
   }
 
@@ -302,17 +307,13 @@ class Brain {
 
   // --- groups ---
   async addGroup(name, settings = {}) {
-    const before = new Set(this.model.groups.keys());
-    const args = name ? [String(name)] : [];
-    const [id] = await this.request('/group/add', args, '/group', (gid) => !before.has(gid));
+    const id = await this.create('/group/add', name ? [String(name)] : [], '/group', this.model.groups);
     return Object.keys(settings).length ? this.setGroup(id, settings) : this.model.groups.get(id);
   }
 
   // settings: name, on (on|off), solo (on|off), collapsed (on|off)
   async setGroup(v, settings) {
-    const id = this.group(v);
-    if (!id) fail('which group?');
-    const flag = (k, val) => ({ on: 1, true: 1, 1: 1, yes: 1, off: 0, false: 0, 0: 0, no: 0 }[String(val).toLowerCase()] ?? fail(`${k} is on or off, not "${val}"`));
+    const id = this.group(v) || fail('which group?');
     for (const [k, val] of Object.entries(settings)) {
       if (!['name', 'on', 'solo', 'collapsed'].includes(k)) fail(`groups have name, on, solo, collapsed, not "${k}"`);
       await this.request('/group/set', [id, k, k === 'name' ? String(val) : flag(k, val)], '/group', (gid) => gid === id);
@@ -322,10 +323,9 @@ class Brain {
 
   // Pin a member's setting to the group's header (range, choice and note settings).
   async pin(groupRef, genId, param, on = true) {
-    const id = this.group(groupRef), g = this.gen(genId);
-    if (!id) fail('which group?');
+    const id = this.group(groupRef) || fail('which group?'), g = this.gen(genId);
     if (g.group !== id) fail(`generator ${g.id} isn't in that group (put it there first: set ${g.id} group=...)`);
-    const s = this.type(g.type).params.find((p) => p.name === param);
+    const s = this.param(g.type, param);
     if (on && !(s && ['range', 'choice', 'note'].includes(s.kind))) fail(`${g.type} has no pinnable setting "${param}" (numbers, menus and notes)`);
     const want = (gid, ...flat) => gid === id && flat.some((x, i) => i % 2 === 0 && x === g.id && flat[i + 1] === param) === on;
     await this.request(on ? '/group/pin' : '/group/unpin', [id, g.id, param], '/group/pins', want);
@@ -333,8 +333,7 @@ class Brain {
   }
 
   async removeGroup(v) {
-    const id = this.group(v);
-    if (!id) fail('which group?');
+    const id = this.group(v) || fail('which group?');
     await this.request('/group/remove', [id], '/group/removed', (gid) => gid === id);
   }
 
@@ -345,7 +344,7 @@ class Brain {
     return this.model.library.get(name) ?? fail(`no type "${name}" in the library (${[...this.model.library.keys()].join(', ')})`);
   }
 
-  source(name) { const e = this.libEntry(name); return require('fs').readFileSync(typePath(name, e.builtin), 'utf8'); }
+  source(name) { return fs.readFileSync(typePath(name, this.libEntry(name).builtin), 'utf8'); }
 
   // Loads (or reloads) a type from the library: resolves when it's in, rejects with the brain's error.
   async loadType(name) {
@@ -368,12 +367,12 @@ class Brain {
   // Parses a type file with sclang (no evaluation) and returns its syntax error, or null if it parses.
   // The brain only says "syntax error"; sclang's message (with the line) goes to its own log.
   check(nameOrFile) {
-    const file = require('fs').existsSync(nameOrFile) ? path.resolve(nameOrFile) : typePath(nameOrFile, this.model.library.get(nameOrFile)?.builtin);
-    if (!require('fs').existsSync(file)) fail(`no file ${file}`);
-    const script = path.join(require('os').tmpdir(), `perturbed-check-${process.pid}.scd`);
-    require('fs').writeFileSync(script, `("CHECK:" ++ File.readAllString(${JSON.stringify(file)}).compile.notNil).postln;\n0.exit;\n`);
-    const out = require('child_process').spawnSync('/Applications/SuperCollider.app/Contents/MacOS/sclang', [script], { encoding: 'utf8', timeout: 30000 }).stdout ?? '';
-    require('fs').unlinkSync(script);
+    const file = fs.existsSync(nameOrFile) ? path.resolve(nameOrFile) : typePath(nameOrFile, this.model.library.get(nameOrFile)?.builtin);
+    if (!fs.existsSync(file)) fail(`no file ${file}`);
+    const script = path.join(os.tmpdir(), `perturbed-check-${process.pid}.scd`);
+    fs.writeFileSync(script, `("CHECK:" ++ File.readAllString(${JSON.stringify(file)}).compile.notNil).postln;\n0.exit;\n`);
+    const out = spawnSync('/Applications/SuperCollider.app/Contents/MacOS/sclang', [script], { encoding: 'utf8', timeout: 30000 }).stdout ?? '';
+    fs.unlinkSync(script);
     if (/CHECK:true/.test(out)) return null;
     const err = out.slice(out.indexOf('ERROR:'));
     return err.startsWith('ERROR:') ? err.split('\n').filter((l) => !/CHECK:|cleaning up|^\s*$/.test(l)).slice(0, 8).join('\n') : 'it doesn\'t parse';
@@ -381,14 +380,12 @@ class Brain {
 
   // --- clocks ---
   async addClock(settings = {}) {
-    const before = new Set(this.model.clocks.keys());
-    const [id] = await this.request('/clock/add', [], '/clock', (cid) => !before.has(cid));
+    const id = await this.create('/clock/add', [], '/clock', this.model.clocks);
     return Object.keys(settings).length ? this.setClock(id, settings) : this.model.clocks.get(id);
   }
 
   async setClock(v, settings) {
-    const id = this.clock(v);
-    if (!id) fail('clock A is the main clock: change it with tempo');
+    const id = this.clock(v) || fail('clock A is the main clock: change it with tempo');
     const allowed = { mode: ['ratio', 'factor', 'free'], num: [1, 32], den: [1, 32], factor: [0.01, 16], bpm: [1, 999] };
     for (const [k, val] of Object.entries(settings)) {
       const a = allowed[k] ?? fail(`clocks have mode, num, den, factor, bpm, not "${k}"`);
@@ -400,8 +397,7 @@ class Brain {
   }
 
   async removeClock(v) {
-    const id = this.clock(v);
-    if (!id) fail('clock A is the main clock and can\'t be removed');
+    const id = this.clock(v) || fail('clock A is the main clock and can\'t be removed');
     await this.request('/clock/remove', [id], '/clock/removed', (cid) => cid === id);
   }
 

@@ -5,3 +5,6 @@ build/
 
 # Live project backups
 **/Backup/
+
+# agent worktrees
+.claude/worktrees/

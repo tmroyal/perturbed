@@ -40,8 +40,18 @@ input[type=range]::-webkit-slider-thumb {
 .segmented button:first-child { border-radius: 6px 0 0 6px; }
 .segmented button:last-child { border-radius: 0 6px 6px 0; border-left: none; }
 .segmented button.on { background: var(--nord7); border-color: var(--nord7); color: var(--nord0); }
-.close { background: none; border: none; color: var(--nord3); padding: 0 4px; font-size: 18px; line-height: 1; }
+/* icon buttons: just the glyph */
+.close, .pin-toggle, .lib-row .star, .group-head .fold { background: none; border: none; }
+.close { color: var(--nord3); padding: 0 4px; font-size: 18px; line-height: 1; }
 .close:hover { background: none; color: var(--nord11); }
+button.power, button.solo { padding: 3px 12px; font-size: 12px; min-width: 48px; }
+button.learn, .lib-row .add, .lib-row .reload, #live-head button { padding: 3px 10px; font-size: 12px; }
+/* waiting for something: learning a note, an armed chord, a changed file to reload */
+button.learn.on, #chord-arm.on, .lib-row .reload { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
+/* titles of sections within a card or menu */
+.fields .section, .lib-section { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--nord3); }
+/* text that doesn't fit ends in … */
+#status, .output .route, .lib-text .hint, .group-summary .hint { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hint { color: var(--nord3); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .fields .row input[type=number].value { width: 52px; text-align: right; flex: none; }
 .unit { color: var(--nord9); font-size: 12px; letter-spacing: .04em; }
@@ -60,45 +70,40 @@ input[type=range]::-webkit-slider-thumb {
 #pulse { width: 12px; height: 12px; border-radius: 50%; background: var(--nord2); }
 #beat { min-width: 32px; color: var(--nord4); font-variant-numeric: tabular-nums; }
 .spacer { flex: 1; }
-#status { color: var(--nord12); }
+#status { color: var(--nord12); max-width: 40vw; }
 
 /* --- layout: chord + generators | sidebar --- */
 #main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; min-height: calc(100vh - 69px); }
 .pane-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
 .pane-head h1 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--nord9); }
 #add-gen { display: flex; gap: 8px; }
-#gens-pane { padding: 24px; }
+#gens-pane { padding: 24px; position: relative; }
 #sidebar { padding: 24px; background: var(--nord1); border-left: 1px solid var(--nord2); }
 .gen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 #grid.empty::before { content: 'Add a generator to begin.'; color: var(--nord3); }
 #ungrouped:not(:empty) { margin-bottom: 24px; }
 
 /* --- the Library menu --- */
-#gens-pane { position: relative; }
 #library {
   position: absolute; right: 24px; top: 64px; z-index: 5; width: min(520px, calc(100% - 48px)); max-height: 60vh; overflow: auto;
   background: var(--nord1); border: 1px solid var(--nord3); border-radius: 8px; padding: 8px 12px 12px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, .4);
 }
 #library-button.on { background: var(--nord3); }
-.lib-section { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--nord3); margin: 10px 0 4px; }
+.lib-section { margin: 10px 0 4px; }
 .lib-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
 .lib-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .lib-name { color: var(--nord6); }
-.lib-text .hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lib-row .star { background: none; border: none; padding: 0 2px; font-size: 16px; color: var(--nord3); }
+.lib-row .star { padding: 0 2px; font-size: 16px; color: var(--nord3); }
 .lib-row .star.on { color: var(--nord13); }
-.lib-row .add, .lib-row .reload { padding: 3px 10px; font-size: 12px; }
 .lib-spacer { width: 26px; flex: none; }
-.lib-row .reload { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
-#status { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* --- groups --- */
 .group { margin-bottom: 20px; border-left: 3px solid var(--nord10); padding-left: 14px; }
 .group.off { border-left-color: var(--nord3); }
 .group-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; min-height: 32px; }
 .group.collapsed .group-head { margin-bottom: 0; }
-.group-head .fold { background: none; border: none; color: var(--nord9); padding: 0 4px; font-size: 14px; }
+.group-head .fold { color: var(--nord9); padding: 0 4px; font-size: 14px; }
 .group-head .group-name {
   width: auto; min-width: 0; max-width: 220px; flex: 0 1 auto; background: none; border-color: transparent;
   font-size: 14px; font-weight: 600; color: var(--nord6); padding: 3px 6px;
@@ -106,8 +111,7 @@ input[type=range]::-webkit-slider-thumb {
 .group-head .group-name:hover { border-color: var(--nord3); }
 .group-summary { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; overflow: hidden; }
 .group-summary .led.on { background: var(--nord3); }
-.group-summary .hint { overflow: hidden; text-overflow: ellipsis; margin-left: 6px; }
-.group-head button.power, .group-head button.solo { padding: 3px 12px; font-size: 12px; min-width: 48px; }
+.group-summary .hint { margin-left: 6px; }
 .group-head select.add-into {
   width: 34px; padding: 2px 0; text-align: center; text-align-last: center; font-size: 15px; font-weight: 600;
   background: var(--nord2); border-color: var(--nord3); border-radius: 6px; cursor: pointer; appearance: none;
@@ -117,7 +121,7 @@ button.solo.on { background: var(--nord13); border-color: var(--nord13); color: 
 .card.silenced { opacity: .45; }
 
 /* --- pins: a card's settings shown on its group's header --- */
-.pin-toggle { display: none; background: none; border: none; padding: 0 4px 0 0; color: var(--nord3); font-size: 11px; }
+.pin-toggle { display: none; padding: 0 4px 0 0; color: var(--nord3); font-size: 11px; }
 .card.grouped .pin-toggle { display: inline; visibility: hidden; }
 .card.grouped .fields label:hover .pin-toggle, .pin-toggle.on { visibility: visible; }
 .pin-toggle:hover { background: none; color: var(--nord8); }
@@ -136,7 +140,6 @@ button.solo.on { background: var(--nord13); border-color: var(--nord13); color: 
 .card header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .card h2 { margin: 0; font-size: 14px; font-weight: 600; color: var(--nord6); margin-right: auto; }
 .led { width: 10px; height: 10px; border-radius: 50%; background: var(--nord2); flex: none; }
-button.power { padding: 3px 12px; font-size: 12px; min-width: 48px; }
 /* minmax(0, …) lets the value column shrink below its content (long names) instead of overflowing */
 .fields { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 10px 12px; align-items: center; }
 .fields > * { min-width: 0; }
@@ -144,22 +147,17 @@ button.power { padding: 3px 12px; font-size: 12px; min-width: 48px; }
 .fields label { color: var(--nord9); }
 .fields .row { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .fields .row select { min-width: 0; text-overflow: ellipsis; }
-.fields .section {
-  grid-column: 1 / -1; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--nord2);
-  font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--nord3);
-}
-button.learn { padding: 3px 10px; font-size: 12px; }
-button.learn.on { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
+.fields .section { grid-column: 1 / -1; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--nord2); }
 
 /* --- chord --- */
 #chord { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; border-top-color: var(--nord7); }
-#chord-arm.on { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
 #chord-notes { flex: 1; color: var(--nord6); font-size: 16px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 #chord-notes:empty::before { content: 'no chord yet: play one'; color: var(--nord3); font-size: 14px; }
 
 /* --- sidebar: clocks and outputs --- */
-#clocks, #outputs { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+#clocks, #outputs, #live-tracks { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
 #clocks { margin-bottom: 28px; }
+#live-tracks { margin-bottom: 8px; }
 .clock, .output { display: flex; align-items: center; gap: 8px; background: var(--nord2); border-radius: 6px; padding: 6px 8px 6px 12px; min-height: 42px; }
 .clock { gap: 6px; }
 .clock select { padding: 4px 2px; }
@@ -172,17 +170,15 @@ button.learn.on { background: var(--nord12); border-color: var(--nord12); color:
 .clock input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .clock .tempo { color: var(--nord8); font-variant-numeric: tabular-nums; margin-left: auto; }
 .clock.main .tempo { margin-right: 26px; }
-.output .route { color: var(--nord4); opacity: .7; font-size: 12px; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.output .route { color: var(--nord4); opacity: .7; font-size: 12px; margin-right: auto; }
 #outputs:empty::before { content: 'No outputs yet.'; color: var(--nord3); }
 .output .warn {
   flex: none; width: 18px; height: 18px; border-radius: 50%; background: var(--nord12); color: var(--nord0);
   font-size: 12px; font-weight: 700; line-height: 18px; text-align: center; cursor: help;
 }
 .output.deaf .name { color: var(--nord12); }
-#live-tracks { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
 .output.live { background: none; border: 1px dashed var(--nord3); }
 .output .add { padding: 2px 10px; }
-#live-head button { padding: 3px 10px; font-size: 12px; }
 #output-manual summary { color: var(--nord9); cursor: pointer; margin: 8px 0; font-size: 12px; }
 #output-form { border-top-color: var(--nord15); }
 #output-form button { margin-top: 12px; width: 100%; }

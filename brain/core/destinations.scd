@@ -2,11 +2,9 @@
 // MIDI track listening to that IAC bus and channel.
 (
 ~dests = ();
-~nextDestId = 1;
 
-~addDest = { |name, port, channel, instrument|
-	var id = ~nextDestId;
-	~nextDestId = id + 1;
+~addDest = { |name, port, channel, instrument, id|
+	id = ~newId.(\dest, id);
 	~dests[id] = (
 		id: id,
 		name: name.asString,
@@ -20,7 +18,7 @@
 
 ~removeDest = { |id|
 	~dests.removeAt(id) !? {
-		~gens.do { |g| if(g[\dest] == id) { ~release.(g); ~releaseHeld.(g); g[\dest] = 0; ~sendGen.(g) } };
+		~gens.do { |g| if(g[\dest] == id) { ~silence.(g); g[\dest] = 0; ~sendGen.(g) } };
 		~send.('/dest/removed', id);
 	};
 };

@@ -23,14 +23,12 @@
 // core/velocity.scd (how loud).
 (
 ~gens = ();
-~nextGenId = 1;
 
 // Releases the generator's previous note and plays the new one at the same logical time. A
 // generator muted by its group (or another group's solo) only releases.
 ~strike = { |g, note, vel|
 	var d = ~dests[g[\dest]];
-	g[\sounding] !? { |sn| ~noteOff.(sn[0], sn[1]) };
-	g[\sounding] = nil;
+	~release.(g);
 	if(~sounds.(g)) {
 		d !? { ~noteOn.(d, note, vel) };
 		g[\sounding] = d !? { [d, note] };
@@ -48,6 +46,9 @@
 	g[\held] !? { |held| held.do { |h| ~noteOff.(h[0], h[1], true) } };
 	g[\held] = ();
 };
+
+// Lets go of everything it plays: its note and the keys it holds.
+~silence = { |g| ~release.(g); ~releaseHeld.(g) };
 
 ~genKey = { |note, vel|
 	~gens.do { |g| if(g[\active]) { g[\type][\key] !? { |fn| try { fn.(g, g[\p], note, vel) } { |e| ~genFailed.(g, e) } } } };
@@ -72,14 +73,12 @@
 	~release.(g);
 };
 
-~addGen = { |typeName, group = 0|
-	var type = ~types[typeName.asSymbol], id, g;
+~addGen = { |typeName, group = 0, id|
+	var type = ~types[typeName.asSymbol], g;
 	if(type.isNil) { "unknown generator type %".format(typeName).warn; nil } {
-		id = ~nextGenId;
-		~nextGenId = id + 1;
-		g = (id: id, typeName: typeName.asSymbol, type: type, p: (), active: false, dest: 0, held: (),
-			group: if(~groups.includesKey(group.asInteger)) { group.asInteger } { 0 });
-		type[\params].do { |spec| g[\p][spec[0]] = spec[1] };
+		id = ~newId.(\gen, id);
+		g = (id: id, typeName: typeName.asSymbol, type: type, p: ~paramsFor.(type), active: false, dest: 0,
+			held: (), group: ~groupOrNone.(group));
 		~gens[id] = g;
 		~sendGen.(g);
 		~sendParams.(g);
@@ -91,6 +90,13 @@
 	~gens.removeAt(id) !? { |g| ~stopGen.(g); ~releaseHeld.(g); ~dropPins.(id); ~send.('/gen/removed', id) };
 };
 
+// A type's params: kept from `old` (a generator's settings) where the param exists, else defaults.
+~paramsFor = { |type, old|
+	var p = ();
+	type[\params].do { |spec| p[spec[0]] = (old ? ())[spec[0]] ? spec[1] };
+	p;
+};
+
 ~setGen = { |g, key, val|
 	key = key.asSymbol;
 	case
@@ -100,15 +106,14 @@
 		~sendGen.(g);
 	}
 	{ key == \dest } {
-		~release.(g);
-		~releaseHeld.(g);
+		~silence.(g);
 		g[\dest] = val.asInteger;
 		~sendGen.(g);
 	}
 	{ key == \group } {
 		if(val.asInteger != g[\group]) { ~dropPins.(g[\id]) };
-		g[\group] = if(~groups.includesKey(val.asInteger)) { val.asInteger } { 0 };
-		if(~sounds.(g).not) { ~release.(g); ~releaseHeld.(g) };
+		g[\group] = ~groupOrNone.(val);
+		~gate.(g);
 		~sendGen.(g);
 	}
 	{ g[\p].includesKey(key) } {
@@ -118,6 +123,9 @@
 	}
 	{ "gen %: unknown param %".format(g[\id], key).warn };
 };
+
+// Runs one of the type's actions (a card button); unknown actions are ignored.
+~genDo = { |g, action| g[\type][\actions] !? { |acts| acts[action.asSymbol] !? { |fn| fn.(g, g[\p]) } } };
 
 ~sendGen = { |g| ~send.('/gen', g[\id], g[\typeName], g[\dest], g[\active].binaryValue, g[\group] ? 0) };
 

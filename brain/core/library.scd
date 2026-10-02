@@ -80,21 +80,29 @@
 	}
 	{ type.isKindOf(Event).not or: { type[\params].isNil } } { err = "it must evaluate to an Event with params" }
 	{ type[\run].isNil and: { type[\key].isNil } } { err = "it needs a run or a key function" };
-	if(err.notNil) {
-		"type % didn't load: %".format(name, err).warn;
-		~send.('/error', "type % didn't load: %".format(name, err));
-		false;
-	} {
+	if(err.notNil) { ~report.("type % didn't load: %".format(name, err)); false } {
 		// keep the AdHoc version being replaced
 		if((entry.isNil or: { entry[\builtin].not }) and: { ~typeSource[name].notNil } and: { ~typeSource[name] != source }) {
-			File.mkdir(~adhocDir +/+ "old");
-			File.use(~adhocDir +/+ "old" +/+ "%-%.scd".format(name, Date.getDate.stamp), "w", { |f| f.write(~typeSource[name]) });
+			File.use(~oldPath.(name, Date.getDate.stamp), "w", { |f| f.write(~typeSource[name]) });
 		};
 		~types[name] = type;
 		~typeSource[name] = source;
 		~gens.do { |g| if(g[\typeName] == name) { ~retype.(g, type) } };
 		true;
 	};
+};
+
+// Loads a type picked from the library (rescanned first, so a new file is found); it joins the add
+// bar for the session. Returns true if it loaded.
+~useType = { |name|
+	~scanLibrary.();
+	if(~loadType.(name)) { ~addToBar.(name.asSymbol); true } { false };
+};
+
+// Where a replaced or deleted AdHoc source is kept: adhoc/old/<name>-<tag>.scd.
+~oldPath = { |name, tag|
+	File.mkdir(~adhocDir +/+ "old");
+	~adhocDir +/+ "old" +/+ "%-%.scd".format(name, tag);
 };
 
 // Deletes an AdHoc type from the library: its file moves to adhoc/old/ (so it can come back), it's
@@ -110,8 +118,7 @@
 	{ e[\builtin] } { "% is built in and can't be deleted (unstar it to take it off the add bar)".format(name) }
 	{ users.notEmpty } { "% is in use by generator% %: remove %".format(name, if(users.size > 1, "s", ""), users.join(", "), if(users.size > 1, "them", "it")) };
 	if(err.notNil) { ~send.('/error', "can't delete: " ++ err); false } {
-		File.mkdir(~adhocDir +/+ "old");
-		File.copy(e[\path], ~adhocDir +/+ "old" +/+ "%-deleted-%.scd".format(name, Date.getDate.stamp));
+		File.copy(e[\path], ~oldPath.(name, "deleted-" ++ Date.getDate.stamp));
 		File.delete(e[\path]);
 		~types.removeAt(name); ~typeSource.removeAt(name); ~sessionTypes.remove(name);
 		if(~favorites.includes(name)) { ~favorites = ~favorites.reject(_ == name); ~writeFavorites.() };
@@ -122,20 +129,17 @@
 
 // A generator moves to a new version of its type: settings kept where the param still exists.
 ~retype = { |g, type|
-	var old = g[\p];
 	g[\type] = type;
-	g[\p] = ();
-	type[\params].do { |spec| g[\p][spec[0]] = old[spec[0]] ? spec[1] };
+	g[\p] = ~paramsFor.(type, g[\p]);
 	if(g[\task].notNil) { ~startGen.(g) };
 };
 
 // A generator's type failed while running (run or key): it stops, and the error is reported.
 ~genFailed = { |g, e|
-	"generator % (%) stopped: %".format(g[\id], g[\typeName], e.errorString).warn;
-	~send.('/error', "generator % (%) stopped: %".format(g[\id], g[\typeName], e.errorString));
+	~report.("generator % (%) stopped: %".format(g[\id], g[\typeName], e.errorString));
 	g[\task] = nil;
 	g[\active] = false;
-	~release.(g); ~releaseHeld.(g);
+	~silence.(g);
 	~sendGen.(g);
 };
 
@@ -146,7 +150,8 @@
 };
 
 // on the add bar: favorites, and types loaded this session
-~onBar = { |name| ~types[name].notNil and: { ~favorites.includes(name) or: { ~sessionTypes.includes(name) } } };
+~addToBar = { |name| if(~favorites.includes(name).not) { ~sessionTypes.add(name) } };
+~onBar ={ |name| ~types[name].notNil and: { ~favorites.includes(name) or: { ~sessionTypes.includes(name) } } };
 
 ~sendLibrary = {
 	~library.keys.asArray.sort.do { |name|

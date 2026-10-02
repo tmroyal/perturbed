@@ -86,6 +86,9 @@
 // Sent when the note actually sounds (MIDI is timestamped `latency` ahead of logical time).
 ~sendLate = { |...msg| SystemClock.sched(~config[\latency], { ~send.(*msg); nil }) };
 
+// An intent failed: to the log and to every surface (tools/perturbed shows it, the app's status bar too).
+~report = { |text| text.warn; ~send.('/error', text) };
+
 // Where to answer: the sender, or the port named in msg[1].
 ~replyAddr = { |msg, addr| msg[1] !? { |port| NetAddr(addr.ip, port.asInteger) } ? addr };
 
@@ -96,13 +99,19 @@
 	~sendChord.();
 	~sendSchema.();
 	~sendLibrary.();
-	~clocks.keys.asArray.sort.do { |id| ~sendClock.(~clocks[id]) };
-	~groups.keys.asArray.sort.do { |id| ~sendGroup.(~groups[id]) };
-	~dests.keys.asArray.sort.do { |id| ~sendDest.(~dests[id]) };
+	~inOrder.(~clocks).do(~sendClock);
+	~inOrder.(~groups).do(~sendGroup);
+	~inOrder.(~dests).do(~sendDest);
 	~sendLiveTracks.();
-	~gens.keys.asArray.sort.do { |id| ~sendGen.(~gens[id]); ~sendParams.(~gens[id]) };
-	~groups.keys.asArray.sort.do { |id| ~sendPins.(~groups[id]) };  // after the generators they point at
+	~inOrder.(~gens).do { |g| ~sendGen.(g); ~sendParams.(g) };
+	~inOrder.(~groups).do(~sendPins);  // after the generators they point at
 	~send.('/state/end');
+};
+
+// An intent for one object, `<addr> <id> <args...>` (objects: \gens, \groups, ...): calls the
+// function named `fn` with the object and the args. Unknown ids are ignored.
+~onObject = { |addr, objects, fn|
+	OSCdef(addr, { |msg| objects.envirGet[msg[1].asInteger] !? { |o| fn.envirGet.(o, *msg[2..]) } }, addr);
 };
 
 ~oscInit = {
@@ -136,48 +145,33 @@
 	OSCdef(\genAdd, { |msg| ~addGen.(msg[1], msg[2] ? 0) }, '/gen/add');
 	OSCdef(\genRemove, { |msg| ~removeGen.(msg[1].asInteger) }, '/gen/remove');
 	OSCdef(\genLearn, { |msg| ~learnGen.(msg[1].asInteger, msg[2], msg[3].asInteger == 1) }, '/gen/learn');
-	OSCdef(\genSet, { |msg| ~gens[msg[1].asInteger] !? { |g| ~setGen.(g, msg[2], msg[3]) } }, '/gen/set');
+	~onObject.('/gen/set', \gens, \setGen);
+	~onObject.('/gen/do', \gens, \genDo);
 
 	OSCdef(\groupAdd, { |msg| ~addGroup.(msg[1]) }, '/group/add');
-	OSCdef(\groupSet, { |msg| ~groups[msg[1].asInteger] !? { |gr| ~setGroup.(gr, msg[2], msg[3]) } }, '/group/set');
-	OSCdef(\groupPin, { |msg| ~groups[msg[1].asInteger] !? { |gr| ~pin.(gr, msg[2], msg[3]) } }, '/group/pin');
-	OSCdef(\groupUnpin, { |msg| ~groups[msg[1].asInteger] !? { |gr| ~unpin.(gr, msg[2], msg[3]) } }, '/group/unpin');
 	OSCdef(\groupRemove, { |msg| ~removeGroup.(msg[1].asInteger) }, '/group/remove');
+	~onObject.('/group/set', \groups, \setGroup);
+	~onObject.('/group/pin', \groups, \pin);
+	~onObject.('/group/unpin', \groups, \unpin);
 
 	OSCdef(\clockAdd, { ~addClock.() }, '/clock/add');
-	OSCdef(\clockSet, { |msg| ~clocks[msg[1].asInteger] !? { |c| ~setClock.(c, msg[2], msg[3]) } }, '/clock/set');
 	OSCdef(\clockRemove, { |msg| ~removeClock.(msg[1].asInteger) }, '/clock/remove');
+	~onObject.('/clock/set', \clocks, \setClock);
 
 	OSCdef(\destAdd, { |msg| ~addDest.(msg[1], msg[2], msg[3], msg[4] ? "") }, '/dest/add');
-	OSCdef(\genDo, { |msg|
-		~gens[msg[1].asInteger] !? { |g| g[\type][\actions] !? { |acts| acts[msg[2].asSymbol] !? { |fn| fn.(g, g[\p]) } } };
-	}, '/gen/do');
-	OSCdef(\adhocLoad, { |msg|
-		var name = msg[1].asSymbol;
-		~scanLibrary.();
-		if(~loadType.(name)) {
-			if(~favorites.includes(name).not) { ~sessionTypes.add(name) };
-			~sendState.();
-			~send.('/adhoc/loaded', name);
-		};
-	}, '/adhoc/load');
+	OSCdef(\destRemove, { |msg| ~removeDest.(msg[1].asInteger) }, '/dest/remove');
+
+	OSCdef(\adhocLoad, { |msg| if(~useType.(msg[1])) { ~sendState.(); ~send.('/adhoc/loaded', msg[1].asSymbol) } }, '/adhoc/load');
 	OSCdef(\adhocDelete, { |msg| if(~deleteType.(msg[1])) { ~sendState.(); ~send.('/adhoc/deleted', msg[1].asSymbol) } }, '/adhoc/delete');
 	OSCdef(\libraryRescan, { ~scanLibrary.(); ~sendState.() }, '/library/rescan');
 	OSCdef(\favorite, { |msg| ~setFavorite.(msg[1], msg[2].asInteger == 1) }, '/favorite');
 	OSCdef(\cc, { |msg| ~cc.(msg[1], msg[2], msg[3], msg[4], true) }, '/cc');
 	OSCdef(\liveTracks, { |msg| ~setLiveTracks.(msg[1..].collect { |x| if(x.isKindOf(Symbol)) { x.asString } { x } }) }, '/live/tracks');
 	OSCdef(\liveTracksClear, { ~setLiveTracks.(nil) }, '/live/tracks/clear');
-	OSCdef(\destRemove, { |msg| ~removeDest.(msg[1].asInteger) }, '/dest/remove');
 
 	OSCdef(\save, { |msg|
-		try { ~savePerformance.(msg[1].asString); ~send.('/saved', msg[1].asString) } { |e|
-			"save failed: %".format(e.errorString).warn; ~send.('/error', "save failed: " ++ e.errorString);
-		};
+		try { ~savePerformance.(msg[1].asString); ~send.('/saved', msg[1].asString) } { |e| ~report.("save failed: " ++ e.errorString) };
 	}, '/save');
-	OSCdef(\load, { |msg|
-		try { ~loadPerformance.(msg[1].asString) } { |e|
-			"load failed: %".format(e.errorString).warn; ~send.('/error', "load failed: " ++ e.errorString);
-		};
-	}, '/load');
+	OSCdef(\load, { |msg| try { ~loadPerformance.(msg[1].asString) } { |e| ~report.("load failed: " ++ e.errorString) } }, '/load');
 };
 )

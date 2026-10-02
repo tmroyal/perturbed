@@ -9,18 +9,16 @@
 		tempo: ~bpm,
 		chord: ~chord,
 		chordMode: ~chordMode,
-		clocks: ~clocks.keys.asArray.sort.collect { |id|
-			var c = ~clocks[id];
-			(id: id, mode: c[\mode], num: c[\num], den: c[\den], factor: c[\factor], bpm: c[\bpm])
+		clocks: ~inOrder.(~clocks).collect { |c|
+			(id: c[\id], mode: c[\mode], num: c[\num], den: c[\den], factor: c[\factor], bpm: c[\bpm])
 		},
-		destinations: ~dests.keys.asArray.sort.collect(~dests[_]),
-		groups: ~groups.keys.asArray.sort.collect(~groups[_]),
+		destinations: ~inOrder.(~dests),
+		groups: ~inOrder.(~groups),
 		adhoc: ().putPairs(~gens.values.collect(_[\typeName]).asSet.asArray
 			.reject { |name| ~library[name] !? (_[\builtin]) ? false }
 			.collect { |name| [name, ~typeSource[name]] }.flatten),
-		generators: ~gens.keys.asArray.sort.collect { |id|
-			var g = ~gens[id];
-			(id: id, type: g[\typeName], dest: g[\dest], group: g[\group] ? 0, active: g[\active], params: g[\p])
+		generators: ~inOrder.(~gens).collect { |g|
+			(id: g[\id], type: g[\typeName], dest: g[\dest], group: g[\group] ? 0, active: g[\active], params: g[\p])
 		},
 	));
 	"saved %".format(path).postln;
@@ -29,13 +27,13 @@
 ~loadPerformance = { |path|
 	var perf = File.readAllString(path.standardizePath).parseJSON;
 	~setPlaying.(false);
-	~gens.keys.copy.do { |id| ~removeGen.(id) };
-	~dests.keys.copy.do { |id| ~removeDest.(id) };
-	~clocks.keys.copy.do { |id| ~removeClock.(id) };
-	~groups.keys.copy.do { |id| ~removeGroup.(id) };
+	~gens.keys.copy.do(~removeGen);
+	~dests.keys.copy.do(~removeDest);
+	~clocks.keys.copy.do(~removeClock);
+	~groups.keys.copy.do(~removeGroup);
+	~nextIds = ();  // ids come from the file
 
 	~setTempo.(perf["tempo"]);  // also sets Link tempo
-	~nextClockId = 1;
 	(perf["clocks"] ? []).do { |saved|
 		var c = ~addClock.(saved["id"].asInteger);
 		[\mode, \num, \den, \factor, \bpm].do { |k| saved[k.asString] !? { |v| ~setClock.(c, k, v) } };
@@ -43,11 +41,7 @@
 	~chordMode = if(perf["chordMode"] == "arm") { \arm } { \auto };
 	~armed = false;
 	~chord = (perf["chord"] ? []).collect(_.asInteger);
-	perf["destinations"].do { |d|
-		~nextDestId = d["id"].asInteger;
-		~addDest.(d["name"], d["port"], d["channel"], d["instrument"]);
-	};
-	~nextGroupId = 1;
+	perf["destinations"].do { |d| ~addDest.(d["name"], d["port"], d["channel"], d["instrument"], d["id"].asInteger) };
 	(perf["groups"] ? []).do { |saved|
 		var gr = ~addGroup.(saved["name"], saved["id"].asInteger);
 		[\on, \solo, \collapsed].do { |k| gr[k] = saved[k.asString] == "true" };
@@ -57,28 +51,23 @@
 	(perf["adhoc"] ? ()).keysValuesDo { |name, source|
 		name = name.asSymbol;
 		if(~typeSource[name] != source) { ~loadType.(name, source) };
-		if(~favorites.includes(name).not) { ~sessionTypes.add(name) };
+		~addToBar.(name);
 	};
 	perf["generators"].do { |saved|
 		var name = saved["type"].asSymbol;
-		if(~types[name].isNil and: { ~loadType.(name) } and: { ~favorites.includes(name).not }) { ~sessionTypes.add(name) };
+		if(~types[name].isNil and: { ~loadType.(name) }) { ~addToBar.(name) };
 	};
 	perf["generators"].do { |saved|
-		var id, g;
-		~nextGenId = saved["id"].asInteger;
-		id = ~addGen.(saved["type"]);
-		(g = ~gens[id]) !? {
+		var id = ~addGen.(saved["type"], saved["group"] ? 0, saved["id"].asInteger);
+		~gens[id] !? { |g|
 			g[\type][\params].do { |spec|
 				saved["params"][spec[0].asString] !? { |v| g[\p][spec[0]] = ~fromJSON.(v, spec[1]) };
 			};
 			g[\dest] = saved["dest"].asInteger;
-			g[\group] = if(~groups.includesKey((saved["group"] ? 0).asInteger)) { saved["group"].asInteger } { 0 };
 			g[\active] = saved["active"] == "true";
 		};
 	};
 	~groups.do { |gr| gr[\pins] = gr[\pins].select { |p| ~gens[p[0]] !? { |g| g[\group] == gr[\id] } ? false } };
-	~nextDestId = (~dests.keys.maxItem ? 0) + 1;
-	~nextGenId = (~gens.keys.maxItem ? 0) + 1;
 	~sendState.();
 	"loaded %".format(path).postln;
 };

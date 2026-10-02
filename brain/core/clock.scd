@@ -16,7 +16,6 @@
 ~link = nil;
 ~quantum = 4;      // beats per Link bar
 ~clocks = ();
-~nextClockId = 1;
 
 ~linkInit = {
 	if(~testMode.not) {
@@ -95,8 +94,7 @@
 
 ~addClock = { |id|
 	var c;
-	id = id ?? { ~nextClockId };
-	~nextClockId = max(~nextClockId, id + 1);
+	id = ~newId.(\clock, id);
 	c = (id: id, name: (65 + id).asAscii.asString, mode: \ratio, num: 1, den: 1, factor: 1.0, bpm: ~bpm);
 	~clocks[id] = c;
 	// added while playing: start at the beat it would be on had it run since play

@@ -12,12 +12,10 @@
 // of the group's own generators; a generator leaving the group (or removed) takes its pins along.
 (
 ~groups = ();
-~nextGroupId = 1;
 
 ~addGroup = { |name, id|
 	var gr;
-	id = id ?? { ~nextGroupId };
-	~nextGroupId = max(~nextGroupId, id + 1);
+	id = ~newId.(\group, id);
 	gr = (id: id, name: (name ?? { "Group %".format(id) }).asString, on: true, solo: false, collapsed: false, pins: []);
 	~groups[id] = gr;
 	~sendGroup.(gr);
@@ -75,7 +73,11 @@
 };
 
 // After a gate changes: whatever no longer sounds lets go of its notes.
-~applyGates = { ~gens.do { |g| if(~sounds.(g).not) { ~release.(g); ~releaseHeld.(g) } } };
+~gate = { |g| if(~sounds.(g).not) { ~silence.(g) } };
+~applyGates = { ~gens.do(~gate) };
+
+// A group id as given, if that group exists; else 0 (no group).
+~groupOrNone = { |id| if(~groups.includesKey(id.asInteger)) { id.asInteger } { 0 } };
 
 ~sendGroup = { |gr| ~send.('/group', gr[\id], gr[\name], gr[\on].binaryValue, gr[\solo].binaryValue, gr[\collapsed].binaryValue) };
 )

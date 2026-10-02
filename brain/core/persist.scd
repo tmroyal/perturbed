@@ -16,7 +16,7 @@
 		groups: ~inOrder.(~groups),
 		adhoc: ().putPairs(~gens.values.collect(_[\typeName]).asSet.asArray
 			.reject { |name| ~library[name] !? (_[\builtin]) ? false }
-			.collect { |name| [name, ~typeSource[name]] }.flatten),
+			.collect { |name| [name, ~typeSource[name].split($\n)] }.flatten(1)),  // as lines: readable, diffable
 		generators: ~inOrder.(~gens).collect { |g|
 			(id: g[\id], type: g[\typeName], dest: g[\dest], group: g[\group] ? 0, active: g[\active], params: g[\p])
 		},
@@ -50,6 +50,7 @@
 	// the types it uses: AdHoc from the piece's own copies, any other from the library
 	(perf["adhoc"] ? ()).keysValuesDo { |name, source|
 		name = name.asSymbol;
+		if(source.isKindOf(String).not) { source = source.join("\n") };  // lines (older files: one string)
 		if(~typeSource[name] != source) { ~loadType.(name, source) };
 		~addToBar.(name);
 	};

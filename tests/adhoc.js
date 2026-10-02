@@ -137,7 +137,12 @@ sock.bind(0, async () => {
     const saved = next('/saved');
     send('/save', perf);
     await saved;
-    check(/vel/.test(JSON.parse(fs.readFileSync(perf, 'utf8')).adhoc['echo-up']), 'the performance file embeds the type');
+    const text = fs.readFileSync(perf, 'utf8');
+    const embedded = JSON.parse(text).adhoc['echo-up'];
+    check(
+      Array.isArray(embedded) && embedded.some((l) => /vel/.test(l)) && text.split('\n').length > 20,
+      'the performance file embeds the type, as lines, and is indented',
+    );
     fs.renameSync(file, `${file}.away`);
     snap = next('/state/end');
     send('/library/rescan');

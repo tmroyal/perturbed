@@ -14,12 +14,39 @@ const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A'
 const OCTAVES = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];  // MIDI 60 = C4
 const noteName = (p) => `${NOTE_NAMES[p % 12]}${Math.floor(p / 12) - 1}`;
 const typeLabel = (name) => name.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
+const genName = (gen) => `${typeLabel(gen.type)} ${gen.id}`;
+const byName = (a, b) => a.name.localeCompare(b.name);
+
+// A toggle button's state: the 'on' class and, if given, its text for that state.
+const setOn = (button, on, text) => { button.classList.toggle('on', on); if (text !== undefined) button.textContent = text; return button; };
+const closeButton = (title, onclick) => el('button', { className: 'close', textContent: '×', title, onclick });
+// A light's flash (a note played, a beat).
+const flash = (light, duration = 150) => light?.animate([{ background: '#EBCB8B' }, { background: '#434C5E' }], { duration });
+
+// Follows a drag begun by pointerdown e on target: move(event) on every move, done() on release.
+function drag(target, e, move, done) {
+  target.setPointerCapture(e.pointerId);
+  target.addEventListener('pointermove', move);
+  target.addEventListener('pointerup', () => { target.removeEventListener('pointermove', move); done?.(); }, { once: true });
+}
 
 function selectInput(options, onChange) {
   const sel = el('select');
   options.forEach(([label, value]) => sel.add(new Option(label, value)));
   sel.addEventListener('change', () => onChange(sel.value));
   return sel;
+}
+
+// A menu of a model map's items by name (outputs, groups, clocks) after a first option with value 0.
+// refresh(value) rebuilds it from the map and selects value, or the first option if it's gone.
+function itemSelect(first, items, onChange) {
+  const sel = el('select');
+  sel.addEventListener('change', () => onChange(parseInt(sel.value)));
+  const refresh = (value) => {
+    sel.replaceChildren(new Option(first, 0), ...[...items.values()].map((x) => new Option(x.name, x.id)));
+    sel.value = items.has(value) ? value : 0;
+  };
+  return { sel, refresh };
 }
 
 function numberInput(min, max, onChange, step = 1) {
@@ -91,12 +118,9 @@ function rotary({ min, max, step, log = false, size = 32, onChange }) {
   };
 
   svg.addEventListener('pointerdown', (e) => {
-    svg.setPointerCapture(e.pointerId);
     dragging = true;
     let lastY = e.clientY;
-    const move = (m) => { nudge(lastY - m.clientY, m.shiftKey); lastY = m.clientY; };
-    svg.addEventListener('pointermove', move);
-    svg.addEventListener('pointerup', () => { svg.removeEventListener('pointermove', move); dragging = false; }, { once: true });
+    drag(svg, e, (m) => { nudge(lastY - m.clientY, m.shiftKey); lastY = m.clientY; }, () => { dragging = false; });
   });
   svg.addEventListener('wheel', (e) => { e.preventDefault(); nudge(-Math.sign(e.deltaY) * (log ? 4 : 1), e.shiftKey); });
   svg.addEventListener('dblclick', () => field.select());

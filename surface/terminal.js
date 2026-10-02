@@ -41,14 +41,8 @@ document.addEventListener('keydown', (e) => {
 window.addEventListener('resize', () => { if (term && !$('drawer').hidden) fit.fit(); });
 
 // drag the top edge to resize (height kept as a CSS variable, so the page can make room)
-$('drawer-handle').addEventListener('pointerdown', (e) => {
-  const handle = e.currentTarget;
-  handle.setPointerCapture(e.pointerId);
-  const move = (m) => {
-    const h = Math.min(window.innerHeight - 120, Math.max(120, window.innerHeight - m.clientY));
-    document.documentElement.style.setProperty('--drawer-h', `${h}px`);
-    fit?.fit();
-  };
-  handle.addEventListener('pointermove', move);
-  handle.addEventListener('pointerup', () => handle.removeEventListener('pointermove', move), { once: true });
-});
+$('drawer-handle').addEventListener('pointerdown', (e) => drag(e.currentTarget, e, (m) => {
+  const h = Math.min(window.innerHeight - 120, Math.max(120, window.innerHeight - m.clientY));
+  document.documentElement.style.setProperty('--drawer-h', `${h}px`);
+  fit?.fit();
+}));

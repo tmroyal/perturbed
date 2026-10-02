@@ -15,6 +15,7 @@ const groupBodies = new Map();    // group id -> the grid its cards go in
 const summaryLeds = new Map();    // gen id -> its light in a folded group's summary
 const summaries = new Map();      // group id -> summary element
 const pinUpdaters = new Map();    // "genId:param" -> update(value) of its pinned control
+const updatePin = (genId, param, value) => pinUpdaters.get(`${genId}:${param}`)?.(value);
 
 const isPinned = (gen, param) => model.groups.get(gen.group)?.pins.some(([id, p]) => id === gen.id && p === param) ?? false;
 function togglePin(gen, param) {
@@ -27,14 +28,14 @@ function pinRow(g) {
   for (const [genId, param] of g.pins) {
     const gen = model.gens.get(genId), spec = gen && specOf(gen.type, param);
     if (!spec) continue;
-    const c = paramControl(spec, (v) => osc.send('/gen/set', genId, param, v), (on) => osc.send('/gen/learn', genId, param, on ? 1 : 0));
+    const c = paramControl(spec, genId);
     c.update(gen.params[param]);
     pinUpdaters.set(`${genId}:${param}`, c.update);
     row.append(el('div', { className: 'pin' },
       // the setting's own name: card labels ("value", "from") rely on the card's sections for context
-      el('label', { textContent: `${typeLabel(gen.type)} ${genId} · ${param}` }),
+      el('label', { textContent: `${genName(gen)} · ${param}` }),
       c.control,
-      el('button', { className: 'close', textContent: '×', title: 'Unpin', onclick: () => osc.send('/group/unpin', g.id, genId, param) })));
+      closeButton('Unpin', () => osc.send('/group/unpin', g.id, genId, param))));
   }
   return row;
 }
@@ -46,6 +47,7 @@ function placeCard(gen) {
 
 function groupSection(g) {
   const set = (key, value) => osc.send('/group/set', g.id, key, value);
+  const flip = (key) => () => set(key, g[key] ? 0 : 1);
   const name = el('input', { type: 'text', className: 'group-name', value: g.name, title: 'Rename' });
   name.addEventListener('change', () => set('name', name.value.trim() || g.name));
   blurOnEnter(name);
@@ -56,13 +58,13 @@ function groupSection(g) {
   body.hidden = g.collapsed;
   return el('section', { className: `group${g.collapsed ? ' collapsed' : ''}${g.on ? '' : ' off'}` },
     el('header', { className: 'group-head' },
-      el('button', { className: 'fold', textContent: g.collapsed ? '▸' : '▾', title: g.collapsed ? 'Unfold' : 'Fold away', onclick: () => set('collapsed', g.collapsed ? 0 : 1) }),
+      el('button', { className: 'fold', textContent: g.collapsed ? '▸' : '▾', title: g.collapsed ? 'Unfold' : 'Fold away', onclick: flip('collapsed') }),
       name,
       summary,
       addInto(g),
-      el('button', { className: `power${g.on ? ' on' : ''}`, textContent: g.on ? 'On' : 'Off', title: 'Switch the group (a mute: it keeps time)', onclick: () => set('on', g.on ? 0 : 1) }),
-      el('button', { className: `solo${g.solo ? ' on' : ''}`, textContent: 'Solo', title: 'Only soloed groups sound', onclick: () => set('solo', g.solo ? 0 : 1) }),
-      el('button', { className: 'close', textContent: '×', title: 'Remove the group (its generators stay)', onclick: () => osc.send('/group/remove', g.id) })),
+      setOn(el('button', { className: 'power', title: 'Switch the group (a mute: it keeps time)', onclick: flip('on') }), g.on, g.on ? 'On' : 'Off'),
+      setOn(el('button', { className: 'solo', textContent: 'Solo', title: 'Only soloed groups sound', onclick: flip('solo') }), g.solo),
+      closeButton('Remove the group (its generators stay)', () => osc.send('/group/remove', g.id))),
     pinRow(g),
     body);
 }
@@ -87,7 +89,6 @@ function renderGroups() {
   model.gens.forEach((gen) => { placeCard(gen); gen.card?.render(); });
   renderGroupSummaries();
 }
-const updateGroup = renderGroups;
 
 function renderGroupSummaries() {
   summaryLeds.clear();
@@ -97,7 +98,7 @@ function renderGroupSummaries() {
     const outputs = [...new Set(members.map((gen) => model.dests.get(gen.dest)?.name).filter(Boolean))];
     summary.replaceChildren(...(g?.collapsed ? [
       ...members.map((gen) => {
-        const led = el('span', { className: `led${gen.active ? ' on' : ''}`, title: `${typeLabel(gen.type)} ${gen.id}${gen.active ? '' : ' (off)'}` });
+        const led = el('span', { className: `led${gen.active ? ' on' : ''}`, title: `${genName(gen)}${gen.active ? '' : ' (off)'}` });
         summaryLeds.set(gen.id, led);
         return led;
       }),
@@ -107,6 +108,4 @@ function renderGroupSummaries() {
   $('grid').classList.toggle('empty', !model.gens.size && !model.groups.size);
 }
 
-function flashSummary(genId) {
-  summaryLeds.get(genId)?.animate([{ background: '#EBCB8B' }, { background: '#434C5E' }], { duration: 150 });
-}
+const flashSummary = (genId) => flash(summaryLeds.get(genId));

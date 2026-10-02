@@ -1,11 +1,13 @@
 // sidebar.js — the chord bar, clocks and outputs (the brain calls outputs "destinations").
 
+// A sidebar row: a name, then its controls.
+const namedRow = (className, name, ...rest) => el('div', { className }, el('span', { className: 'name', textContent: name }), ...rest);
+
 // --- chord ---
 function renderChord() {
-  [...$('chord-mode').children].forEach((b) => b.classList.toggle('on', b.dataset.mode === model.chord.mode));
+  [...$('chord-mode').children].forEach((b) => setOn(b, b.dataset.mode === model.chord.mode));
   $('chord-arm').hidden = model.chord.mode !== 'arm';
-  $('chord-arm').classList.toggle('on', model.chord.armed);
-  $('chord-arm').textContent = model.chord.armed ? 'Play a chord…' : 'Arm';
+  setOn($('chord-arm'), model.chord.armed, model.chord.armed ? 'Play a chord…' : 'Arm');
   $('chord-notes').textContent = model.chord.pitches.map(noteName).join('  ');
 }
 $('chord-arm').onclick = () => osc.send('/chord/arm', model.chord.armed ? 0 : 1);
@@ -35,17 +37,16 @@ function clockRow(c) {
     controls = [dial.root];
     show = (c) => dial.set(c.bpm);
   }
-  const root = el('div', { className: 'clock' },
-    el('span', { className: 'name', textContent: c.name }), mode, ...controls, tempo,
-    el('button', { className: 'close', textContent: '×', title: 'Remove (its generators move to A)', onclick: () => osc.send('/clock/remove', c.id) }));
+  const root = namedRow('clock', c.name, mode, ...controls, tempo,
+    closeButton('Remove (its generators move to A)', () => osc.send('/clock/remove', c.id)));
   const update = (c) => { mode.value = c.mode; show(c); tempo.textContent = `${+c.tempo.toFixed(2)}`; };
   update(c);
   return { mode: c.mode, root, update };
 }
 
-const mainClockRow = () => el('div', { className: 'clock main' },
-  el('span', { className: 'name', textContent: 'A' }), el('span', { className: 'unit', textContent: 'main' }),
+const mainClockRow = () => namedRow('clock main', 'A', el('span', { className: 'unit', textContent: 'main' }),
   el('span', { className: 'tempo', textContent: `${+model.bpm.toFixed(2)}` }));
+const renderMainClock = () => $('clocks').firstChild?.replaceWith(mainClockRow());
 
 function renderClocks() {
   clockRows.clear();
@@ -54,7 +55,7 @@ function renderClocks() {
     clockRows.set(c.id, row);
     return row.root;
   }));
-  model.gens.forEach((g) => g.card?.refreshClocks());
+  renderCards();
 }
 $('add-clock').onclick = () => osc.send('/clock/add');
 
@@ -71,14 +72,13 @@ const addOutput = (t) => osc.send('/dest/add', t.name, t.port, t.channel, t.inst
 function renderOutputs() {
   $('outputs').replaceChildren(...[...model.dests.values()].map((d) => {
     const deaf = model.live && !model.live.some((t) => listensTo(t, d));
-    return el('div', { className: 'output' + (deaf ? ' deaf' : '') },
-      el('span', { className: 'name', textContent: d.name }),
+    return namedRow('output' + (deaf ? ' deaf' : ''), d.name,
       el('span', { className: 'route', textContent: `port ${d.port} · ch ${d.channel} · ${d.instrument}`, title: model.ports[d.port - 1] ?? '' }),
       deaf ? el('span', { className: 'warn', textContent: '!', title: `No Live track listens to port ${d.port} ch ${d.channel}` }) : '',
-      el('button', { className: 'close', textContent: '×', title: 'Remove', onclick: () => osc.send('/dest/remove', d.id) }));
+      closeButton('Remove', () => osc.send('/dest/remove', d.id)));
   }));
   renderLiveTracks();
-  model.gens.forEach((g) => g.card?.refreshOutputs());
+  renderCards();
   renderGroupSummaries();
 }
 
@@ -87,8 +87,7 @@ function renderLiveTracks() {
   const dests = [...model.dests.values()];
   const fresh = (model.live ?? []).filter((t) => !dests.some((d) => d.port === t.port && d.channel === t.channel));
   const addable = fresh.filter((t) => t.channel > 0);
-  $('live-tracks').replaceChildren(...fresh.map((t) => el('div', { className: 'output live' },
-    el('span', { className: 'name', textContent: t.name }),
+  $('live-tracks').replaceChildren(...fresh.map((t) => namedRow('output live', t.name,
     el('span', { className: 'route', textContent: t.channel ? `port ${t.port} · ch ${t.channel} · ${t.instrument || 'no instrument'}` : 'all channels: pick one in Live' }),
     t.channel ? el('button', { className: 'add', textContent: '+', title: 'Add as an output', onclick: () => addOutput(t) }) : '')));
   $('live-head').hidden = fresh.length === 0;

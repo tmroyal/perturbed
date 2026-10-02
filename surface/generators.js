@@ -1,10 +1,11 @@
 // generators.js — generator cards, built entirely from the type schema the brain sends
 // (params, labels, sections, showWhen), so new types need no surface code.
 
-// One param's control: { control, update(value), learning?(on), refresh?() }.
-// learn(on) asks the brain to set the param from the next key played (note params).
-function paramControl(spec, send, learn) {
+// One param of generator genId as a control: { control, update(value), learning?(on), refresh?() }.
+// Changes go straight to the brain; a note's Set asks it for the next key played (/gen/learn).
+function paramControl(spec, genId) {
   const [min, max, step = 1] = spec.args;
+  const send = (v) => osc.send('/gen/set', genId, spec.name, v);
   const plain = (input) => ({ control: input, update: (v) => { if (!editing(input)) input.value = v; } });
   switch (spec.kind) {
     case 'note': {
@@ -14,23 +15,18 @@ function paramControl(spec, send, learn) {
       const name = selectInput(NOTE_NAMES.map((n, i) => [n, i]), (v) => { pc = +v; setNote(); });
       const octave = selectInput(OCTAVES.map((o, i) => [o, i]), (v) => { oct = +v; setNote(); });
       const setBtn = el('button', { className: 'learn', textContent: 'Set', title: 'Set from the next key played',
-        onclick: () => learn(!learning) });
+        onclick: () => osc.send('/gen/learn', genId, spec.name, learning ? 0 : 1) });
       return {
         control: el('div', { className: 'row' }, name, octave, setBtn),
         update: (v) => { pc = v % 12; oct = Math.floor(v / 12); name.value = pc; octave.value = oct; },
-        learning: (on) => { learning = on; setBtn.classList.toggle('on', on); setBtn.textContent = on ? 'Play…' : 'Set'; },
+        learning: (on) => { learning = on; setOn(setBtn, on, on ? 'Play…' : 'Set'); },
       };
     }
     case 'clock': {
-      const sel = el('select');
-      sel.addEventListener('change', () => send(parseInt(sel.value)));
+      const menu = itemSelect('A · main', model.clocks, send);
       let value = 0;
-      const refresh = () => {
-        sel.replaceChildren(new Option('A · main', 0), ...[...model.clocks.values()].map((c) => new Option(c.name, c.id)));
-        sel.value = model.clocks.has(value) ? value : 0;
-      };
-      refresh();
-      return { control: sel, update: (v) => { value = v; refresh(); }, refresh };
+      menu.refresh(value);
+      return { control: menu.sel, update: (v) => { value = v; menu.refresh(v); }, refresh: () => menu.refresh(value) };
     }
     case 'choice': {
       const sel = selectInput(spec.args.map((o) => [o, o]), send);
@@ -54,41 +50,29 @@ function buildCard(gen) {
   const set = (param, value) => osc.send('/gen/set', gen.id, param, value);
   const led = el('span', { className: 'led', title: 'Flashes on each note' });
   const power = el('button', { className: 'power', onclick: () => set('active', gen.active ? 0 : 1) });
-
-  const outputSel = el('select');
-  outputSel.addEventListener('change', () => set('dest', parseInt(outputSel.value)));
-  const refreshOutputs = () => {
-    outputSel.replaceChildren(new Option('—', 0), ...[...model.dests.values()].map((d) => new Option(d.name, d.id)));
-    outputSel.value = model.dests.has(gen.dest) ? gen.dest : 0;
-  };
-
-  const groupSel = el('select');
-  groupSel.addEventListener('change', () => set('group', parseInt(groupSel.value)));
-  const refreshGroups = () => {
-    groupSel.replaceChildren(new Option('—', 0), ...[...model.groups.values()].map((g) => new Option(g.name, g.id)));
-    groupSel.value = model.groups.has(gen.group) ? gen.group : 0;
-  };
+  const output = itemSelect('—', model.dests, (v) => set('dest', v));
+  const group = itemSelect('—', model.groups, (v) => set('group', v));
 
   const specs = model.types.get(gen.type) ?? [];
-  const fields = [...(specs.noOutput ? [] : [el('label', { textContent: 'output' }), outputSel]),
-    el('label', { textContent: 'group' }), groupSel];
-  const updaters = {}, learners = {}, refreshers = [], pins = {};
+  const fields = [...(specs.noOutput ? [] : [el('label', { textContent: 'output' }), output.sel]),
+    el('label', { textContent: 'group' }), group.sel];
+  const updaters = {}, learners = {}, refreshers = [], pins = {};  // refreshers: menus of clocks
   const conditional = [];  // rows shown only for some values of another param
   const applyShow = () => conditional.forEach(({ show, els }) => {
     const visible = show.values.includes(String(gen.params[show.param]));
     els.forEach((e) => { e.hidden = !visible; });
   });
 
-  const byName = Object.fromEntries(specs.map((s) => [s.name, s]));
+  const named = Object.fromEntries(specs.map((s) => [s.name, s]));
   for (const spec of specs) {
     if (spec.section) fields.push(el('div', { className: 'section', textContent: spec.section }));
-    if (spec.name === 'den' && byName.num) continue;
-    if (spec.name === 'num' && byName.den) {
+    if (spec.name === 'den' && named.num) continue;
+    if (spec.name === 'num' && named.den) {
       // the grid step as num / den beats, with the result shown
       const beats = el('span', { className: 'hint' });
       const showBeats = () => { beats.textContent = `= ${+(gen.params.num / gen.params.den).toFixed(3)} beat`; };
       const asField = (s) => ({ ...s, field: true });  // num/den are always number fields (a slider doesn't fit the row)
-      const num = paramControl(asField(spec), (v) => set('num', v)), den = paramControl(asField(byName.den), (v) => set('den', v));
+      const num = paramControl(asField(spec), gen.id), den = paramControl(asField(named.den), gen.id);
       updaters.num = (v) => { num.update(v); showBeats(); };
       updaters.den = (v) => { den.update(v); showBeats(); };
       const row = el('div', { className: 'row' }, num.control, '/', den.control, beats);
@@ -96,7 +80,7 @@ function buildCard(gen) {
       if (spec.show) conditional.push({ show: spec.show, els: [fields[fields.length - 2], row] });
       continue;
     }
-    const c = paramControl(spec, (v) => set(spec.name, v), (on) => osc.send('/gen/learn', gen.id, spec.name, on ? 1 : 0));
+    const c = paramControl(spec, gen.id);
     const label = el('label', { textContent: spec.label ?? spec.name });
     if (['range', 'choice', 'note'].includes(spec.kind)) {
       // ◇ pins the setting to the group's header (shown only while the card is in a group)
@@ -114,33 +98,30 @@ function buildCard(gen) {
   const root = el('section', { className: 'card gen' },
     el('header', {},
       led,
-      el('h2', { textContent: `${typeLabel(gen.type)} ${gen.id}` }),
+      el('h2', { textContent: genName(gen) }),
       ...(specs.actions ?? []).map((a) => el('button', { className: 'power', textContent: a, onclick: () => osc.send('/gen/do', gen.id, a) })),
       power,
-      el('button', { className: 'close', textContent: '×', title: 'Remove', onclick: () => osc.send('/gen/remove', gen.id) })),
+      closeButton('Remove', () => osc.send('/gen/remove', gen.id))),
     el('div', { className: 'fields' }, ...fields));
 
   return {
     root,
-    refreshOutputs,
-    refreshClocks: () => refreshers.forEach((f) => f()),
-    render() {
-      power.classList.toggle('on', gen.active);
-      power.textContent = gen.active ? 'On' : 'Off';
+    render() {  // state, pins and menus (outputs, groups, clocks) from the model
+      setOn(power, gen.active, gen.active ? 'On' : 'Off');
       root.classList.toggle('active', gen.active);
       root.classList.toggle('silenced', gen.active && !sounds(gen));  // on, but muted by a group
       root.classList.toggle('grouped', !!gen.group);
       for (const [param, pin] of Object.entries(pins)) {
         const on = isPinned(gen, param);
-        pin.classList.toggle('on', on);
-        pin.textContent = on ? '◆' : '◇';
+        setOn(pin, on, on ? '◆' : '◇');
       }
-      refreshOutputs();
-      refreshGroups();
+      output.refresh(gen.dest);
+      group.refresh(gen.group);
+      refreshers.forEach((f) => f());
     },
     param: (name, value) => { updaters[name]?.(value); applyShow(); },
     learning: (name, on) => learners[name]?.(on),
-    flash: () => led.animate([{ background: '#EBCB8B' }, { background: '#434C5E' }], { duration: 150 }),
+    flash: () => flash(led),
   };
 }
 
@@ -151,18 +132,23 @@ function mountCard(gen) {
   placeCard(gen);
 }
 
+// After /gen: a new generator gets a card; a known one re-renders, and moves if its group changed.
+function updateGen(gen, moved) {
+  if (!gen.card) mountCard(gen); else { gen.card.render(); if (moved) placeCard(gen); }
+  renderGroupSummaries();
+}
+
+function unmountCard(gen) {
+  gen?.card?.root.remove();
+  renderGroupSummaries();
+}
+
+// Re-renders every card (their menus follow the outputs, groups and clocks).
+const renderCards = () => model.gens.forEach((g) => g.card?.render());
+
 function renderGens() {
   model.gens.forEach((g) => { g.card = null; });
   renderGroups();
   model.gens.forEach(mountCard);
   renderGroupSummaries();
-}
-
-// The add bar: a button per favorite (and per type loaded this session), + Group, and the Library.
-function renderTypes() {
-  const bar = [...model.library.values()].filter((t) => t.bar).sort((a, b) => b.builtin - a.builtin || a.name.localeCompare(b.name));
-  $('add-gen').replaceChildren(...bar.map((t) =>
-    el('button', { textContent: `+ ${typeLabel(t.name)}`, title: t.description, onclick: () => osc.send('/gen/add', t.name) })),
-  el('button', { textContent: '+ Group', title: 'A group: switch, solo and fold away several generators at once', onclick: () => osc.send('/group/add') }),
-  el('button', { id: 'library-button', textContent: 'Library ▾', title: 'Every generator type: star favorites for the add bar, bring back old ones', onclick: toggleLibrary }));
 }

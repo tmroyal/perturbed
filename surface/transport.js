@@ -25,12 +25,11 @@ $('mod-apply').onclick = () => osc.send('/transport/scale', ...modFraction());
 // Beat display: a pulse on every beat and the beat count (no bar grouping; there's no metre).
 function showBeat(b) {
   $('beat').textContent = b >= 0 ? b + 1 : '';
-  if (b >= 0) $('pulse').animate([{ background: '#EBCB8B' }, { background: '#434C5E' }], { duration: 180 });
+  if (b >= 0) flash($('pulse'), 180);
 }
 
 function renderTransport() {
-  $('play').classList.toggle('on', model.playing);
-  $('play').textContent = model.playing ? 'Stop' : 'Play';
+  setOn($('play'), model.playing, model.playing ? 'Stop' : 'Play');
   if (!model.playing) showBeat(-1);
   tempoDial.set(model.bpm);
   renderMod();

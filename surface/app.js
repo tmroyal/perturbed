@@ -41,7 +41,6 @@ setInterval(() => {
 
 function renderAll() {
   renderTransport();
-  renderTypes();
   renderLibrary();
   renderPorts();
   renderChord();
@@ -50,9 +49,12 @@ function renderAll() {
   renderGens();
 }
 
-// --- brain messages; during a snapshot the model is filled and rendered once at /state/end ---
+// --- brain messages: each handler updates the model and returns what to re-render, which runs at
+// once, or not during a snapshot (everything renders at /state/end). Momentary events (beats,
+// notes, learning, errors) show directly. ---
 const specOf = (type, name) => model.types.get(type)?.find((s) => s.name === name);
-const live = (render) => { if (!inSnapshot) render(); };
+const setSpec = (key) => (type, name, value) => { const s = specOf(type, name); if (s) s[key] = value; };
+const chunks = (a, n) => Array.from({ length: Math.floor(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
 
 const handlers = {
   '/pong': (id) => {
@@ -62,94 +64,94 @@ const handlers = {
   },
   '/state/begin': () => {
     inSnapshot = true;
-    model.types.clear(); model.clocks.clear(); model.dests.clear(); model.gens.clear(); model.groups.clear(); model.library.clear();
+    Object.values(model).forEach((v) => { if (v instanceof Map) v.clear(); });
     model.live = null;
   },
   '/state/end': () => {
     inSnapshot = false;
     lastPong = Date.now();
     setConnected(true);
-    renderAll();
+    return renderAll;
   },
   '/transport': (playing, bpm) => {
     Object.assign(model, { playing: !!playing, bpm });
-    live(() => { renderTransport(); $('clocks').firstChild?.replaceWith(mainClockRow()); });
+    return () => { renderTransport(); renderMainClock(); };
   },
-  '/ports': (...names) => { model.ports = names; live(renderPorts); },
-  '/chord': (mode, armed, ...pitches) => { model.chord = { mode, armed: !!armed, pitches }; live(renderChord); },
+  '/ports': (...names) => { model.ports = names; return renderPorts; },
+  '/chord': (mode, armed, ...pitches) => { model.chord = { mode, armed: !!armed, pitches }; return renderChord; },
 
   '/library/type': (name, builtin, favorite, loaded, bar, changed, description, mtime) => {
     model.library.set(name, { name, builtin: !!builtin, favorite: !!favorite, loaded: !!loaded, bar: !!bar, changed: !!changed, description, mtime });
   },
-  '/adhoc/loaded': (name) => { if (pendingAdd === name) { pendingAdd = null; osc.send('/gen/add', name); } },
-  '/error': (message) => showError(message),
+  '/adhoc/loaded': (name) => { typeLoaded(name); },
+  '/error': (message) => { showError(message); },
   '/gen/schema': (type, name, kind, def, ...args) => {
     if (!model.types.has(type)) model.types.set(type, []);
     model.types.get(type).push({ name, kind, def, args });
   },
-  '/gen/label': (type, name, label) => { const s = specOf(type, name); if (s) s.label = label; },
-  '/gen/section': (type, name, title) => { const s = specOf(type, name); if (s) s.section = title; },
+  '/gen/label': setSpec('label'),
+  '/gen/section': setSpec('section'),
+  '/gen/slider': setSpec('slider'),
   '/gen/action': (type, name) => { const specs = model.types.get(type); if (specs) (specs.actions ??= []).push(name); },
-  '/gen/slider': (type, name, scale) => { const s = specOf(type, name); if (s) s.slider = scale; },
   '/gen/nooutput': (type) => { const specs = model.types.get(type); if (specs) specs.noOutput = true; },
-  '/gen/show': (type, name, param, ...values) => {
-    const s = specOf(type, name);
-    if (s) s.show = { param, values: values.map(String) };
-  },
+  '/gen/show': (type, name, param, ...values) => setSpec('show')(type, name, { param, values: values.map(String) }),
 
   '/clock': (id, name, mode, num, den, factor, bpm, tempo) => {
     const c = { id, name, mode, num, den, factor, bpm, tempo };
     model.clocks.set(id, c);
-    live(() => updateClock(c));
+    return () => updateClock(c);
   },
-  '/clock/removed': (id) => { model.clocks.delete(id); renderClocks(); },
+  '/clock/removed': (id) => { model.clocks.delete(id); return renderClocks; },
 
   '/dest': (id, name, port, channel, instrument) => {
     model.dests.set(id, { id, name, port, channel, instrument });
-    live(renderOutputs);
+    return renderOutputs;
   },
-  '/dest/removed': (id) => { model.dests.delete(id); renderOutputs(); },
+  '/dest/removed': (id) => { model.dests.delete(id); return renderOutputs; },
   '/live/tracks': (...a) => {
-    model.live = [];
-    for (let i = 0; i + 3 < a.length; i += 4) model.live.push({ name: a[i], port: a[i + 1], channel: a[i + 2], instrument: a[i + 3] });
-    live(renderOutputs);
+    model.live = chunks(a, 4).map(([name, port, channel, instrument]) => ({ name, port, channel, instrument }));
+    return renderOutputs;
   },
-  '/live/tracks/clear': () => { model.live = null; live(renderOutputs); },
+  '/live/tracks/clear': () => { model.live = null; return renderOutputs; },
 
   '/gen': (id, type, dest, active, group = 0) => {
     let gen = model.gens.get(id);
     if (!gen) model.gens.set(id, gen = { id, type, params: {}, card: null });
     const moved = gen.group !== group;
     Object.assign(gen, { dest, active: !!active, group });
-    live(() => { if (!gen.card) mountCard(gen); else { gen.card.render(); if (moved) placeCard(gen); } renderGroupSummaries(); });
+    return () => updateGen(gen, moved);
   },
   '/group': (id, name, on, solo, collapsed) => {
-    const known = model.groups.get(id);
-    const g = { id, name, on: !!on, solo: !!solo, collapsed: !!collapsed, pins: known?.pins ?? [] };
-    model.groups.set(id, g);
-    live(() => (known ? updateGroup(g) : renderGroups()));
+    model.groups.set(id, { id, name, on: !!on, solo: !!solo, collapsed: !!collapsed, pins: model.groups.get(id)?.pins ?? [] });
+    return renderGroups;
   },
   '/group/pins': (id, ...flat) => {
     const g = model.groups.get(id);
     if (!g) return;
-    g.pins = [];
-    for (let i = 0; i + 1 < flat.length; i += 2) g.pins.push([flat[i], flat[i + 1]]);
-    live(renderGroups);
+    g.pins = chunks(flat, 2);
+    return renderGroups;
   },
-  '/group/removed': (id) => { model.groups.delete(id); renderGroups(); },
+  '/group/removed': (id) => { model.groups.delete(id); return renderGroups; },
   '/gen/param': (id, name, value) => {
     const gen = model.gens.get(id);
     if (!gen) return;
     gen.params[name] = value;
-    live(() => { gen.card?.param(name, value); pinUpdaters.get(`${id}:${name}`)?.(value); });
+    return () => { gen.card?.param(name, value); updatePin(id, name, value); };
   },
-  '/gen/learn': (id, name, on) => model.gens.get(id)?.card?.learning(name, !!on),
-  '/gen/removed': (id) => { model.gens.get(id)?.card?.root.remove(); model.gens.delete(id); renderGroupSummaries(); },
+  '/gen/removed': (id) => {
+    const gen = model.gens.get(id);
+    model.gens.delete(id);
+    return () => unmountCard(gen);
+  },
 
+  '/gen/learn': (id, name, on) => { model.gens.get(id)?.card?.learning(name, !!on); },
   '/beat': (b) => { if (model.playing) showBeat(b); },
   '/note': (id) => { model.gens.get(id)?.card?.flash(); flashSummary(id); },
 };
-osc.on(({ addr, args }) => handlers[addr]?.(...args));
+osc.on(({ addr, args }) => {
+  const render = handlers[addr]?.(...args);
+  if (render && !inSnapshot) render();
+});
 
 setConnected(false);
 tempoDial.set(model.bpm);

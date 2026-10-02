@@ -9,6 +9,9 @@ const path = require('path');
 const { encode, decode } = require('../../surface/osc');
 
 const PORT = +(process.env.PERFORMED_PORT || 57120);
+const ROOT = path.join(__dirname, '..', '..');
+const ADHOC = process.env.PERFORMED_ADHOC || path.join(ROOT, 'adhoc');
+const typePath = (name, builtin) => (builtin ? path.join(ROOT, 'brain', 'types', `${name}.scd`) : path.join(ADHOC, `${name}.scd`));
 const NOTE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const noteName = (p) => `${NOTE_NAMES[p % 12]}${Math.floor(p / 12) - 1}`;
@@ -34,6 +37,7 @@ class Brain {
       chord: { mode: 'auto', armed: false, pitches: [] },
       types: new Map(),   // name -> { params: [spec], output: bool, actions: [] }
       clocks: new Map(), dests: new Map(), gens: new Map(), groups: new Map(), live: null,
+      library: new Map(),  // every type, built-in and AdHoc
     };
     this.sock.on('message', (buf) => {
       let msg;
@@ -94,7 +98,8 @@ class Brain {
     };
     const spec = (t, p) => type(t).params.find((s) => s.name === p);
     switch (addr) {
-      case '/state/begin': m.types.clear(); m.clocks.clear(); m.dests.clear(); m.gens.clear(); m.groups.clear(); m.live = null; break;
+      case '/state/begin': m.types.clear(); m.clocks.clear(); m.dests.clear(); m.gens.clear(); m.groups.clear(); m.library.clear(); m.live = null; break;
+      case '/library/type': m.library.set(a[0], { name: a[0], builtin: !!a[1], favorite: !!a[2], loaded: !!a[3], on_bar: !!a[4], changed: !!a[5], description: a[6], modified: new Date(a[7] * 1000).toISOString().slice(0, 16) }); break;
       case '/group': m.groups.set(a[0], { id: a[0], name: a[1], on: !!a[2], solo: !!a[3], collapsed: !!a[4], pins: m.groups.get(a[0])?.pins ?? [] }); break;
       case '/group/pins': { const g = m.groups.get(a[0]); if (g) { g.pins = []; for (let i = 1; i + 1 < a.length; i += 2) g.pins.push({ generator: a[i], setting: a[i + 1] }); } break; }
       case '/group/removed': m.groups.delete(a[0]); break;
@@ -142,7 +147,9 @@ class Brain {
     return g ? g.id : fail(`no group "${v}" (groups: ${[...m.groups.values()].map((x) => `${x.id} ${x.name}`).join(', ') || 'none'})`);
   }
   type(name) {
-    return this.model.types.get(name) ?? fail(`no generator type "${name}" (types: ${[...this.model.types.keys()].join(', ')})`);
+    return this.model.types.get(name) ?? fail(this.model.library.has(name)
+      ? `type "${name}" isn't loaded (adhoc load ${name})`
+      : `no generator type "${name}" (library: ${[...this.model.library.keys()].join(', ')})`);
   }
 
   // A generator setting, checked and converted for the brain.
@@ -227,6 +234,7 @@ class Brain {
 
   // --- generators ---
   async addGen(typeName, settings = {}) {
+    if (!this.model.types.has(typeName) && this.model.library.has(typeName)) await this.loadType(typeName);
     const t = this.type(typeName);
     const before = new Set(this.model.gens.keys());
     // the brain sends /gen, then every default as /gen/param: wait for the last one, so the echoes
@@ -328,6 +336,41 @@ class Brain {
     const id = this.group(v);
     if (!id) fail('which group?');
     await this.request('/group/remove', [id], '/group/removed', (gid) => gid === id);
+  }
+
+  // --- the type library (built-in and AdHoc types; favorites are the add bar) ---
+  library() { return [...this.model.library.values()]; }
+
+  libEntry(name) {
+    return this.model.library.get(name) ?? fail(`no type "${name}" in the library (${[...this.model.library.keys()].join(', ')})`);
+  }
+
+  source(name) { const e = this.libEntry(name); return require('fs').readFileSync(typePath(name, e.builtin), 'utf8'); }
+
+  // Loads (or reloads) a type from the library: resolves when it's in, rejects with the brain's error.
+  async loadType(name) {
+    await this.request('/adhoc/load', [String(name)], '/adhoc/loaded', (n) => n === String(name), 3000);
+    return this.model.library.get(name);
+  }
+
+  async favorite(name, on) {
+    this.libEntry(name);
+    await this.request('/favorite', [String(name), on ? 1 : 0], '/state/end', () => true, 3000);
+    return this.model.library.get(name);
+  }
+
+  // Parses a type file with sclang (no evaluation) and returns its syntax error, or null if it parses.
+  // The brain only says "syntax error"; sclang's message (with the line) goes to its own log.
+  check(nameOrFile) {
+    const file = require('fs').existsSync(nameOrFile) ? path.resolve(nameOrFile) : typePath(nameOrFile, this.model.library.get(nameOrFile)?.builtin);
+    if (!require('fs').existsSync(file)) fail(`no file ${file}`);
+    const script = path.join(require('os').tmpdir(), `perturbed-check-${process.pid}.scd`);
+    require('fs').writeFileSync(script, `("CHECK:" ++ File.readAllString(${JSON.stringify(file)}).compile.notNil).postln;\n0.exit;\n`);
+    const out = require('child_process').spawnSync('/Applications/SuperCollider.app/Contents/MacOS/sclang', [script], { encoding: 'utf8', timeout: 30000 }).stdout ?? '';
+    require('fs').unlinkSync(script);
+    if (/CHECK:true/.test(out)) return null;
+    const err = out.slice(out.indexOf('ERROR:'));
+    return err.startsWith('ERROR:') ? err.split('\n').filter((l) => !/CHECK:|cleaning up|^\s*$/.test(l)).slice(0, 8).join('\n') : 'it doesn\'t parse';
   }
 
   // --- clocks ---

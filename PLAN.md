@@ -3,7 +3,7 @@
 Perturbed is an algorithmic performance toolbox: generators on shared clocks read the chord you
 play and send MIDI to instruments in Ableton Live, played from the Perturbed app (§5 describes
 the system). Claude runs in a drawer in the app (§5.6) and sets up the running performance with the `perturbed`
-command (§5.7). **Next: AdHoc generators and the library (§1.1).**
+command (§5.7). Claude can also write its own generator types into a library (§5.9). **Next: to be chosen.**
 
 **The idea.** A performer describes the piece they want to play ("two pianos phasing on an
 arpeggio of whatever I play, a slow bass on the lowest note, echo my right hand an octave up")
@@ -15,43 +15,7 @@ tempo. Claude arranges the instrument; it does **not** rewrite the app. Its brie
 
 ## 1. Later: Claude goes further
 
-### 1.1 AdHoc generators and their library
-
-Claude writes a one-off generator type for the piece at hand (a strum, a tintinnabuli voice, a
-canon of another generator), called **AdHoc**. Nothing Claude writes is thrown away: every AdHoc
-type goes into a **library**, so a good one can be recalled for a piece, and any one can be found
-and brought back later ("that rolling strum from last week").
-
-- **The library:** `adhoc/` at the repo root, tracked in git (it's the performer's material, not
-  scratch), one file per type: `adhoc/<name>.scd`, the same format as `brain/types/`. A header
-  says what it is, so it can be found later:
-  `// rolling-strum — strums the chord upward, spread in beats, accent on the top note`
-  `// made 2026-10-01 for "Winter piece"; changes: …`
-  Claude may write only here (`agent-settings.json`); `brain/types/` stays the developer's.
-- **Versions:** rewriting a type keeps the old one (`adhoc/old/<name>-<date>.scd`), so revising
-  never loses something that worked.
-- **Favorites (decided):** the library holds *every* type, built-in (`brain/types/`) and AdHoc
-  alike; **favorites are the add bar** (a `+` button each), the rest is one click away in the
-  *Library* menu, where ☆/★ toggles a favorite. Built-ins start as favorites and can be unstarred;
-  new AdHoc types start unstarred but stay on the bar for the session they were loaded in. Favorites
-  are the performer's, not the piece's: one file, `adhoc/favorites.json`.
-- **Loading:** favorites load at boot; others load on demand, hot (`/adhoc/load <name>`): the brain
-  reads the file and resends the schema; running generators keep running; reloading an edited type
-  updates its schema and restarts its generators, keeping their settings.
-- **Isolation:** a type that fails to load or throws in `run` must not take the brain down: load
-  inside `try`, keep the previous version on error, stop just the failing generator, and report
-  the error (`/error`) so Claude sees it in the terminal and can fix it.
-- **Recall for a piece:** a performance file that uses AdHoc types embeds a copy of each one's
-  source. Opening it loads those copies, so the piece sounds as it did even if the library version
-  changed since; if they differ, the surface offers the library's newer version.
-- **Bringing one back:** the *Library* menu lists favorites, then built-ins, then AdHoc types
-  newest first, each with its description; picking one loads it and adds a generator.
-  `perturbed adhoc list` (names, descriptions, stars), `adhoc show <name>`, `adhoc load <name>`,
-  `favorite`/`unfavorite <name>`, so Claude can search the library by what the performer remembers.
-- **Graduating:** a type that keeps coming back can move to `brain/types/` (a developer task:
-  tests, AGENTS.md table).
-
-### 1.2 Claude and Live
+### 1.1 Claude and Live
 
 Claude sets up the sound side too, through the bridge (§5.4): new protocol messages (e.g.
 `/live/track/volume`, `/live/record`, `/live/clip/launch`) that the brain forwards and the bridge
@@ -81,7 +45,7 @@ so the Live API can create audio clips from files).
   surface shows a pending/done state.
 - **Claude:** processes are small scripts like generator types, so Claude can write one for the
   moment ("stretch 8x, freeze the attack, reverse the tail"), run it, and the clip appears:
-  AdHoc processes, alongside AdHoc generators (§1.1).
+  AdHoc processes, alongside AdHoc generators (§5.9).
 
 ### 2.2 Global parameters ("juicy")
 
@@ -290,3 +254,26 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   lights and outputs when folded, + to add a generator into it, On, Solo, ×) and its pins; a
   *group* menu on each card; cards that are on but muted are dimmed. CLI: `group add|set|remove|
   pin|unpin`, `group=` on generators, `sounding` in `state`.
+
+### 5.9 The type library and AdHoc generators
+
+- Every type the brain knows is in a **library** (`brain/core/library.scd`): built-in
+  (`brain/types/`) and **AdHoc**, written by Claude for a piece (`adhoc/` at the repo root, in git;
+  `$PERFORMED_ADHOC` elsewhere, as the tests do). A type file's first header sentence
+  (`// name — what it does.`) is its description.
+- **Favorites** (`adhoc/favorites.json`; default: the built-ins) load at boot and are the add bar;
+  other types load on demand (`/adhoc/load <name>`, hot) and stay on the bar for the session.
+  `/favorite <name> 1|0`, `/library/rescan`; every type is listed in the snapshot as
+  `/library/type` (with `changed` when its file differs from what's loaded).
+- **Guarded:** a file that fails to evaluate changes nothing (`/error`); a generator whose type
+  fails while running stops alone (`Routine.exceptionHandler`, `try` around `key`), is switched off
+  and reported. Reloading moves generators to the new version keeping their settings, and keeps the
+  replaced AdHoc source in `adhoc/old/`.
+- **Pieces** embed the AdHoc types they use (`adhoc` in the performance file); opening one loads
+  those copies, so a piece never changes with the library.
+- **Surface:** the add bar (favorites), *Library ▾* (star, + Add, Reload when changed), brain errors
+  in the status area. **CLI:** `adhoc list|show|load|check`, `favorite`/`unfavorite`; `add` loads a
+  library type first. `adhoc check` runs sclang's parser on a file to show the syntax error.
+- AGENTS.md teaches Claude the format and workflow; `agent-settings.json` lets it write `adhoc/`.
+- **Later:** graduating a type from `adhoc/` to `brain/types/` is a developer task (tests, AGENTS
+  table).

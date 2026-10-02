@@ -58,6 +58,17 @@ try {
 
   check(json('chord', 'C4', 'E4', 'G4').pitches.join() === '60,64,67', 'chord by note names');
 
+  // the type library (the test brain's is a temp copy of tests/adhoc/)
+  const lib = json('adhoc', 'list');
+  check(lib.some((t) => t.name === 'basic' && t.builtin && t.favorite) && lib.some((t) => t.name === 'broken' && !t.loaded), 'adhoc list');
+  const bad = run('adhoc', 'check', 'broken');
+  check(!bad.ok && /syntax error/.test(bad.out) && /line \d+/.test(bad.out), 'adhoc check shows sclang\'s syntax error with the line');
+  check(run('adhoc', 'check', 'crashy').ok, 'adhoc check passes a file that parses');
+  // (crashy, left off: adhoc.js, which runs next, expects echo-up unloaded)
+  const viaAdd = json('add', 'crashy', 'note=D4');
+  check(viaAdd.type === 'crashy' && viaAdd.params.note === 62, 'add loads a library type first');
+  run('remove', String(viaAdd.id));
+
   const file = path.join(os.tmpdir(), `perturbed-cli-${process.pid}.json`);
   check(run('save', file).ok && fs.existsSync(file), 'save writes the file');
   run('remove', String(g.id));

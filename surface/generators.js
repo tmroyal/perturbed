@@ -158,8 +158,11 @@ function renderGens() {
   renderGroupSummaries();
 }
 
+// The add bar: a button per favorite (and per type loaded this session), + Group, and the Library.
 function renderTypes() {
-  $('add-gen').replaceChildren(...[...model.types.keys()].map((type) =>
-    el('button', { textContent: `+ ${typeLabel(type)}`, onclick: () => osc.send('/gen/add', type) })),
-  el('button', { textContent: '+ Group', title: 'A group: switch, solo and fold away several generators at once', onclick: () => osc.send('/group/add') }));
+  const bar = [...model.library.values()].filter((t) => t.bar).sort((a, b) => b.builtin - a.builtin || a.name.localeCompare(b.name));
+  $('add-gen').replaceChildren(...bar.map((t) =>
+    el('button', { textContent: `+ ${typeLabel(t.name)}`, title: t.description, onclick: () => osc.send('/gen/add', t.name) })),
+  el('button', { textContent: '+ Group', title: 'A group: switch, solo and fold away several generators at once', onclick: () => osc.send('/group/add') }),
+  el('button', { id: 'library-button', textContent: 'Library ▾', title: 'Every generator type: star favorites for the add bar, bring back old ones', onclick: toggleLibrary }));
 }

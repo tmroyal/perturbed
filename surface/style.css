@@ -73,6 +73,25 @@ input[type=range]::-webkit-slider-thumb {
 #grid.empty::before { content: 'Add a generator to begin.'; color: var(--nord3); }
 #ungrouped:not(:empty) { margin-bottom: 24px; }
 
+/* --- the Library menu --- */
+#gens-pane { position: relative; }
+#library {
+  position: absolute; right: 24px; top: 64px; z-index: 5; width: min(520px, calc(100% - 48px)); max-height: 60vh; overflow: auto;
+  background: var(--nord1); border: 1px solid var(--nord3); border-radius: 8px; padding: 8px 12px 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .4);
+}
+#library-button.on { background: var(--nord3); }
+.lib-section { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--nord3); margin: 10px 0 4px; }
+.lib-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+.lib-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.lib-name { color: var(--nord6); }
+.lib-text .hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lib-row .star { background: none; border: none; padding: 0 2px; font-size: 16px; color: var(--nord3); }
+.lib-row .star.on { color: var(--nord13); }
+.lib-row .add, .lib-row .reload { padding: 3px 10px; font-size: 12px; }
+.lib-row .reload { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
+#status { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* --- groups --- */
 .group { margin-bottom: 20px; border-left: 3px solid var(--nord10); padding-left: 14px; }
 .group.off { border-left-color: var(--nord3); }

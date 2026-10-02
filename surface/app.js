@@ -10,11 +10,21 @@ const model = {
   live: null,        // Live's tracks on the brain's buses [{ name, port, channel, instrument }]; null = no bridge
   gens: new Map(),   // id -> { id, type, dest, active, group, params, card }
   groups: new Map(), // id -> { id, name, on, solo, collapsed, pins: [[genId, param], ...] }
+  library: new Map(), // type name -> { name, builtin, favorite, loaded, bar, changed, description, mtime }
 };
 let inSnapshot = false;
 
 // --- connection: /hello until a snapshot arrives, /ping to notice a restarted or missing brain ---
 let connected = false, bootId = null, lastPong = 0;
+
+// Errors from the brain (a type that didn't load or stopped) show in the transport bar for a while.
+let errorTimer = null;
+function showError(message) {
+  $('status').textContent = message;
+  $('status').title = message;
+  clearTimeout(errorTimer);
+  errorTimer = setTimeout(() => { if (connected) $('status').textContent = ''; }, 8000);
+}
 
 function setConnected(on) {
   connected = on;
@@ -32,6 +42,7 @@ setInterval(() => {
 function renderAll() {
   renderTransport();
   renderTypes();
+  renderLibrary();
   renderPorts();
   renderChord();
   renderClocks();
@@ -51,7 +62,7 @@ const handlers = {
   },
   '/state/begin': () => {
     inSnapshot = true;
-    model.types.clear(); model.clocks.clear(); model.dests.clear(); model.gens.clear(); model.groups.clear();
+    model.types.clear(); model.clocks.clear(); model.dests.clear(); model.gens.clear(); model.groups.clear(); model.library.clear();
     model.live = null;
   },
   '/state/end': () => {
@@ -67,6 +78,11 @@ const handlers = {
   '/ports': (...names) => { model.ports = names; live(renderPorts); },
   '/chord': (mode, armed, ...pitches) => { model.chord = { mode, armed: !!armed, pitches }; live(renderChord); },
 
+  '/library/type': (name, builtin, favorite, loaded, bar, changed, description, mtime) => {
+    model.library.set(name, { name, builtin: !!builtin, favorite: !!favorite, loaded: !!loaded, bar: !!bar, changed: !!changed, description, mtime });
+  },
+  '/adhoc/loaded': (name) => { if (pendingAdd === name) { pendingAdd = null; osc.send('/gen/add', name); } },
+  '/error': (message) => showError(message),
   '/gen/schema': (type, name, kind, def, ...args) => {
     if (!model.types.has(type)) model.types.set(type, []);
     model.types.get(type).push({ name, kind, def, args });

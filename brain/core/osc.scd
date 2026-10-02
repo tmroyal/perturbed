@@ -48,7 +48,7 @@
 //   /transport        <playing> <bpm>
 //   /ports            <name>...                  MIDI outputs; destination port n = nth name
 //   /chord            <mode> <armed> <pitch>...
-//   /library/type     <name> <builtin> <favorite> <loaded> <onBar> <changed> <description>
+//   /library/type     <name> <builtin> <favorite> <loaded> <onBar> <changed> <description> <mtime>
 //                                                every library type (changed: the file differs from
 //                                                what's loaded: reload to update)
 //   /adhoc/loaded     <name>

@@ -50,6 +50,9 @@ first (the brain lists the MIDI inputs it found in the terminal). The first run 
   *Arm* (*Arm* mode). *Clear* empties it.
 - **Outputs:** Live's tracks on the IAC buses are listed under *In Live*; **+** (or *Add all*)
   makes them outputs. A **!** marks an output no Live track listens to.
+- **Library:** the add bar holds your favorite generator types; *Library ▾* lists every type,
+  built-in and AdHoc (written by Claude for a piece, kept in `adhoc/`), with ☆ to star one for the
+  bar and *+ Add*. Errors from a type show at the top right.
 - **Generators:** *+ Basic* adds a generator. Pick an output, turn it *On*, press *Play* (or
   space). Set where its pitch comes from (a note or the chord: index, lowest, highest, arpeggio,
   permute), its rhythm (every, euclid, random, phrase on a num/den grid) and velocity (set,
@@ -82,6 +85,7 @@ brain/     SuperCollider: clocks, chord, generators, MIDI, OSC protocol (the aut
 surface/   the Perturbed app (Electron): ui, transport, generators, sidebar, app (state + protocol),
            terminal (the Claude drawer)
 tools/     perturbed: change the running performance from the shell (tools/perturbed help)
+adhoc/     the AdHoc type library (written by Claude), favorites.json, old/ (replaced versions)
 ableton/   the Live set and the Perturbed Bridge (Max for Live: bridge.js)
 tests/     run.sh and the tests it runs
 performances/  saved performances

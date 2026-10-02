@@ -16,10 +16,20 @@
 ~sessionTypes = Set[];  // loaded this session without being favorites: on the add bar until restart
 ~favorites = [];
 
+// The first sentence of the header comment, after "name — ".
 ~describe = { |path|
-	var first = (File.readAllString(path).split($\n).first ? "");
-	var i = first.find(" — ");
-	if(i.notNil) { first[(i + " — ".size)..].stripWhiteSpace } { "" };  // (the dash is 3 bytes)
+	var lines = File.readAllString(path).split($\n), text = "", i, dot;
+	block { |stop|
+		lines.do { |l|
+			if(l.beginsWith("//").not or: { l.stripWhiteSpace == "//" }) { stop.() };
+			text = text + l.drop(2).stripWhiteSpace;
+		};
+	};
+	text = text.stripWhiteSpace;
+	i = text.find(" — ");
+	text = if(i.notNil) { text[(i + " — ".size)..] } { "" };  // (the dash is 3 bytes)
+	dot = text.find(". ");
+	(if(dot.notNil) { text[..dot] } { text }).stripWhiteSpace;
 };
 
 ~scanLibrary = {
@@ -66,7 +76,7 @@
 	case
 	{ source.isNil } { err = "there's no type % in the library".format(name) }
 	{ (type = try { source.interpret } { |e| err = e.errorString; nil }).isNil } {
-		err = err ? "it has a syntax error (sclang's message is in the brain's log)";
+		err = err ? "it has a syntax error (tools/perturbed adhoc check % shows where)".format(name);
 	}
 	{ type.isKindOf(Event).not or: { type[\params].isNil } } { err = "it must evaluate to an Event with params" }
 	{ type[\run].isNil and: { type[\key].isNil } } { err = "it needs a run or a key function" };
@@ -120,7 +130,8 @@
 		var e = ~library[name];
 		var changed = ~typeSource[name].notNil and: { ~typeSource[name] != File.readAllString(e[\path]) };
 		~send.('/library/type', name, e[\builtin].binaryValue, ~favorites.includes(name).binaryValue,
-			~types[name].notNil.binaryValue, ~onBar.(name).binaryValue, changed.binaryValue, e[\description]);
+			~types[name].notNil.binaryValue, ~onBar.(name).binaryValue, changed.binaryValue, e[\description],
+			File.mtime(e[\path]));
 	};
 };
 )

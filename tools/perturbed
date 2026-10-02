@@ -22,6 +22,12 @@ const HELP = `perturbed — change the running performance
   group unpin <name|id> <gen id> <setting>
   set <id> group=<name|id|none>      put a generator in a group (also: add basic group=...)
 
+  adhoc list                         the type library: built-in and AdHoc types, stars, descriptions
+  adhoc show <name>                  a type's source
+  adhoc load <name>                  load or reload a type (after writing or editing adhoc/<name>.scd)
+  adhoc check <name|file>            sclang's syntax error for a type file, if any
+  favorite <name> | unfavorite <name>   star a type: favorites are the add bar
+
   output add <name> <port> <channel> [instrument]
   output remove <name|id>
   output live [<track name>|all]     make Live's tracks (from the bridge) outputs
@@ -69,6 +75,16 @@ async function run(b, [cmd, ...a]) {
       if (sub === 'pin' || sub === 'unpin') { need(r, 3, `group ${sub} <name|id> <gen id> <setting>`); return print(await b.pin(r[0], r[1], r[2], sub === 'pin')); }
       throw new PerturbedError('usage: perturbed group add|set|remove ...');
     }
+    case 'adhoc': {
+      const [sub, name] = a;
+      if (sub === 'list') return print(b.library());
+      need(a, 2, `adhoc ${sub ?? 'list|show|load|check'} <name>`);
+      if (sub === 'show') return print(b.source(name));
+      if (sub === 'load') { await b.loadType(name); return print(`loaded ${name}`); }
+      if (sub === 'check') { const e = b.check(name); if (e) throw new PerturbedError(e); return print(`${name} parses`); }
+      throw new PerturbedError('usage: perturbed adhoc list|show|load|check ...');
+    }
+    case 'favorite': case 'unfavorite': need(a, 1, `${cmd} <name>`); return print(await b.favorite(a[0], cmd === 'favorite'));
     case 'output': {
       const [sub, ...r] = a;
       if (sub === 'add') { need(r, 3, 'output add <name> <port> <channel> [instrument]'); return print(await b.addOutput(...r)); }

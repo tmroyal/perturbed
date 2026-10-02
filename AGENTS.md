@@ -19,9 +19,9 @@ change it.
 ### Rules
 
 - **Do not edit the app:** nothing under `brain/`, `surface/`, `ableton/`, `tests/`, and not
-  README/PLAN/AGENTS. If what the performer wants needs a new kind of generator or a code change,
-  say so and suggest they ask a developer (AdHoc generators, written by you, are planned: PLAN §1.1).
-- **You may write** performance files in `performances/`.
+  README/PLAN/AGENTS. If a piece needs a kind of generator that doesn't exist, **write an AdHoc
+  type** (below); if it needs a change to the app itself, suggest they ask a developer.
+- **You may write** performance files in `performances/` and AdHoc types in `adhoc/`.
 - **The performer owns play/stop.** Don't start or stop the transport unless asked
   (`tools/perturbed play`/`stop` exist for when they do).
 - **Don't lose work.** Before replacing the current performance (`load`, or removing most of it),
@@ -163,6 +163,85 @@ mapping is done by hand in Live.
   re-voice whenever the performer plays a new chord; `note` stays fixed.
 - **Splits and echoes:** passthroughs with different zones and outputs; a delayed, transposed
   passthrough makes a live canon.
+
+### Writing AdHoc generators
+
+When no existing type does what the piece needs (a strum, a canon of another generator, a
+tintinnabuli voice, a drone that breathes), write one. Every type you write is kept in the
+performer's library (`adhoc/`, in git): they can star it as a favorite, and bring it back for
+another piece, so write it to last.
+
+**First, look in the library:** `tools/perturbed adhoc list` (names, descriptions, stars). The
+performer may mean one that exists ("the rolling strum from last week"): `adhoc show <name>`, then
+`add <name>` (loads it if needed).
+
+**Workflow:**
+1. Write `adhoc/<name>.scd` (lowercase, hyphens: `rolling-strum`).
+2. `tools/perturbed adhoc check <name>`: sclang's syntax error with the line, if any.
+3. `tools/perturbed add <name> output="Piano 1" group=...`: loads it and adds a generator (off).
+   Audition with `chord C3 G3 E4` and ask the performer to play; errors while it runs come back
+   as `perturbed: ... stopped: ...` on your next command and in the app's status bar.
+4. Revise the file, then `tools/perturbed adhoc load <name>`: running generators move to the new
+   version with their settings; the replaced version is kept in `adhoc/old/` automatically.
+5. A piece that uses it carries a copy in its performance file, so later edits never change it.
+
+**Format** (the same as the built-in types in `brain/types/`; read `basic.scd`, `passthrough.scd`
+and `lfo.scd` as examples, and `brain/core/generators.scd` for the full list of keys):
+
+```supercollider
+// rolling-strum — strums the current chord upward on each grid step, spread over `spread` beats.
+// made 2026-10-01 for "Winter piece"
+(
+params: [
+	[\num, 1, \range, 1, 32], [\den, 1, \range, 1, 32],      // grid step = num/den beats
+	[\spread, 0.25, \range, 0, 2, 0.05],                    // beats from lowest to highest note
+	[\velocity, 80, \range, 1, 127],
+	~clockParam,                                            // which clock it runs on
+],
+sliders: (spread: \lin),
+restartOn: [\num, \den, \clock],
+run: { |g, p|
+	var dur = p[\num] / p[\den];
+	var k = (~beats.() / dur - 1e-9).ceil.asInteger;        // next grid point at or after now
+	loop {
+		(k * dur - ~beats.()).max(0).wait;                  // waits are in beats of its clock
+		~chord.do { |note, i|                               // the current chord, low to high
+			var d = ~dests[g[\dest]];
+			var at = p[\spread] * i / (~chord.size - 1).max(1);
+			thisThread.clock.sched(at, {
+				if(d.notNil and: { ~sounds.(g) }) {             // muted by its group: stay silent
+					g[\held][note] !? { |h| ~noteOff.(h[0], h[1]) };
+					~noteOn.(d, note, p[\velocity]);
+					g[\held][note] = [d, note];                // released on stop, mute, removal
+				};
+				nil
+			});
+		};
+		k = k + 1;
+	};
+},
+)
+```
+
+- **Header:** line 1 is `// <name> — <one sentence>`; that sentence is what the library shows, so
+  say what it *does*. Line 2: when and for which piece.
+- **params:** `[name, default, kind, ...]`, kind `range` (min max [step]), `note`, `choice`
+  (options...), `text`, `clock` (`~clockParam`). Optional keys: `showWhen`, `labels`, `sections`,
+  `restartOn`, `sliders`, `actions` (card buttons), `output: false`.
+- **run** `{ |g, p| }` is a routine on its clock while the transport plays (waits in beats);
+  **key** `{ |g, p, note, vel| }` gets keyboard notes (vel 0 = up) whether or not it plays.
+- **Playing notes:** one at a time: `~strike.(g, note, vel)` (releases the previous, respects
+  mutes) and `~release.(g)`. Several at once: `~noteOn.(dest, note, vel)` / `~noteOff.(dest, note)`
+  with `dest = ~dests[g[\dest]]`, check `~sounds.(g)` first, and keep what you hold in
+  `g[\held][key] = [dest, note]` so stopping or muting releases it.
+- **Reading the world:** `~chord` (current chord, MIDI, sorted; may be empty: rest), `~beats.()`
+  (beats since the grid origin), `p[\name]` (its settings, read live), `~gens` (other generators,
+  e.g. for a canon: `~gens[id][\sounding]` is `[dest, note]` or nil). Shared building blocks:
+  `~pitchParams`/`~pitch.(p, step)`, `~rhythmParams`/`~rhythmGate.(p, k)`,
+  `~velocityParams`/`~velocity.(g, p, k)` (see `brain/types/basic.scd`). CC: `~cc.(bus, ch, cc, v)`.
+- **sclang traps:** no operator precedence (`a + b * c` is `(a + b) * c`: parenthesize); `var`
+  only at the top of a function; menu (choice) values arrive as Symbols: compare with
+  `p[\x].asString == "up"`; integers for grid indexes.
 
 ---
 

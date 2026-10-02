@@ -4,7 +4,9 @@
       "Edit(performances/**)",
       "Write(performances/**)",
       "Bash(tools/perturbed:*)",
-      "Bash(./tools/perturbed:*)"
+      "Bash(./tools/perturbed:*)",
+      "Edit(adhoc/**)",
+      "Write(adhoc/**)"
     ],
     "deny": [
       "Edit(brain/**)",

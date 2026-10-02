@@ -80,7 +80,19 @@ sock.bind(0, async () => {
       'opening it restores the AdHoc generator from the embedded copy');
     fs.renameSync(file + '.away', file);
     fs.unlinkSync(perf);
+
+    // deleting: refused for built-ins and types in use; otherwise the file moves to old/
+    let refused = next('/error', (m) => /can't delete: basic is built in/.test(m)); send('/adhoc/delete', 'basic'); await refused;
+    refused = next('/error', (m) => /can't delete: echo-up is in use by generator/.test(m)); send('/adhoc/delete', 'echo-up'); await refused;
+    check(true, 'delete refused for a built-in and for a type in use');
     send('/gen/remove', g);
+    snap = next('/state/end'); send('/favorite', 'echo-up', 1); await snap;
+    inbox = [];
+    const deleted = next('/adhoc/deleted'); send('/adhoc/delete', 'echo-up'); await deleted;
+    const favsAfter = JSON.parse(fs.readFileSync(path.join(DIR, 'favorites.json'), 'utf8'));
+    check(!fs.existsSync(file) && fs.readdirSync(path.join(DIR, 'old')).some((f) => f.startsWith('echo-up-deleted-'))
+      && !inbox.some((m) => m.addr === '/library/type' && m.args[0] === 'echo-up') && !favsAfter.includes('echo-up'),
+      'delete: file moved to old/, gone from the library and the favorites');
   } catch (e) {
     check(false, e.message);
   }

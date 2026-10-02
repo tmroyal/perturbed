@@ -97,6 +97,29 @@
 	};
 };
 
+// Deletes an AdHoc type from the library: its file moves to adhoc/old/ (so it can come back), it's
+// unloaded and unstarred. Built-ins can't be deleted, nor a type generators still use.
+~deleteType = { |name|
+	var e, users, err;
+	name = name.asSymbol;
+	~scanLibrary.();
+	e = ~library[name];
+	users = ~gens.values.select { |g| g[\typeName] == name }.collect(_[\id]).sort;
+	err = case
+	{ e.isNil } { "there's no type % in the library".format(name) }
+	{ e[\builtin] } { "% is built in and can't be deleted (unstar it to take it off the add bar)".format(name) }
+	{ users.notEmpty } { "% is in use by generator% %: remove %".format(name, if(users.size > 1, "s", ""), users.join(", "), if(users.size > 1, "them", "it")) };
+	if(err.notNil) { ~send.('/error', "can't delete: " ++ err); false } {
+		File.mkdir(~adhocDir +/+ "old");
+		File.copy(e[\path], ~adhocDir +/+ "old" +/+ "%-deleted-%.scd".format(name, Date.getDate.stamp));
+		File.delete(e[\path]);
+		~types.removeAt(name); ~typeSource.removeAt(name); ~sessionTypes.remove(name);
+		if(~favorites.includes(name)) { ~favorites = ~favorites.reject(_ == name); ~writeFavorites.() };
+		~scanLibrary.();
+		true;
+	};
+};
+
 // A generator moves to a new version of its type: settings kept where the param still exists.
 ~retype = { |g, type|
 	var old = g[\p];

@@ -89,6 +89,7 @@ input[type=range]::-webkit-slider-thumb {
 .lib-row .star { background: none; border: none; padding: 0 2px; font-size: 16px; color: var(--nord3); }
 .lib-row .star.on { color: var(--nord13); }
 .lib-row .add, .lib-row .reload { padding: 3px 10px; font-size: 12px; }
+.lib-spacer { width: 26px; flex: none; }
 .lib-row .reload { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
 #status { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

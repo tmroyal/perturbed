@@ -353,6 +353,12 @@ class Brain {
     return this.model.library.get(name);
   }
 
+  // An AdHoc type's file moves to adhoc/old/; refused (with the reason) for built-ins and types in use.
+  async deleteType(name) {
+    this.libEntry(name);
+    await this.request('/adhoc/delete', [String(name)], '/adhoc/deleted', (n) => n === String(name), 3000);
+  }
+
   async favorite(name, on) {
     this.libEntry(name);
     await this.request('/favorite', [String(name), on ? 1 : 0], '/state/end', () => true, 3000);

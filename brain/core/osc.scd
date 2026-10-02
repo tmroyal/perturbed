@@ -32,6 +32,8 @@
 //   /cc               <port> <channel> <cc> <value>   one control change now; port = control bus 1, 2, ...
 //   /adhoc/load       <name>                     load (or reload) a library type: rescans adhoc/, then
 //                                                a full snapshot and /adhoc/loaded (or /error)
+//   /adhoc/delete     <name>                     an AdHoc type's file moves to adhoc/old/; full snapshot
+//                                                and /adhoc/deleted (or /error: built in, or in use)
 //   /library/rescan                              re-read the library (new files); full snapshot
 //   /favorite         <name> 1|0                 star a type (the add bar); full snapshot
 //   /live/tracks      (<name> <port> <channel> <instrument>)...   from the Perturbed Bridge: Live's
@@ -52,6 +54,7 @@
 //                                                every library type (changed: the file differs from
 //                                                what's loaded: reload to update)
 //   /adhoc/loaded     <name>
+//   /adhoc/deleted    <name>
 //   /gen/schema       <type> <param> <kind> <default> <kind args...>   (loaded types only)
 //   /gen/show         <type> <param> <otherParam> <value>...   show param only for those values
 //   /gen/label        <type> <param> <label>     display name
@@ -158,6 +161,7 @@
 			~send.('/adhoc/loaded', name);
 		};
 	}, '/adhoc/load');
+	OSCdef(\adhocDelete, { |msg| if(~deleteType.(msg[1])) { ~sendState.(); ~send.('/adhoc/deleted', msg[1].asSymbol) } }, '/adhoc/delete');
 	OSCdef(\libraryRescan, { ~scanLibrary.(); ~sendState.() }, '/library/rescan');
 	OSCdef(\favorite, { |msg| ~setFavorite.(msg[1], msg[2].asInteger == 1) }, '/favorite');
 	OSCdef(\cc, { |msg| ~cc.(msg[1], msg[2], msg[3], msg[4], true) }, '/cc');

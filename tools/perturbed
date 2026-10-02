@@ -26,6 +26,7 @@ const HELP = `perturbed — change the running performance
   adhoc show <name>                  a type's source
   adhoc load <name>                  load or reload a type (after writing or editing adhoc/<name>.scd)
   adhoc check <name|file>            sclang's syntax error for a type file, if any
+  adhoc delete <name>                remove an AdHoc type from the library (its file moves to adhoc/old/)
   favorite <name> | unfavorite <name>   star a type: favorites are the add bar
 
   output add <name> <port> <channel> [instrument]
@@ -81,6 +82,7 @@ async function run(b, [cmd, ...a]) {
       need(a, 2, `adhoc ${sub ?? 'list|show|load|check'} <name>`);
       if (sub === 'show') return print(b.source(name));
       if (sub === 'load') { await b.loadType(name); return print(`loaded ${name}`); }
+      if (sub === 'delete') { await b.deleteType(name); return print(`deleted ${name} (kept in adhoc/old/)`); }
       if (sub === 'check') { const e = b.check(name); if (e) throw new PerturbedError(e); return print(`${name} parses`); }
       throw new PerturbedError('usage: perturbed adhoc list|show|load|check ...');
     }

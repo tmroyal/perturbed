@@ -1,6 +1,7 @@
 // library.js — the Library menu: every generator type, built-in and AdHoc (written by Claude for a
-// piece), with ☆/★ for favorites (the add bar), + Add (loading the type first if needed) and, when a
-// type's file changed since it was loaded, Reload. Favorites first, then built-ins, then AdHoc types
+// piece), with ☆/★ for favorites (the add bar), + Add (loading the type first if needed), Reload when
+// a type's file changed since it was loaded, and Delete for AdHoc types (the file moves to
+// adhoc/old/, so it can come back). Favorites first, then built-ins, then AdHoc types
 // newest first. The brain owns the library (brain/core/library.scd).
 let pendingAdd = null;  // a type being loaded, to add once it's in (/adhoc/loaded)
 
@@ -19,7 +20,9 @@ function libraryRow(t) {
       el('span', { className: 'hint', textContent: t.description || (t.builtin ? 'built-in' : '') })),
     t.changed ? el('button', { className: 'reload', textContent: 'Reload', title: 'Its file changed since it was loaded: load the new version (settings kept)',
       onclick: () => osc.send('/adhoc/load', t.name) }) : '',
-    el('button', { className: 'add', textContent: '+ Add', onclick: () => addFromLibrary(t) }));
+    el('button', { className: 'add', textContent: '+ Add', onclick: () => addFromLibrary(t) }),
+    t.builtin ? el('span', { className: 'lib-spacer' }) : el('button', { className: 'close', textContent: '×', title: 'Delete from the library (kept in adhoc/old/)',
+      onclick: () => { if (confirm(`Delete ${typeLabel(t.name)} from the library?\n\nIts file moves to adhoc/old/, so it can be brought back.`)) osc.send('/adhoc/delete', t.name); } }));
 }
 
 function renderLibrary() {

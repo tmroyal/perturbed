@@ -271,9 +271,11 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   replaced AdHoc source in `adhoc/old/`.
 - **Pieces** embed the AdHoc types they use (`adhoc` in the performance file); opening one loads
   those copies, so a piece never changes with the library.
-- **Surface:** the add bar (favorites), *Library ▾* (star, + Add, Reload when changed), brain errors
-  in the status area. **CLI:** `adhoc list|show|load|check`, `favorite`/`unfavorite`; `add` loads a
-  library type first. `adhoc check` runs sclang's parser on a file to show the syntax error.
+- **Deleting** (`/adhoc/delete`): an AdHoc type's file moves to `adhoc/old/<name>-deleted-<stamp>`
+  and it's unloaded and unstarred; refused for built-ins and for types generators still use.
+- **Surface:** the add bar (favorites), *Library ▾* (star, + Add, Reload when changed, × to delete),
+  brain errors in the status area. **CLI:** `adhoc list|show|load|check|delete`,
+  `favorite`/`unfavorite`; `add` loads a library type first. `adhoc check` runs sclang's parser on a file to show the syntax error.
 - AGENTS.md teaches Claude the format and workflow; `agent-settings.json` lets it write `adhoc/`.
 - **Later:** graduating a type from `adhoc/` to `brain/types/` is a developer task (tests, AGENTS
   table).

@@ -184,6 +184,8 @@ performer may mean one that exists ("the rolling strum from last week"): `adhoc 
 4. Revise the file, then `tools/perturbed adhoc load <name>`: running generators move to the new
    version with their settings; the replaced version is kept in `adhoc/old/` automatically.
 5. A piece that uses it carries a copy in its performance file, so later edits never change it.
+6. Delete a type only when the performer asks: `tools/perturbed adhoc delete <name>` (its file
+   moves to `adhoc/old/`; refused while generators use it).
 
 **Format** (the same as the built-in types in `brain/types/`; read `basic.scd`, `passthrough.scd`
 and `lfo.scd` as examples, and `brain/core/generators.scd` for the full list of keys):

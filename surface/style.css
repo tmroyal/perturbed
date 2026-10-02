@@ -123,8 +123,10 @@ button.solo.on { background: var(--nord13); border-color: var(--nord13); color: 
 /* --- pins: a card's settings shown on its group's header --- */
 .pin-toggle { display: none; padding: 0 4px 0 0; color: var(--nord3); font-size: 11px; }
 .card.grouped .pin-toggle { display: inline; visibility: hidden; }
-.card.grouped .fields label:hover .pin-toggle, .pin-toggle.on { visibility: visible; }
-.pin-toggle:hover { background: none; color: var(--nord8); }
+/* (.card.grouped prefixes keep these above the hidden rule; button.on's green fill doesn't apply) */
+.card.grouped .fields label:hover .pin-toggle, .card.grouped .pin-toggle.on { visibility: visible; }
+.pin-toggle:hover, .pin-toggle.on { background: none; border: none; }
+.pin-toggle:hover { color: var(--nord8); }
 .pin-toggle.on { color: var(--nord13); }
 .group-pins { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0 0 12px 30px; }
 .group-pins:empty { display: none; }

@@ -35,7 +35,7 @@ function renderLibrary() {
   $('add-gen').replaceChildren(...bar.map((t) =>
     el('button', { textContent: `+ ${typeLabel(t.name)}`, title: t.description, onclick: () => osc.send('/gen/add', t.name) })),
   el('button', { textContent: '+ Group', title: 'A group: switch, solo and fold away several generators at once', onclick: () => osc.send('/group/add') }),
-  el('button', { id: 'library-button', textContent: 'Library ▾', title: 'Every generator type: star favorites for the add bar, bring back old ones', onclick: toggleLibrary }));
+  el('button', { id: 'library-button', className: $('library').hidden ? '' : 'on', textContent: 'Library ▾', title: 'Every generator type: star favorites for the add bar, bring back old ones', onclick: toggleLibrary }));
 
   const section = (title, list) => (list.length ? [el('div', { className: 'lib-section', textContent: title }), ...list.map(libraryRow)] : []);
   $('library').replaceChildren(

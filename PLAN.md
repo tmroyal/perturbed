@@ -83,6 +83,27 @@ so the Live API can create audio clips from files).
   moment ("stretch 8x, freeze the attack, reverse the tail"), run it, and the clip appears:
   AdHoc processes, alongside AdHoc generators (§1.1).
 
+### 2.2 Global parameters ("juicy")
+
+Named, performance-wide parameters: one control (say *juicy*, 0–1) that moves many generator
+settings at once, each in its own way, so a single gesture reshapes the piece.
+
+- **Parameters:** a list in the sidebar (like clocks), each with a name, a value 0–1 and a slider;
+  added, renamed and removed freely; saved with the performance.
+- **Mappings:** each parameter drives any number of generator settings (velocity, prob, pulses,
+  note, an lfo's range, ...), each with its own range and curve: linear, inverted, exponential,
+  stepped (snaps to a few values), threshold (switches at a point), so "more juicy" can mean
+  louder here, denser there and an LFO opening up. Mapped from the card (like pins) or the
+  parameter's row; a setting follows at most one parameter.
+- **Brain:** the brain applies a parameter by setting the mapped settings (echoed as usual, so
+  cards and pins move with it). Settings that restart a generator (num, den, clock) aren't mappable.
+- **AdHoc types** can read parameters directly (`~global.(\juicy)`, declared in the type, e.g.
+  `globals: [\juicy]`), so Claude can write a generator around what a parameter *means* (juicier =
+  more notes in the strum, wider spread), beyond what mapping a setting can express.
+- **Control:** a natural target for knob mapping (backlog) and for Claude
+  (`perturbed global add juicy`, `global map juicy 3 velocity 60..120 exp`, `global set juicy 0.8`).
+  It generalizes the group "macro" idea in the backlog.
+
 ---
 
 ## 3. Backlog

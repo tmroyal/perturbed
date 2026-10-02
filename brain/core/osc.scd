@@ -30,6 +30,10 @@
 //   /dest/remove      <id>
 //   /gen/do           <id> <action>              run one of the type's actions (a card button)
 //   /cc               <port> <channel> <cc> <value>   one control change now; port = control bus 1, 2, ...
+//   /adhoc/load       <name>                     load (or reload) a library type: rescans adhoc/, then
+//                                                a full snapshot and /adhoc/loaded (or /error)
+//   /library/rescan                              re-read the library (new files); full snapshot
+//   /favorite         <name> 1|0                 star a type (the add bar); full snapshot
 //   /live/tracks      (<name> <port> <channel> <instrument>)...   from the Perturbed Bridge: Live's
 //                                                MIDI tracks on the brain's buses (channel 0 = all)
 //   /live/tracks/clear                           the bridge is gone
@@ -44,7 +48,11 @@
 //   /transport        <playing> <bpm>
 //   /ports            <name>...                  MIDI outputs; destination port n = nth name
 //   /chord            <mode> <armed> <pitch>...
-//   /gen/schema       <type> <param> <kind> <default> <kind args...>
+//   /library/type     <name> <builtin> <favorite> <loaded> <onBar> <changed> <description>
+//                                                every library type (changed: the file differs from
+//                                                what's loaded: reload to update)
+//   /adhoc/loaded     <name>
+//   /gen/schema       <type> <param> <kind> <default> <kind args...>   (loaded types only)
 //   /gen/show         <type> <param> <otherParam> <value>...   show param only for those values
 //   /gen/label        <type> <param> <label>     display name
 //   /gen/action       <type> <name>              the type has an action: show a button
@@ -84,6 +92,7 @@
 	~send.('/ports', *~config[\ports].collect(_.join(" ")));
 	~sendChord.();
 	~sendSchema.();
+	~sendLibrary.();
 	~clocks.keys.asArray.sort.do { |id| ~sendClock.(~clocks[id]) };
 	~groups.keys.asArray.sort.do { |id| ~sendGroup.(~groups[id]) };
 	~dests.keys.asArray.sort.do { |id| ~sendDest.(~dests[id]) };
@@ -140,6 +149,17 @@
 	OSCdef(\genDo, { |msg|
 		~gens[msg[1].asInteger] !? { |g| g[\type][\actions] !? { |acts| acts[msg[2].asSymbol] !? { |fn| fn.(g, g[\p]) } } };
 	}, '/gen/do');
+	OSCdef(\adhocLoad, { |msg|
+		var name = msg[1].asSymbol;
+		~scanLibrary.();
+		if(~loadType.(name)) {
+			if(~favorites.includes(name).not) { ~sessionTypes.add(name) };
+			~sendState.();
+			~send.('/adhoc/loaded', name);
+		};
+	}, '/adhoc/load');
+	OSCdef(\libraryRescan, { ~scanLibrary.(); ~sendState.() }, '/library/rescan');
+	OSCdef(\favorite, { |msg| ~setFavorite.(msg[1], msg[2].asInteger == 1) }, '/favorite');
 	OSCdef(\cc, { |msg| ~cc.(msg[1], msg[2], msg[3], msg[4], true) }, '/cc');
 	OSCdef(\liveTracks, { |msg| ~setLiveTracks.(msg[1..].collect { |x| if(x.isKindOf(Symbol)) { x.asString } { x } }) }, '/live/tracks');
 	OSCdef(\liveTracksClear, { ~setLiveTracks.(nil) }, '/live/tracks/clear');

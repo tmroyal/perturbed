@@ -1,5 +1,6 @@
 // persist.scd — save/load a performance as JSON: tempo, clocks, chord, destinations, groups,
-// generators.
+// generators, and a copy of every AdHoc type it uses (`adhoc`), so the piece sounds the same even
+// if the library's version changes later (the surface then offers the library's version).
 // Plugin state lives in the Live Set, not here. Loading replaces everything and stops the
 // transport; generators keep their active flag, so pressing play resumes the piece.
 (
@@ -14,6 +15,9 @@
 		},
 		destinations: ~dests.keys.asArray.sort.collect(~dests[_]),
 		groups: ~groups.keys.asArray.sort.collect(~groups[_]),
+		adhoc: ().putPairs(~gens.values.collect(_[\typeName]).asSet.asArray
+			.reject { |name| ~library[name] !? (_[\builtin]) ? false }
+			.collect { |name| [name, ~typeSource[name]] }.flatten),
 		generators: ~gens.keys.asArray.sort.collect { |id|
 			var g = ~gens[id];
 			(id: id, type: g[\typeName], dest: g[\dest], group: g[\group] ? 0, active: g[\active], params: g[\p])
@@ -48,6 +52,16 @@
 		var gr = ~addGroup.(saved["name"], saved["id"].asInteger);
 		[\on, \solo, \collapsed].do { |k| gr[k] = saved[k.asString] == "true" };
 		gr[\pins] = (saved["pins"] ? []).collect { |p| [p[0].asInteger, p[1].asSymbol] };  // checked against the generators below
+	};
+	// the types it uses: AdHoc from the piece's own copies, any other from the library
+	(perf["adhoc"] ? ()).keysValuesDo { |name, source|
+		name = name.asSymbol;
+		if(~typeSource[name] != source) { ~loadType.(name, source) };
+		if(~favorites.includes(name).not) { ~sessionTypes.add(name) };
+	};
+	perf["generators"].do { |saved|
+		var name = saved["type"].asSymbol;
+		if(~types[name].isNil and: { ~loadType.(name) } and: { ~favorites.includes(name).not }) { ~sessionTypes.add(name) };
 	};
 	perf["generators"].do { |saved|
 		var id, g;

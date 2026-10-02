@@ -50,7 +50,7 @@
 };
 
 ~genKey = { |note, vel|
-	~gens.do { |g| if(g[\active]) { g[\type][\key] !? { |fn| fn.(g, g[\p], note, vel) } } };
+	~gens.do { |g| if(g[\active]) { g[\type][\key] !? { |fn| try { fn.(g, g[\p], note, vel) } { |e| ~genFailed.(g, e) } } } };
 };
 
 // (Re)starts the routine if it should be running. A sounding note rings until the next
@@ -59,7 +59,10 @@
 	g[\task].stop;
 	g[\task] = nil;
 	if(~playing and: { g[\active] } and: { g[\type][\run].notNil }) {
-		g[\task] = Routine { g[\type][\run].value(g, g[\p]) }.play(~clockOf.(g[\p][\clock] ? 0));
+		// a failing run (an AdHoc type's bug) stops only this generator (core/library.scd)
+		g[\task] = Routine { g[\type][\run].value(g, g[\p]) };
+		g[\task].exceptionHandler = { |e| ~genFailed.(g, e) };
+		g[\task].play(~clockOf.(g[\p][\clock] ? 0));
 	};
 };
 

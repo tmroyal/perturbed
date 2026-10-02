@@ -6,7 +6,9 @@
 		"{" ++ x.keys.asArray.sort.collect { |k| ~toJSON.(k.asString) ++ ": " ++ ~toJSON.(x[k]) }.join(", ") ++ "}"
 	}
 	{ x.isKindOf(String) or: { x.isKindOf(Symbol) } } {
-		"\"" ++ x.asString.replace("\\", "\\\\").replace("\"", "\\\"") ++ "\""
+		// control characters escaped too: performance files embed AdHoc type sources (multi-line)
+		"\"" ++ x.asString.replace("\\", "\\\\").replace("\"", "\\\"")
+			.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") ++ "\""
 	}
 	{ x.isKindOf(SequenceableCollection) } { "[" ++ x.collect(~toJSON).join(", ") ++ "]" }
 	{ x.isKindOf(Boolean) } { x.asString }

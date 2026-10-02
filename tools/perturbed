@@ -56,64 +56,67 @@ function settings(args) {
   return o;
 }
 
-const need = (args, n, usage) => { if (args.length < n) throw new PerturbedError(`usage: perturbed ${usage}`); };
 const print = (v) => console.log(typeof v === 'string' ? v : JSON.stringify(v, null, 2));
 
+// "<command>" or "<command> <sub>": [least args, usage, (brain, args) => what to print]
+const COMMANDS = {
+  state: [0, '', (b) => b.state()],
+  schema: [0, '[type]', (b, [type]) => b.schema(type)],
+  add: [1, '<type> [setting=value ...]', (b, [type, ...s]) => b.addGen(type, settings(s))],
+  set: [2, '<id> setting=value ...', (b, [id, ...s]) => b.setGen(id, settings(s))],
+  on: [1, '<id>', (b, [id]) => b.setGen(id, { active: 'on' })],
+  off: [1, '<id>', (b, [id]) => b.setGen(id, { active: 'off' })],
+  remove: [1, '<id>', async (b, [id]) => { await b.removeGen(id); return `removed generator ${id}`; }],
+  do: [2, '<id> <action>', async (b, [id, a]) => { await b.action(id, a); return `${a} on generator ${id}`; }],
+
+  'group add': [0, '[name] [setting=value ...]', (b, r) => {
+    const named = r[0] && !r[0].includes('=');
+    return b.addGroup(named ? r[0] : undefined, settings(named ? r.slice(1) : r));
+  }],
+  'group set': [2, '<name|id> setting=value ...', (b, [g, ...s]) => b.setGroup(g, settings(s))],
+  'group remove': [1, '<name|id>', async (b, [g]) => { await b.removeGroup(g); return `removed group ${g}`; }],
+  'group pin': [3, '<name|id> <gen id> <setting>', (b, [g, id, s]) => b.pin(g, id, s, true)],
+  'group unpin': [3, '<name|id> <gen id> <setting>', (b, [g, id, s]) => b.pin(g, id, s, false)],
+
+  'adhoc list': [0, '', (b) => b.library()],
+  'adhoc show': [1, '<name>', (b, [name]) => b.source(name)],
+  'adhoc load': [1, '<name>', async (b, [name]) => { await b.loadType(name); return `loaded ${name}`; }],
+  'adhoc check': [1, '<name|file>', (b, [name]) => { const e = b.check(name); if (e) throw new PerturbedError(e); return `${name} parses`; }],
+  'adhoc delete': [1, '<name>', async (b, [name]) => { await b.deleteType(name); return `deleted ${name} (kept in adhoc/old/)`; }],
+  favorite: [1, '<name>', (b, [name]) => b.favorite(name, true)],
+  unfavorite: [1, '<name>', (b, [name]) => b.favorite(name, false)],
+
+  'output add': [3, '<name> <port> <channel> [instrument]', (b, r) => b.addOutput(...r)],
+  'output remove': [1, '<name|id>', async (b, [o]) => { await b.removeOutput(o); return `removed output ${o}`; }],
+  'output live': [0, '[<track name>|all]', (b, [which]) => b.outputsFromLive(which ?? 'all')],
+
+  'clock add': [0, '[setting=value ...]', (b, s) => b.addClock(settings(s))],
+  'clock set': [2, '<B|id> setting=value ...', (b, [c, ...s]) => b.setClock(c, settings(s))],
+  'clock remove': [1, '<B|id>', async (b, [c]) => { await b.removeClock(c); return `removed clock ${c}`; }],
+
+  tempo: [1, '<bpm>', async (b, [bpm]) => `tempo ${await b.tempo(bpm)}`],
+  scale: [2, '<num> <den>', async (b, [num, den]) => `tempo ${await b.scale(num, den)}`],
+  chord: [1, '<note ...>', (b, notes) => b.chord(notes)],
+  'chord clear': [0, '', async (b) => { await b.chordClear(); return 'chord cleared'; }],
+  'chord mode': [1, 'auto|arm', async (b, [mode]) => { await b.chordMode(mode); return `chord mode ${mode}`; }],
+  cc: [4, '<bus> <channel> <cc> <value>', (b, a) => { b.cc(...a); return `cc ${a[2]} = ${a[3]} on bus ${a[0]} ch ${a[1]}`; }],
+  play: [0, '', async (b) => { await b.play(true); return 'playing'; }],
+  stop: [0, '', async (b) => { await b.play(false); return 'stopped'; }],
+  save: [1, '<file>', async (b, [file]) => `saved ${await b.save(file)}`],
+  load: [1, '<file>', async (b, [file]) => `loaded ${await b.load(file)}`],
+};
+
+const known = (name) => Object.hasOwn(COMMANDS, name);
+
 async function run(b, [cmd, ...a]) {
-  switch (cmd) {
-    case 'state': return print(b.state());
-    case 'schema': return print(b.schema(a[0]));
-    case 'add': need(a, 1, 'add <type> [setting=value ...]'); return print(await b.addGen(a[0], settings(a.slice(1))));
-    case 'set': need(a, 2, 'set <id> setting=value ...'); return print(await b.setGen(a[0], settings(a.slice(1))));
-    case 'on': case 'off': need(a, 1, `${cmd} <id>`); return print(await b.setGen(a[0], { active: cmd }));
-    case 'remove': need(a, 1, 'remove <id>'); await b.removeGen(a[0]); return print(`removed generator ${a[0]}`);
-    case 'do': need(a, 2, 'do <id> <action>'); await b.action(a[0], a[1]); return print(`${a[1]} on generator ${a[0]}`);
-    case 'group': {
-      const [sub, ...r] = a;
-      if (sub === 'add') { const named = r[0] && !r[0].includes('='); return print(await b.addGroup(named ? r[0] : undefined, settings(named ? r.slice(1) : r))); }
-      if (sub === 'set') { need(r, 2, 'group set <name|id> setting=value ...'); return print(await b.setGroup(r[0], settings(r.slice(1)))); }
-      if (sub === 'remove') { need(r, 1, 'group remove <name|id>'); await b.removeGroup(r[0]); return print(`removed group ${r[0]}`); }
-      if (sub === 'pin' || sub === 'unpin') { need(r, 3, `group ${sub} <name|id> <gen id> <setting>`); return print(await b.pin(r[0], r[1], r[2], sub === 'pin')); }
-      throw new PerturbedError('usage: perturbed group add|set|remove ...');
-    }
-    case 'adhoc': {
-      const [sub, name] = a;
-      if (sub === 'list') return print(b.library());
-      need(a, 2, `adhoc ${sub ?? 'list|show|load|check'} <name>`);
-      if (sub === 'show') return print(b.source(name));
-      if (sub === 'load') { await b.loadType(name); return print(`loaded ${name}`); }
-      if (sub === 'delete') { await b.deleteType(name); return print(`deleted ${name} (kept in adhoc/old/)`); }
-      if (sub === 'check') { const e = b.check(name); if (e) throw new PerturbedError(e); return print(`${name} parses`); }
-      throw new PerturbedError('usage: perturbed adhoc list|show|load|check ...');
-    }
-    case 'favorite': case 'unfavorite': need(a, 1, `${cmd} <name>`); return print(await b.favorite(a[0], cmd === 'favorite'));
-    case 'output': {
-      const [sub, ...r] = a;
-      if (sub === 'add') { need(r, 3, 'output add <name> <port> <channel> [instrument]'); return print(await b.addOutput(...r)); }
-      if (sub === 'remove') { need(r, 1, 'output remove <name|id>'); await b.removeOutput(r[0]); return print(`removed output ${r[0]}`); }
-      if (sub === 'live') return print(await b.outputsFromLive(r[0] ?? 'all'));
-      throw new PerturbedError('usage: perturbed output add|remove|live ...');
-    }
-    case 'clock': {
-      const [sub, ...r] = a;
-      if (sub === 'add') return print(await b.addClock(settings(r)));
-      if (sub === 'set') { need(r, 2, 'clock set <B|id> setting=value ...'); return print(await b.setClock(r[0], settings(r.slice(1)))); }
-      if (sub === 'remove') { need(r, 1, 'clock remove <B|id>'); await b.removeClock(r[0]); return print(`removed clock ${r[0]}`); }
-      throw new PerturbedError('usage: perturbed clock add|set|remove ...');
-    }
-    case 'tempo': need(a, 1, 'tempo <bpm>'); return print(`tempo ${await b.tempo(a[0])}`);
-    case 'scale': need(a, 2, 'scale <num> <den>'); return print(`tempo ${await b.scale(a[0], a[1])}`);
-    case 'chord':
-      if (a[0] === 'clear') { await b.chordClear(); return print('chord cleared'); }
-      if (a[0] === 'mode') { need(a, 2, 'chord mode auto|arm'); await b.chordMode(a[1]); return print(`chord mode ${a[1]}`); }
-      need(a, 1, 'chord <note ...>'); return print(await b.chord(a));
-    case 'cc': need(a, 4, 'cc <bus> <channel> <cc> <value>'); b.cc(...a); return print(`cc ${a[2]} = ${a[3]} on bus ${a[0]} ch ${a[1]}`);
-    case 'play': await b.play(true); return print('playing');
-    case 'stop': await b.play(false); return print('stopped');
-    case 'save': need(a, 1, 'save <file>'); return print(`saved ${await b.save(a[0])}`);
-    case 'load': need(a, 1, 'load <file>'); return print(`loaded ${await b.load(a[0])}`);
-    default: throw new PerturbedError(cmd ? `unknown command "${cmd}"\n\n${HELP}` : HELP);
+  const name = known(`${cmd} ${a[0]}`) ? `${cmd} ${a.shift()}` : cmd;
+  if (!known(name)) {
+    const subs = Object.keys(COMMANDS).filter((k) => k.startsWith(`${cmd} `)).map((k) => k.split(' ')[1]);
+    throw new PerturbedError(subs.length ? `usage: perturbed ${cmd} ${subs.join('|')} ...` : `unknown command "${cmd}"\n\n${HELP}`);
   }
+  const [least, usage, fn] = COMMANDS[name];
+  if (a.length < least) throw new PerturbedError(`usage: perturbed ${name} ${usage}`);
+  print(await fn(b, a));
 }
 
 (async () => {

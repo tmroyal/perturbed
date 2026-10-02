@@ -11,10 +11,10 @@ function sounds(gen) {
   return gen.active && (!gr || gr.on) && (!anySolo || (gr?.solo ?? false));
 }
 
-const groupBodies = new Map();    // group id -> the grid its cards go in
-const summaryLeds = new Map();    // gen id -> its light in a folded group's summary
-const summaries = new Map();      // group id -> summary element
-const pinUpdaters = new Map();    // "genId:param" -> update(value) of its pinned control
+const groupBodies = new Map(); // group id -> the grid its cards go in
+const summaryLeds = new Map(); // gen id -> its light in a folded group's summary
+const summaries = new Map(); // group id -> summary element
+const pinUpdaters = new Map(); // "genId:param" -> update(value) of its pinned control
 const updatePin = (genId, param, value) => pinUpdaters.get(`${genId}:${param}`)?.(value);
 
 const isPinned = (gen, param) => model.groups.get(gen.group)?.pins.some(([id, p]) => id === gen.id && p === param) ?? false;
@@ -26,16 +26,22 @@ function togglePin(gen, param) {
 function pinRow(g) {
   const row = el('div', { className: 'group-pins' });
   for (const [genId, param] of g.pins) {
-    const gen = model.gens.get(genId), spec = gen && specOf(gen.type, param);
+    const gen = model.gens.get(genId),
+      spec = gen && specOf(gen.type, param);
     if (!spec) continue;
     const c = paramControl(spec, genId);
     c.update(gen.params[param]);
     pinUpdaters.set(`${genId}:${param}`, c.update);
-    row.append(el('div', { className: 'pin' },
-      // the setting's own name: card labels ("value", "from") rely on the card's sections for context
-      el('label', { textContent: `${genName(gen)} · ${param}` }),
-      c.control,
-      closeButton('Unpin', () => osc.send('/group/unpin', g.id, genId, param))));
+    row.append(
+      el(
+        'div',
+        { className: 'pin' },
+        // the setting's own name: card labels ("value", "from") rely on the card's sections for context
+        el('label', { textContent: `${genName(gen)} · ${param}` }),
+        c.control,
+        closeButton('Unpin', () => osc.send('/group/unpin', g.id, genId, param)),
+      ),
+    );
   }
   return row;
 }
@@ -56,17 +62,32 @@ function groupSection(g) {
   const body = el('div', { className: 'gen-grid' });
   groupBodies.set(g.id, body);
   body.hidden = g.collapsed;
-  return el('section', { className: `group${g.collapsed ? ' collapsed' : ''}${g.on ? '' : ' off'}` },
-    el('header', { className: 'group-head' },
-      el('button', { className: 'fold', textContent: g.collapsed ? '▸' : '▾', title: g.collapsed ? 'Unfold' : 'Fold away', onclick: flip('collapsed') }),
+  return el(
+    'section',
+    { className: `group${g.collapsed ? ' collapsed' : ''}${g.on ? '' : ' off'}` },
+    el(
+      'header',
+      { className: 'group-head' },
+      el('button', {
+        className: 'fold',
+        textContent: g.collapsed ? '▸' : '▾',
+        title: g.collapsed ? 'Unfold' : 'Fold away',
+        onclick: flip('collapsed'),
+      }),
       name,
       summary,
       addInto(g),
-      setOn(el('button', { className: 'power', title: 'Switch the group (a mute: it keeps time)', onclick: flip('on') }), g.on, g.on ? 'On' : 'Off'),
+      setOn(
+        el('button', { className: 'power', title: 'Switch the group (a mute: it keeps time)', onclick: flip('on') }),
+        g.on,
+        g.on ? 'On' : 'Off',
+      ),
       setOn(el('button', { className: 'solo', textContent: 'Solo', title: 'Only soloed groups sound', onclick: flip('solo') }), g.solo),
-      closeButton('Remove the group (its generators stay)', () => osc.send('/group/remove', g.id))),
+      closeButton('Remove the group (its generators stay)', () => osc.send('/group/remove', g.id)),
+    ),
     pinRow(g),
-    body);
+    body,
+  );
 }
 
 // "+": a menu of generator types; picking one adds it straight into the group.
@@ -77,16 +98,21 @@ function addInto(g) {
   sel.addEventListener('change', () => {
     if (sel.value) osc.send('/gen/add', sel.value, g.id);
     sel.value = '';
-    if (g.collapsed) osc.send('/group/set', g.id, 'collapsed', 0);  // show what was added
+    if (g.collapsed) osc.send('/group/set', g.id, 'collapsed', 0); // show what was added
   });
   return sel;
 }
 
 // Rebuilds the sections; cards are moved, not rebuilt.
 function renderGroups() {
-  groupBodies.clear(); summaries.clear(); pinUpdaters.clear();
+  groupBodies.clear();
+  summaries.clear();
+  pinUpdaters.clear();
   $('grid').replaceChildren(el('div', { className: 'gen-grid', id: 'ungrouped' }), ...[...model.groups.values()].map(groupSection));
-  model.gens.forEach((gen) => { placeCard(gen); gen.card?.render(); });
+  model.gens.forEach((gen) => {
+    placeCard(gen);
+    gen.card?.render();
+  });
   renderGroupSummaries();
 }
 
@@ -96,14 +122,18 @@ function renderGroupSummaries() {
     const g = model.groups.get(id);
     const members = [...model.gens.values()].filter((gen) => gen.group === id);
     const outputs = [...new Set(members.map((gen) => model.dests.get(gen.dest)?.name).filter(Boolean))];
-    summary.replaceChildren(...(g?.collapsed ? [
-      ...members.map((gen) => {
-        const led = el('span', { className: `led${gen.active ? ' on' : ''}`, title: `${genName(gen)}${gen.active ? '' : ' (off)'}` });
-        summaryLeds.set(gen.id, led);
-        return led;
-      }),
-      el('span', { className: 'hint', textContent: outputs.join(', ') || (members.length ? '' : 'empty') }),
-    ] : []));
+    summary.replaceChildren(
+      ...(g?.collapsed
+        ? [
+            ...members.map((gen) => {
+              const led = el('span', { className: `led${gen.active ? ' on' : ''}`, title: `${genName(gen)}${gen.active ? '' : ' (off)'}` });
+              summaryLeds.set(gen.id, led);
+              return led;
+            }),
+            el('span', { className: 'hint', textContent: outputs.join(', ') || (members.length ? '' : 'empty') }),
+          ]
+        : []),
+    );
   }
   $('grid').classList.toggle('empty', !model.gens.size && !model.groups.size);
 }

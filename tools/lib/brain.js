@@ -4,11 +4,11 @@
 //
 // Settings are checked against the type schema before sending (the brain stores what it gets),
 // and errors say what's allowed, so a caller (often Claude) can correct itself.
-const dgram = require('dgram');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const { spawnSync } = require('child_process');
+const dgram = require('node:dgram');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const { encode, decode } = require('../../surface/osc');
 
 const PORT = +(process.env.PERFORMED_PORT || 57120);
@@ -20,7 +20,9 @@ const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 
 const noteName = (p) => `${NOTE_NAMES[p % 12]}${Math.floor(p / 12) - 1}`;
 
 class PerturbedError extends Error {}
-const fail = (msg) => { throw new PerturbedError(msg); };
+const fail = (msg) => {
+  throw new PerturbedError(msg);
+};
 
 // on/off settings (active, a group's on, solo, collapsed) -> 1 | 0
 const FLAG = { on: 1, true: 1, 1: 1, yes: 1, off: 0, false: 0, 0: 0, no: 0 };
@@ -41,15 +43,25 @@ class Brain {
     this.sock = dgram.createSocket('udp4');
     this.waiters = [];
     this.model = {
-      playing: false, tempo: 0, ports: [],
+      playing: false,
+      tempo: 0,
+      ports: [],
       chord: { mode: 'auto', armed: false, pitches: [] },
-      types: new Map(),   // name -> { params: [spec], output: bool, actions: [] }
-      clocks: new Map(), dests: new Map(), gens: new Map(), groups: new Map(), live: null,
-      library: new Map(),  // every type, built-in and AdHoc
+      types: new Map(), // name -> { params: [spec], output: bool, actions: [] }
+      clocks: new Map(),
+      dests: new Map(),
+      gens: new Map(),
+      groups: new Map(),
+      live: null,
+      library: new Map(), // every type, built-in and AdHoc
     };
     this.sock.on('message', (buf) => {
       let msg;
-      try { msg = decode(buf); } catch { return; }
+      try {
+        msg = decode(buf);
+      } catch {
+        return;
+      }
       this.apply(msg);
       this.waiters = this.waiters.filter((w) => !w(msg));
     });
@@ -59,8 +71,12 @@ class Brain {
   static async connect({ timeout = 1500 } = {}) {
     const b = new Brain();
     await new Promise((r) => b.sock.bind(0, r));
-    const end = b.waitFor('/state/end', () => true, timeout)
-      .catch(() => { b.sock.close(); fail(`the brain isn't answering on port ${PORT}: is Perturbed running?`); });
+    const end = b
+      .waitFor('/state/end', () => true, timeout)
+      .catch(() => {
+        b.sock.close();
+        fail(`the brain isn't answering on port ${PORT}: is Perturbed running?`);
+      });
     b.send('/hello');
     await end;
     b.bootId = await b.ping();
@@ -69,23 +85,40 @@ class Brain {
 
   // The brain's boot id, or null if it doesn't answer (a new id means it restarted: reconnect).
   async ping(ms = 800) {
-    try { return (await this.request('/ping', [], '/pong', () => true, ms))[0]; } catch { return null; }
+    try {
+      return (await this.request('/ping', [], '/pong', () => true, ms))[0];
+    } catch {
+      return null;
+    }
   }
 
   close() {
-    return new Promise((r) => this.sock.send(encode('/bye', []), PORT, '127.0.0.1', () => { this.sock.close(); r(); }));
+    return new Promise((r) =>
+      this.sock.send(encode('/bye', []), PORT, '127.0.0.1', () => {
+        this.sock.close();
+        r();
+      }),
+    );
   }
 
-  send(addr, ...args) { this.sock.send(encode(addr, args), PORT, '127.0.0.1'); }
+  send(addr, ...args) {
+    this.sock.send(encode(addr, args), PORT, '127.0.0.1');
+  }
 
   // Resolves with the args of the first message (from now on) matching addr and pred.
   waitFor(addr, pred = () => true, ms = 1500) {
     return new Promise((resolve, reject) => {
       const t = setTimeout(() => reject(new PerturbedError(`no ${addr} from the brain`)), ms);
       this.waiters.push((m) => {
-        if (m.addr === '/error') { clearTimeout(t); reject(new PerturbedError(m.args[0])); return true; }
+        if (m.addr === '/error') {
+          clearTimeout(t);
+          reject(new PerturbedError(m.args[0]));
+          return true;
+        }
         if (m.addr !== addr || !pred(...m.args)) return false;
-        clearTimeout(t); resolve(m.args); return true;
+        clearTimeout(t);
+        resolve(m.args);
+        return true;
       });
     });
   }
@@ -112,29 +145,108 @@ class Brain {
     };
     const spec = (t, p) => type(t).params.find((s) => s.name === p);
     switch (addr) {
-      case '/state/begin': m.types.clear(); m.clocks.clear(); m.dests.clear(); m.gens.clear(); m.groups.clear(); m.library.clear(); m.live = null; break;
-      case '/library/type': m.library.set(a[0], { name: a[0], builtin: !!a[1], favorite: !!a[2], loaded: !!a[3], on_bar: !!a[4], changed: !!a[5], description: a[6], modified: new Date(a[7] * 1000).toISOString().slice(0, 16) }); break;
-      case '/group': m.groups.set(a[0], { id: a[0], name: a[1], on: !!a[2], solo: !!a[3], collapsed: !!a[4], pins: m.groups.get(a[0])?.pins ?? [] }); break;
-      case '/group/pins': { const g = m.groups.get(a[0]); if (g) { g.pins = []; for (let i = 1; i + 1 < a.length; i += 2) g.pins.push({ generator: a[i], setting: a[i + 1] }); } break; }
-      case '/group/removed': m.groups.delete(a[0]); break;
-      case '/transport': m.playing = !!a[0]; m.tempo = a[1]; break;
-      case '/ports': m.ports = a; break;
-      case '/chord': m.chord = { mode: a[0], armed: !!a[1], pitches: a.slice(2) }; break;
-      case '/gen/schema': type(a[0]).params.push({ name: a[1], kind: a[2], default: a[3], args: a.slice(4) }); break;
-      case '/gen/label': { const s = spec(a[0], a[1]); if (s) s.label = a[2]; break; }
-      case '/gen/section': { const s = spec(a[0], a[1]); if (s) s.section = a[2]; break; }
-      case '/gen/show': { const s = spec(a[0], a[1]); if (s) s.showWhen = { param: a[2], values: a.slice(3).map(String) }; break; }
-      case '/gen/nooutput': type(a[0]).output = false; break;
-      case '/gen/action': type(a[0]).actions.push(a[1]); break;
-      case '/clock': m.clocks.set(a[0], { id: a[0], name: a[1], mode: a[2], num: a[3], den: a[4], factor: a[5], bpm: a[6], tempo: a[7] }); break;
-      case '/clock/removed': m.clocks.delete(a[0]); break;
-      case '/dest': m.dests.set(a[0], { id: a[0], name: a[1], port: a[2], channel: a[3], instrument: a[4] }); break;
-      case '/dest/removed': m.dests.delete(a[0]); break;
-      case '/live/tracks': m.live = []; for (let i = 0; i + 3 < a.length; i += 4) m.live.push({ name: a[i], port: a[i + 1], channel: a[i + 2], instrument: a[i + 3] }); break;
-      case '/live/tracks/clear': m.live = null; break;
-      case '/gen': { const g = m.gens.get(a[0]) ?? { id: a[0], params: {} }; Object.assign(g, { type: a[1], dest: a[2], active: !!a[3], group: a[4] ?? 0 }); m.gens.set(a[0], g); break; }
-      case '/gen/param': { const g = m.gens.get(a[0]); if (g) g.params[a[1]] = a[2]; break; }
-      case '/gen/removed': m.gens.delete(a[0]); break;
+      case '/state/begin':
+        m.types.clear();
+        m.clocks.clear();
+        m.dests.clear();
+        m.gens.clear();
+        m.groups.clear();
+        m.library.clear();
+        m.live = null;
+        break;
+      case '/library/type':
+        m.library.set(a[0], {
+          name: a[0],
+          builtin: !!a[1],
+          favorite: !!a[2],
+          loaded: !!a[3],
+          on_bar: !!a[4],
+          changed: !!a[5],
+          description: a[6],
+          modified: new Date(a[7] * 1000).toISOString().slice(0, 16),
+        });
+        break;
+      case '/group':
+        m.groups.set(a[0], { id: a[0], name: a[1], on: !!a[2], solo: !!a[3], collapsed: !!a[4], pins: m.groups.get(a[0])?.pins ?? [] });
+        break;
+      case '/group/pins': {
+        const g = m.groups.get(a[0]);
+        if (g) {
+          g.pins = [];
+          for (let i = 1; i + 1 < a.length; i += 2) g.pins.push({ generator: a[i], setting: a[i + 1] });
+        }
+        break;
+      }
+      case '/group/removed':
+        m.groups.delete(a[0]);
+        break;
+      case '/transport':
+        m.playing = !!a[0];
+        m.tempo = a[1];
+        break;
+      case '/ports':
+        m.ports = a;
+        break;
+      case '/chord':
+        m.chord = { mode: a[0], armed: !!a[1], pitches: a.slice(2) };
+        break;
+      case '/gen/schema':
+        type(a[0]).params.push({ name: a[1], kind: a[2], default: a[3], args: a.slice(4) });
+        break;
+      case '/gen/label': {
+        const s = spec(a[0], a[1]);
+        if (s) s.label = a[2];
+        break;
+      }
+      case '/gen/section': {
+        const s = spec(a[0], a[1]);
+        if (s) s.section = a[2];
+        break;
+      }
+      case '/gen/show': {
+        const s = spec(a[0], a[1]);
+        if (s) s.showWhen = { param: a[2], values: a.slice(3).map(String) };
+        break;
+      }
+      case '/gen/nooutput':
+        type(a[0]).output = false;
+        break;
+      case '/gen/action':
+        type(a[0]).actions.push(a[1]);
+        break;
+      case '/clock':
+        m.clocks.set(a[0], { id: a[0], name: a[1], mode: a[2], num: a[3], den: a[4], factor: a[5], bpm: a[6], tempo: a[7] });
+        break;
+      case '/clock/removed':
+        m.clocks.delete(a[0]);
+        break;
+      case '/dest':
+        m.dests.set(a[0], { id: a[0], name: a[1], port: a[2], channel: a[3], instrument: a[4] });
+        break;
+      case '/dest/removed':
+        m.dests.delete(a[0]);
+        break;
+      case '/live/tracks':
+        m.live = [];
+        for (let i = 0; i + 3 < a.length; i += 4) m.live.push({ name: a[i], port: a[i + 1], channel: a[i + 2], instrument: a[i + 3] });
+        break;
+      case '/live/tracks/clear':
+        m.live = null;
+        break;
+      case '/gen': {
+        const g = m.gens.get(a[0]) ?? { id: a[0], params: {} };
+        Object.assign(g, { type: a[1], dest: a[2], active: !!a[3], group: a[4] ?? 0 });
+        m.gens.set(a[0], g);
+        break;
+      }
+      case '/gen/param': {
+        const g = m.gens.get(a[0]);
+        if (g) g.params[a[1]] = a[2];
+        break;
+      }
+      case '/gen/removed':
+        m.gens.delete(a[0]);
+        break;
     }
   }
 
@@ -148,19 +260,30 @@ class Brain {
     const x = map.get(+v) ?? [...map.values()].find((o) => o.name.toLowerCase() === String(v).toLowerCase());
     return x ? x.id : fail(`no ${what} "${v}" (${what}s: ${listed})`);
   }
-  dest(v) { return this.find(this.model.dests, v, 'output', listed(this.model.dests)); }
-  group(v) { return this.find(this.model.groups, v, 'group', listed(this.model.groups)); }
+  dest(v) {
+    return this.find(this.model.dests, v, 'output', listed(this.model.dests));
+  }
+  group(v) {
+    return this.find(this.model.groups, v, 'group', listed(this.model.groups));
+  }
   clock(v) {
     const names = [...this.model.clocks.values()].map((x) => `, ${x.name}`).join('');
     return this.find(this.model.clocks, v, 'clock', `A (main)${names}`, ['a', 'main']);
   }
   type(name) {
-    return this.model.types.get(name) ?? fail(this.model.library.has(name)
-      ? `type "${name}" isn't loaded (adhoc load ${name})`
-      : `no generator type "${name}" (library: ${[...this.model.library.keys()].join(', ')})`);
+    return (
+      this.model.types.get(name) ??
+      fail(
+        this.model.library.has(name)
+          ? `type "${name}" isn't loaded (adhoc load ${name})`
+          : `no generator type "${name}" (library: ${[...this.model.library.keys()].join(', ')})`,
+      )
+    );
   }
 
-  param(typeName, name) { return this.type(typeName).params.find((p) => p.name === name); }
+  param(typeName, name) {
+    return this.type(typeName).params.find((p) => p.name === name);
+  }
 
   // A generator setting, checked and converted for the brain.
   coerce(g, param, value) {
@@ -168,8 +291,11 @@ class Brain {
     if (param === 'output' || param === 'dest') return this.dest(value);
     if (param === 'group') return this.group(value);
     const t = this.type(g.type);
-    const s = this.param(g.type, param)
-      ?? fail(`${g.type} has no setting "${param}" (settings: active, group, ${t.output ? 'output, ' : ''}${t.params.map((p) => p.name).join(', ')})`);
+    const s =
+      this.param(g.type, param) ??
+      fail(
+        `${g.type} has no setting "${param}" (settings: active, group, ${t.output ? 'output, ' : ''}${t.params.map((p) => p.name).join(', ')})`,
+      );
     switch (s.kind) {
       case 'choice': {
         const opt = s.args.find((o) => String(o).toLowerCase() === String(value).toLowerCase());
@@ -179,13 +305,17 @@ class Brain {
         const n = parseNote(value);
         return n >= 0 && n <= 127 ? n : fail(`${param} is a note from C-1 (0) to G9 (127)`);
       }
-      case 'clock': return this.clock(value);
+      case 'clock':
+        return this.clock(value);
       case 'range': {
-        const [min, max, step = 1] = s.args, n = Number(value);
-        if (!Number.isFinite(n) || n < min || n > max) fail(`${param} is a number from ${min} to ${max}${step !== 1 ? ` in steps of ${step}` : ''}, not "${value}"`);
+        const [min, max, step = 1] = s.args,
+          n = Number(value);
+        if (!Number.isFinite(n) || n < min || n > max)
+          fail(`${param} is a number from ${min} to ${max}${step !== 1 ? ` in steps of ${step}` : ''}, not "${value}"`);
         return step % 1 === 0 && Number.isInteger(step) ? Math.round(n) : n;
       }
-      default: return String(value);
+      default:
+        return String(value);
     }
   }
 
@@ -197,13 +327,18 @@ class Brain {
       playing: m.playing,
       tempo: +m.tempo.toFixed(3),
       chord: { mode: m.chord.mode, armed: m.chord.armed, pitches: m.chord.pitches, names: m.chord.pitches.map(noteName) },
-      clocks: [{ id: 0, name: 'A', mode: 'main', tempo: +m.tempo.toFixed(3) },
-        ...[...m.clocks.values()].map((c) => ({ ...c, tempo: +c.tempo.toFixed(3) }))],
+      clocks: [
+        { id: 0, name: 'A', mode: 'main', tempo: +m.tempo.toFixed(3) },
+        ...[...m.clocks.values()].map((c) => ({ ...c, tempo: +c.tempo.toFixed(3) })),
+      ],
       outputs: [...m.dests.values()],
-      live_tracks: m.live,  // Live's tracks on the brain's buses (null: no bridge)
+      live_tracks: m.live, // Live's tracks on the brain's buses (null: no bridge)
       groups: [...m.groups.values()],
       generators: [...m.gens.values()].map((g) => ({
-        id: g.id, type: g.type, active: g.active, sounding: this.sounds(g),
+        id: g.id,
+        type: g.type,
+        active: g.active,
+        sounding: this.sounds(g),
         group: g.group ? { id: g.group, name: m.groups.get(g.group)?.name ?? null } : null,
         ...(this.model.types.get(g.type)?.output === false ? {} : { output: g.dest ? { id: g.dest, name: destName(g.dest) } : null }),
         params: g.params,
@@ -226,7 +361,9 @@ class Brain {
         output: t.output,
         actions: t.actions,
         params: t.params.map((s) => ({
-          name: s.name, kind: s.kind, default: s.default,
+          name: s.name,
+          kind: s.kind,
+          default: s.default,
           ...(s.kind === 'range' ? { min: s.args[0], max: s.args[1], step: s.args[2] ?? 1 } : {}),
           ...(s.kind === 'choice' ? { options: s.args } : {}),
           ...(s.label ? { label: s.label } : {}),
@@ -272,16 +409,20 @@ class Brain {
   }
 
   async action(id, name) {
-    const g = this.gen(id), t = this.type(g.type);
-    const a = t.actions.find((x) => x.toLowerCase() === String(name).toLowerCase())
-      ?? fail(`${g.type} has no action "${name}" (actions: ${t.actions.join(', ') || 'none'})`);
+    const g = this.gen(id),
+      t = this.type(g.type);
+    const a =
+      t.actions.find((x) => x.toLowerCase() === String(name).toLowerCase()) ??
+      fail(`${g.type} has no action "${name}" (actions: ${t.actions.join(', ') || 'none'})`);
     this.send('/gen/do', g.id, a);
   }
 
   // --- outputs ---
   async addOutput(name, port, channel, instrument = '') {
-    port = +port; channel = +channel;
-    if (!(port >= 1 && port <= this.model.ports.length)) fail(`port is 1 to ${this.model.ports.length} (${this.model.ports.map((p, i) => `${i + 1} = ${p}`).join(', ')})`);
+    port = +port;
+    channel = +channel;
+    if (!(port >= 1 && port <= this.model.ports.length))
+      fail(`port is 1 to ${this.model.ports.length} (${this.model.ports.map((p, i) => `${i + 1} = ${p}`).join(', ')})`);
     if (!(channel >= 1 && channel <= 16)) fail('channel is 1 to 16');
     const id = await this.create('/dest/add', [String(name), port, channel, String(instrument)], '/dest', this.model.dests);
     return this.model.dests.get(id);
@@ -295,11 +436,16 @@ class Brain {
   // Live tracks (reported by the bridge) that aren't outputs yet -> outputs. which: a track name or "all".
   async outputsFromLive(which = 'all') {
     const m = this.model;
-    if (m.live === null) fail('Live\'s tracks are unknown: the Perturbed Bridge isn\'t connected');
+    if (m.live === null) fail("Live's tracks are unknown: the Perturbed Bridge isn't connected");
     const taken = (t) => [...m.dests.values()].some((d) => d.port === t.port && d.channel === t.channel);
     const fresh = m.live.filter((t) => t.channel > 0 && !taken(t));
     const pick = which === 'all' ? fresh : fresh.filter((t) => t.name.toLowerCase() === String(which).toLowerCase());
-    if (!pick.length) fail(which === 'all' ? 'no Live tracks to add' : `no Live track "${which}" that isn't an output (new: ${fresh.map((t) => t.name).join(', ') || 'none'})`);
+    if (!pick.length)
+      fail(
+        which === 'all'
+          ? 'no Live tracks to add'
+          : `no Live track "${which}" that isn't an output (new: ${fresh.map((t) => t.name).join(', ') || 'none'})`,
+      );
     const added = [];
     for (const t of pick) added.push(await this.addOutput(t.name, t.port, t.channel, t.instrument));
     return added;
@@ -323,10 +469,12 @@ class Brain {
 
   // Pin a member's setting to the group's header (range, choice and note settings).
   async pin(groupRef, genId, param, on = true) {
-    const id = this.group(groupRef) || fail('which group?'), g = this.gen(genId);
+    const id = this.group(groupRef) || fail('which group?'),
+      g = this.gen(genId);
     if (g.group !== id) fail(`generator ${g.id} isn't in that group (put it there first: set ${g.id} group=...)`);
     const s = this.param(g.type, param);
-    if (on && !(s && ['range', 'choice', 'note'].includes(s.kind))) fail(`${g.type} has no pinnable setting "${param}" (numbers, menus and notes)`);
+    if (on && !(s && ['range', 'choice', 'note'].includes(s.kind)))
+      fail(`${g.type} has no pinnable setting "${param}" (numbers, menus and notes)`);
     const want = (gid, ...flat) => gid === id && flat.some((x, i) => i % 2 === 0 && x === g.id && flat[i + 1] === param) === on;
     await this.request(on ? '/group/pin' : '/group/unpin', [id, g.id, param], '/group/pins', want);
     return this.model.groups.get(id);
@@ -338,13 +486,17 @@ class Brain {
   }
 
   // --- the type library (built-in and AdHoc types; favorites are the add bar) ---
-  library() { return [...this.model.library.values()]; }
+  library() {
+    return [...this.model.library.values()];
+  }
 
   libEntry(name) {
     return this.model.library.get(name) ?? fail(`no type "${name}" in the library (${[...this.model.library.keys()].join(', ')})`);
   }
 
-  source(name) { return fs.readFileSync(typePath(name, this.libEntry(name).builtin), 'utf8'); }
+  source(name) {
+    return fs.readFileSync(typePath(name, this.libEntry(name).builtin), 'utf8');
+  }
 
   // Loads (or reloads) a type from the library: resolves when it's in, rejects with the brain's error.
   async loadType(name) {
@@ -371,11 +523,18 @@ class Brain {
     if (!fs.existsSync(file)) fail(`no file ${file}`);
     const script = path.join(os.tmpdir(), `perturbed-check-${process.pid}.scd`);
     fs.writeFileSync(script, `("CHECK:" ++ File.readAllString(${JSON.stringify(file)}).compile.notNil).postln;\n0.exit;\n`);
-    const out = spawnSync('/Applications/SuperCollider.app/Contents/MacOS/sclang', [script], { encoding: 'utf8', timeout: 30000 }).stdout ?? '';
+    const out =
+      spawnSync('/Applications/SuperCollider.app/Contents/MacOS/sclang', [script], { encoding: 'utf8', timeout: 30000 }).stdout ?? '';
     fs.unlinkSync(script);
     if (/CHECK:true/.test(out)) return null;
     const err = out.slice(out.indexOf('ERROR:'));
-    return err.startsWith('ERROR:') ? err.split('\n').filter((l) => !/CHECK:|cleaning up|^\s*$/.test(l)).slice(0, 8).join('\n') : 'it doesn\'t parse';
+    return err.startsWith('ERROR:')
+      ? err
+          .split('\n')
+          .filter((l) => !/CHECK:|cleaning up|^\s*$/.test(l))
+          .slice(0, 8)
+          .join('\n')
+      : "it doesn't parse";
   }
 
   // --- clocks ---
@@ -389,15 +548,16 @@ class Brain {
     const allowed = { mode: ['ratio', 'factor', 'free'], num: [1, 32], den: [1, 32], factor: [0.01, 16], bpm: [1, 999] };
     for (const [k, val] of Object.entries(settings)) {
       const a = allowed[k] ?? fail(`clocks have mode, num, den, factor, bpm, not "${k}"`);
-      if (k === 'mode') { if (!a.includes(val)) fail(`mode is ratio, factor or free, not "${val}"`); }
-      else if (!(+val >= a[0] && +val <= a[1])) fail(`${k} is ${a[0]} to ${a[1]}`);
+      if (k === 'mode') {
+        if (!a.includes(val)) fail(`mode is ratio, factor or free, not "${val}"`);
+      } else if (!(+val >= a[0] && +val <= a[1])) fail(`${k} is ${a[0]} to ${a[1]}`);
       await this.request('/clock/set', [id, k, k === 'mode' ? val : +val], '/clock', (cid) => cid === id);
     }
     return this.model.clocks.get(id);
   }
 
   async removeClock(v) {
-    const id = this.clock(v) || fail('clock A is the main clock and can\'t be removed');
+    const id = this.clock(v) || fail("clock A is the main clock and can't be removed");
     await this.request('/clock/remove', [id], '/clock/removed', (cid) => cid === id);
   }
 
@@ -407,20 +567,32 @@ class Brain {
     await this.request('/transport/tempo', [+bpm], '/transport');
     return this.model.tempo;
   }
-  async scale(num, den) { await this.request('/transport/scale', [+num, +den], '/transport'); return this.model.tempo; }
-  async play(on) { await this.request('/transport/play', [on ? 1 : 0], '/transport', (p) => !!p === on); }
+  async scale(num, den) {
+    await this.request('/transport/scale', [+num, +den], '/transport');
+    return this.model.tempo;
+  }
+  async play(on) {
+    await this.request('/transport/play', [on ? 1 : 0], '/transport', (p) => !!p === on);
+  }
   async chord(notes) {
     const pitches = notes.map(parseNote);
     await this.request('/chord/set', pitches, '/chord');
     return this.state().chord;
   }
-  async chordClear() { await this.request('/chord/clear', [], '/chord'); }
+  async chordClear() {
+    await this.request('/chord/clear', [], '/chord');
+  }
   async chordMode(mode) {
     if (!['auto', 'arm'].includes(mode)) fail('chord mode is auto or arm');
     await this.request('/chord/mode', [mode], '/chord');
   }
   cc(bus, channel, cc, value) {
-    for (const [n, v, lo, hi] of [['bus', bus, 1, 8], ['channel', channel, 1, 16], ['cc', cc, 0, 127], ['value', value, 0, 127]]) {
+    for (const [n, v, lo, hi] of [
+      ['bus', bus, 1, 8],
+      ['channel', channel, 1, 16],
+      ['cc', cc, 0, 127],
+      ['value', value, 0, 127],
+    ]) {
       if (!(Number.isInteger(+v) && +v >= lo && +v <= hi)) fail(`${n} is ${lo} to ${hi}`);
     }
     this.send('/cc', +bus, +channel, +cc, +value);

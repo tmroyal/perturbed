@@ -251,7 +251,9 @@ run: { |g, p|
 
 Read [PLAN.md](PLAN.md): what's next, the backlog, the system reference and the gotchas.
 
-- Run `./tests/run.sh` (~40 s) after changes; keep it green and short. It uses its own brain on
+- Run `./tests/run.sh` (~45 s) after changes; keep it green and short. It starts with a lint and
+  format check of the JavaScript (Biome, `biome.jsonc`; `npm install` at the repo root once):
+  `npm run format` fixes formatting. SuperCollider has no linter; the tests load every brain file. It uses its own brain on
   port 57140, so it doesn't touch a running performance.
 - The brain is authoritative; the surface renders what it reports. New generator types need only
   a file in `brain/types/` (the surface builds cards from the schema); reuse the pitch, rhythm and

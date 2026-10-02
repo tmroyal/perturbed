@@ -99,7 +99,10 @@ settings at once, each in its own way, so a single gesture reshapes the piece.
 
 ## 4. Working on Perturbed (developers)
 
-- `./tests/run.sh` (~40 s) starts a test brain on port 57140 and runs the timing, generator, CLI and
+- JavaScript is linted and formatted with Biome (`biome.jsonc`: 2 spaces, single quotes, 140
+  columns; `npm run lint`, `npm run format`); `tests/run.sh` checks it first. The renderer scripts
+  share globals through `<script>` tags, so Biome's unused-variable rule is off for them.
+- `./tests/run.sh` (~45 s) starts a test brain on port 57140 and runs the timing, generator, CLI and
   protocol tests; it plays MIDI on IAC Bus 1 channels 1–2 and sends CCs on Bus 2. Keep it green
   and short.
 - The OSC protocol's authoritative list is the header of `brain/core/osc.scd`.

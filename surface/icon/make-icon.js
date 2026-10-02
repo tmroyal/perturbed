@@ -3,17 +3,21 @@
 // Writes icon.svg, icon.png (1024) and icon.icns next to this file.
 // Needs macOS (Quick Look renders the SVG, iconutil builds the .icns) and ImageMagick (`magick`).
 // Run: node surface/icon/make-icon.js
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const { execFileSync } = require('child_process');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 
 const DIR = __dirname;
 const SIZE = 1024;
 const C = SIZE / 2;
 const nord = {
-  bg: '#2E3440', panel: '#3B4252', ring: '#434C5E',
-  frost: ['#8FBCBB', '#88C0D0', '#81A1C1'], downbeat: '#EBCB8B', light: '#ECEFF4',
+  bg: '#2E3440',
+  panel: '#3B4252',
+  ring: '#434C5E',
+  frost: ['#8FBCBB', '#88C0D0', '#81A1C1'],
+  downbeat: '#EBCB8B',
+  light: '#ECEFF4',
 };
 
 // Rings, outer to inner: beats per cycle, radius, dot radius, colour.
@@ -24,7 +28,7 @@ const rings = [
 ];
 
 const at = (r, i, n) => {
-  const a = (i / n) * 2 * Math.PI - Math.PI / 2;  // beat 0 at the top, clockwise
+  const a = (i / n) * 2 * Math.PI - Math.PI / 2; // beat 0 at the top, clockwise
   return [C + r * Math.cos(a), C + r * Math.sin(a)];
 };
 
@@ -36,7 +40,9 @@ for (const { r } of rings) {
   parts.push(`<circle cx="${C}" cy="${C}" r="${r}" fill="none" stroke="${nord.ring}" stroke-width="10"/>`);
 }
 // playhead from the centre to the downbeat
-parts.push(`<line x1="${C}" y1="${C}" x2="${C}" y2="${C - rings[0].r}" stroke="${nord.light}" stroke-opacity="0.35" stroke-width="10" stroke-linecap="round"/>`);
+parts.push(
+  `<line x1="${C}" y1="${C}" x2="${C}" y2="${C - rings[0].r}" stroke="${nord.light}" stroke-opacity="0.35" stroke-width="10" stroke-linecap="round"/>`,
+);
 for (const { beats, r, dot, color } of rings) {
   for (let i = 1; i < beats; i++) {
     const [x, y] = at(r, i, beats);
@@ -55,9 +61,22 @@ fs.writeFileSync(path.join(DIR, 'icon.svg'), svg);
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'icon-'));
 execFileSync('qlmanage', ['-t', '-s', String(SIZE), '-o', tmp, path.join(DIR, 'icon.svg')], { stdio: 'ignore' });
 const png = path.join(DIR, 'icon.png');
-execFileSync('magick', [path.join(tmp, 'icon.svg.png'),
-  '(', '-size', `${SIZE}x${SIZE}`, 'xc:none', '-fill', 'white', '-draw', 'roundrectangle 97,97 926,926 188,188', ')',
-  '-compose', 'CopyOpacity', '-composite', png]);
+execFileSync('magick', [
+  path.join(tmp, 'icon.svg.png'),
+  '(',
+  '-size',
+  `${SIZE}x${SIZE}`,
+  'xc:none',
+  '-fill',
+  'white',
+  '-draw',
+  'roundrectangle 97,97 926,926 188,188',
+  ')',
+  '-compose',
+  'CopyOpacity',
+  '-composite',
+  png,
+]);
 fs.rmSync(tmp, { recursive: true });
 
 // The iconset sizes macOS wants, then .icns.

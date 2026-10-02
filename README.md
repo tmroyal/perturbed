@@ -76,7 +76,9 @@ first (the brain lists the MIDI inputs it found in the terminal). The first run 
 ## Develop
 
 ```
-./tests/run.sh      # ~40 s: timing, generator, protocol and CLI tests on a separate test brain
+npm install         # once, at the repo root: the JavaScript linter/formatter (Biome)
+./tests/run.sh      # ~45 s: lint, then timing, generator, protocol, CLI and library tests on a separate test brain
+npm run format      # fix formatting and safe lint findings in the JavaScript (biome.jsonc)
 ```
 
 ```

@@ -1,7 +1,7 @@
 // protocol.js — acts as a surface against a running brain (test mode) and checks the OSC protocol:
 // snapshot framing, schema, echoes of every accepted change, ping/pong, removals.
 // Run via tests/run.sh.
-const dgram = require('dgram');
+const dgram = require('node:dgram');
 const { encode, decode } = require('../surface/osc');
 
 const sock = dgram.createSocket('udp4');
@@ -15,16 +15,22 @@ sock.on('message', (buf) => {
 const send = (addr, ...args) => sock.send(encode(addr, args), +process.env.PERFORMED_PORT, '127.0.0.1');
 
 // Resolves with the first message (from now on) matching addr and pred.
-const next = (addr, pred = () => true, ms = 1000) => new Promise((resolve, reject) => {
-  const t = setTimeout(() => reject(new Error(`timeout waiting for ${addr}`)), ms);
-  waiters.push((m) => {
-    if (m.addr !== addr || !pred(...m.args)) return false;
-    clearTimeout(t); resolve(m.args); return true;
+const next = (addr, pred = () => true, ms = 1000) =>
+  new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`timeout waiting for ${addr}`)), ms);
+    waiters.push((m) => {
+      if (m.addr !== addr || !pred(...m.args)) return false;
+      clearTimeout(t);
+      resolve(m.args);
+      return true;
+    });
   });
-});
 
 let failed = false;
-const check = (ok, what) => { if (!ok) failed = true; console.log(`${ok ? 'ok  ' : 'FAIL'}  ${what}`); };
+const check = (ok, what) => {
+  if (!ok) failed = true;
+  console.log(`${ok ? 'ok  ' : 'FAIL'}  ${what}`);
+};
 
 sock.bind(0, async () => {
   try {
@@ -35,10 +41,16 @@ sock.bind(0, async () => {
     check(addrs[0] === '/state/begin', 'snapshot starts with /state/begin');
     check(addrs.includes('/transport') && addrs.includes('/ports'), 'snapshot has /transport and /ports');
     const schema = inbox.filter((m) => m.addr === '/gen/schema' && m.args[0] === 'basic').map((m) => m.args[1]);
-    check(['note', 'velocity', 'num', 'den'].every((p) => schema.includes(p)), `basic schema (${schema.join(' ')})`);
+    check(
+      ['note', 'velocity', 'num', 'den'].every((p) => schema.includes(p)),
+      `basic schema (${schema.join(' ')})`,
+    );
 
-    check(inbox.some((m) => m.addr === '/gen/nooutput' && m.args[0] === 'lfo')
-      && !inbox.some((m) => m.addr === '/gen/nooutput' && m.args[0] === 'basic'), 'lfo is marked output-less, basic is not');
+    check(
+      inbox.some((m) => m.addr === '/gen/nooutput' && m.args[0] === 'lfo') &&
+        !inbox.some((m) => m.addr === '/gen/nooutput' && m.args[0] === 'basic'),
+      'lfo is marked output-less, basic is not',
+    );
 
     const pong = next('/pong');
     send('/ping');
@@ -50,8 +62,10 @@ sock.bind(0, async () => {
     await new Promise((r) => other.bind(0, r));
     const otherEnd = new Promise((resolve) => other.on('message', (b) => decode(b).addr === '/state/end' && resolve()));
     send('/hello', other.address().port);
-    check(await Promise.race([otherEnd.then(() => true), new Promise((r) => setTimeout(() => r(false), 1000))]),
-      '/hello <port> sends the snapshot to that port');
+    check(
+      await Promise.race([otherEnd.then(() => true), new Promise((r) => setTimeout(() => r(false), 1000))]),
+      '/hello <port> sends the snapshot to that port',
+    );
     other.close();
 
     // Live's tracks, as the bridge reports them, reach every surface and the next snapshot
@@ -64,7 +78,7 @@ sock.bind(0, async () => {
     await cleared;
     check(true, '/live/tracks/clear forwarded');
 
-    const dest = next('/dest', (id, name) => name === 'proto');
+    const dest = next('/dest', (_id, name) => name === 'proto');
     send('/dest/add', 'proto', 2, 16, 'none');
     const [destId, , port, channel] = await dest;
     check(port === 2 && channel === 16, 'dest/add echoed with port and channel');
@@ -79,38 +93,46 @@ sock.bind(0, async () => {
     await param;
     check(true, 'gen/set param echoed');
 
-    const destSet = next('/gen', (id, t, d) => id === genId && d === destId);
+    const destSet = next('/gen', (id, _t, d) => id === genId && d === destId);
     send('/gen/set', genId, 'dest', destId);
     await destSet;
     check(true, 'gen/set dest echoed');
 
-    const tempo = next('/transport', (p, bpm) => Math.abs(bpm - 97.5) < 1e-3);
+    const tempo = next('/transport', (_p, bpm) => Math.abs(bpm - 97.5) < 1e-3);
     send('/transport/tempo', 97.5);
     await tempo;
     check(true, 'tempo echoed');
 
-    const up = next('/transport', (p, bpm) => Math.abs(bpm - 146.25) < 1e-3);
+    const up = next('/transport', (_p, bpm) => Math.abs(bpm - 146.25) < 1e-3);
     send('/transport/scale', 3, 2);
     await up;
-    const back = next('/transport', (p, bpm) => Math.abs(bpm - 97.5) < 1e-3);
+    const back = next('/transport', (_p, bpm) => Math.abs(bpm - 97.5) < 1e-3);
     send('/transport/scale', 2, 3);
     await back;
     check(true, 'scale 3/2 then 2/3 returns to the same tempo');
 
     // clocks: ratio and factor follow main tempo changes, free doesn't
-    const [ratioId] = await (() => { const c = next('/clock'); send('/clock/add'); return c; })();
-    const [freeId] = await (() => { const c = next('/clock'); send('/clock/add'); return c; })();
+    const [ratioId] = await (() => {
+      const c = next('/clock');
+      send('/clock/add');
+      return c;
+    })();
+    const [freeId] = await (() => {
+      const c = next('/clock');
+      send('/clock/add');
+      return c;
+    })();
     send('/clock/set', ratioId, 'num', 3);
     send('/clock/set', ratioId, 'den', 2);
     send('/clock/set', freeId, 'mode', 'free');
     send('/clock/set', freeId, 'bpm', 77);
     await new Promise((r) => setTimeout(r, 100));
-    const ratioFollows = next('/clock', (id, n, mode, num, den, f, b, tempo) => id === ratioId && Math.abs(tempo - 150) < 1e-3);
-    const freeStays = next('/clock', (id, n, mode, num, den, f, b, tempo) => id === freeId && Math.abs(tempo - 77) < 1e-3);
+    const ratioFollows = next('/clock', (id, _n, _mode, _num, _den, _f, _b, tempo) => id === ratioId && Math.abs(tempo - 150) < 1e-3);
+    const freeStays = next('/clock', (id, _n, _mode, _num, _den, _f, _b, tempo) => id === freeId && Math.abs(tempo - 77) < 1e-3);
     send('/transport/tempo', 100);
     await Promise.all([ratioFollows, freeStays]);
     check(true, 'clock ratio 3/2 follows main tempo; free clock stays');
-    const factorFollows = next('/clock', (id, n, mode, num, den, f, b, tempo) => id === ratioId && Math.abs(tempo - 125) < 1e-2);
+    const factorFollows = next('/clock', (id, _n, _mode, _num, _den, _f, _b, tempo) => id === ratioId && Math.abs(tempo - 125) < 1e-2);
     send('/clock/set', ratioId, 'mode', 'factor');
     send('/clock/set', ratioId, 'factor', 1.25);
     await factorFollows;
@@ -134,7 +156,7 @@ sock.bind(0, async () => {
     send('/transport/play', 0);
 
     const destGone = next('/dest/removed', (id) => id === destId);
-    const genCleared = next('/gen', (id, t, d) => id === genId && d === 0);
+    const genCleared = next('/gen', (id, _t, d) => id === genId && d === 0);
     send('/dest/remove', destId);
     await Promise.all([destGone, genCleared]);
     check(true, 'dest/remove echoed, generator unassigned');
@@ -145,8 +167,8 @@ sock.bind(0, async () => {
     check(true, 'gen/remove echoed');
 
     // save → change → load: state comes back in a full snapshot
-    const file = require('path').join(require('os').tmpdir(), `performed-test-${process.pid}.json`);
-    const d2 = next('/dest', (id, name) => name === 'saved');
+    const file = require('node:path').join(require('node:os').tmpdir(), `performed-test-${process.pid}.json`);
+    const d2 = next('/dest', (_id, name) => name === 'saved');
     send('/dest/add', 'saved', 1, 3, 'Pianoteq 9');
     const [savedDest] = await d2;
     const g2 = next('/gen');
@@ -154,39 +176,39 @@ sock.bind(0, async () => {
     const [savedGen] = await g2;
     send('/gen/set', savedGen, 'dest', savedDest);
     send('/gen/set', savedGen, 'num', 5);
-    send('/gen/set', savedGen, 'rate', 0.25);  // fractional value of a float param
+    send('/gen/set', savedGen, 'rate', 0.25); // fractional value of a float param
     send('/gen/set', savedGen, 'source', 'arpeggio');
     send('/chord/mode', 'arm');
     send('/chord/set', 62, 65, 69);
-    const tempo2 = next('/transport', (p, bpm) => bpm === 111);
+    const tempo2 = next('/transport', (_p, bpm) => bpm === 111);
     send('/transport/tempo', 111);
     await tempo2;
-    const pg = next('/gen', (id, t) => t === 'passthrough');
+    const pg = next('/gen', (_id, t) => t === 'passthrough');
     send('/gen/add', 'passthrough');
     const [passGen] = await pg;
     send('/gen/set', passGen, 'delay', 0.5);
     // a group (renamed, collapsed, off) with the generator in it
-    const grp = next('/group', (id, name) => name === 'Layer');
+    const grp = next('/group', (_id, name) => name === 'Layer');
     send('/group/add', 'Layer');
     const [groupId] = await grp;
-    const grpSet = next('/group', (id, name, on, solo, collapsed) => id === groupId && name === 'Pianos' && !on && collapsed);
+    const grpSet = next('/group', (id, name, on, _solo, collapsed) => id === groupId && name === 'Pianos' && !on && collapsed);
     send('/group/set', groupId, 'name', 'Pianos');
     send('/group/set', groupId, 'on', 0);
     send('/group/set', groupId, 'collapsed', 1);
     await grpSet;
-    const born = next('/gen', (id, t, d, a, gr) => t === 'lfo' && gr === groupId);
+    const born = next('/gen', (_id, t, _d, _a, gr) => t === 'lfo' && gr === groupId);
     send('/gen/add', 'lfo', groupId);
     const [bornId] = await born;
     check(true, '/gen/add <type> <group> adds straight into the group');
     send('/gen/remove', bornId);
-    const inGroup = next('/gen', (id, t, d, a, gr) => id === savedGen && gr === groupId);
+    const inGroup = next('/gen', (id, _t, _d, _a, gr) => id === savedGen && gr === groupId);
     send('/gen/set', savedGen, 'group', groupId);
     await inGroup;
     check(true, 'group add/set echoed; /gen carries the group');
     const pinned = next('/group/pins', (id, ...p) => id === groupId && p.join() === `${savedGen},num,${savedGen},source`);
     send('/group/pin', groupId, savedGen, 'num');
     send('/group/pin', groupId, savedGen, 'source');
-    send('/group/pin', groupId, savedGen, 'phrase');  // text: not pinnable
+    send('/group/pin', groupId, savedGen, 'phrase'); // text: not pinnable
     await pinned;
     check(true, 'pins echoed in order (text settings refused)');
     await new Promise((r) => setTimeout(r, 100));
@@ -204,23 +226,50 @@ sock.bind(0, async () => {
     send('/load', file);
     await loaded;
     const has = (addr, pred) => inbox.some((m) => m.addr === addr && pred(...m.args));
-    check(has('/transport', (p, bpm) => bpm === 111), 'load restores tempo');
-    check(has('/clock', (id, n, mode, num, den, factor) => id === ratioId && mode === 'factor' && Math.abs(factor - 1.25) < 1e-3), 'load restores clocks');
-    check(has('/chord', (mode, armed, ...ps) => mode === 'arm' && ps.join() === '62,65,69'), 'load restores chord and mode');
-    check(has('/dest', (id, name, port, ch, inst) => id === savedDest && name === 'saved' && ch === 3 && inst === 'Pianoteq 9'), 'load restores destinations');
-    check(has('/gen', (id, t, d) => id === savedGen && d === savedDest), 'load restores generators with their dest');
-    check(has('/group', (id, name, on, solo, collapsed) => id === groupId && name === 'Pianos' && !on && collapsed === 1)
-      && has('/gen', (id, t, d, a, gr) => id === savedGen && gr === groupId), 'load restores groups and membership');
-    check(has('/group/pins', (id, ...p) => id === groupId && p.join() === `${savedGen},num,${savedGen},source`), 'load restores pins');
+    check(
+      has('/transport', (_p, bpm) => bpm === 111),
+      'load restores tempo',
+    );
+    check(
+      has('/clock', (id, _n, mode, _num, _den, factor) => id === ratioId && mode === 'factor' && Math.abs(factor - 1.25) < 1e-3),
+      'load restores clocks',
+    );
+    check(
+      has('/chord', (mode, _armed, ...ps) => mode === 'arm' && ps.join() === '62,65,69'),
+      'load restores chord and mode',
+    );
+    check(
+      has('/dest', (id, name, _port, ch, inst) => id === savedDest && name === 'saved' && ch === 3 && inst === 'Pianoteq 9'),
+      'load restores destinations',
+    );
+    check(
+      has('/gen', (id, _t, d) => id === savedGen && d === savedDest),
+      'load restores generators with their dest',
+    );
+    check(
+      has('/group', (id, name, on, _solo, collapsed) => id === groupId && name === 'Pianos' && !on && collapsed === 1) &&
+        has('/gen', (id, _t, _d, _a, gr) => id === savedGen && gr === groupId),
+      'load restores groups and membership',
+    );
+    check(
+      has('/group/pins', (id, ...p) => id === groupId && p.join() === `${savedGen},num,${savedGen},source`),
+      'load restores pins',
+    );
     const unpinned = next('/group/pins', (id, ...p) => id === groupId && p.length === 0);
     send('/gen/set', savedGen, 'group', 0);
     await unpinned;
     check(true, 'leaving the group drops its pins');
-    check(has('/gen/param', (id, p, v) => id === savedGen && p === 'num' && v === 5)
-      && has('/gen/param', (id, p, v) => id === savedGen && p === 'source' && v === 'arpeggio')
-      && has('/gen/param', (id, p, v) => id === savedGen && p === 'rate' && Math.abs(v - 0.25) < 1e-6), 'load restores params');
-    check(has('/gen/param', (id, p, v) => id === passGen && p === 'delay' && Math.abs(v - 0.5) < 1e-6), 'load keeps 0.5 for a param defaulting to 0');
-    require('fs').unlinkSync(file);
+    check(
+      has('/gen/param', (id, p, v) => id === savedGen && p === 'num' && v === 5) &&
+        has('/gen/param', (id, p, v) => id === savedGen && p === 'source' && v === 'arpeggio') &&
+        has('/gen/param', (id, p, v) => id === savedGen && p === 'rate' && Math.abs(v - 0.25) < 1e-6),
+      'load restores params',
+    );
+    check(
+      has('/gen/param', (id, p, v) => id === passGen && p === 'delay' && Math.abs(v - 0.5) < 1e-6),
+      'load keeps 0.5 for a param defaulting to 0',
+    );
+    require('node:fs').unlinkSync(file);
   } catch (e) {
     check(false, e.message);
   }

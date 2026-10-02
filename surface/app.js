@@ -2,20 +2,24 @@
 // sends. The brain is authoritative: controls send intents over OSC, and the UI is built and
 // updated only from what the brain reports (protocol: brain/core/osc.scd).
 const model = {
-  playing: false, bpm: 120, ports: [],
-  types: new Map(),  // name -> [{ name, kind, def, args, label?, section?, show?: { param, values } }]
+  playing: false,
+  bpm: 120,
+  ports: [],
+  types: new Map(), // name -> [{ name, kind, def, args, label?, section?, show?: { param, values } }]
   chord: { mode: 'auto', armed: false, pitches: [] },
   clocks: new Map(), // id -> { id, name, mode, num, den, factor, bpm, tempo }  (A = main, implicit)
-  dests: new Map(),  // id -> { id, name, port, channel, instrument }
-  live: null,        // Live's tracks on the brain's buses [{ name, port, channel, instrument }]; null = no bridge
-  gens: new Map(),   // id -> { id, type, dest, active, group, params, card }
+  dests: new Map(), // id -> { id, name, port, channel, instrument }
+  live: null, // Live's tracks on the brain's buses [{ name, port, channel, instrument }]; null = no bridge
+  gens: new Map(), // id -> { id, type, dest, active, group, params, card }
   groups: new Map(), // id -> { id, name, on, solo, collapsed, pins: [[genId, param], ...] }
   library: new Map(), // type name -> { name, builtin, favorite, loaded, bar, changed, description, mtime }
 };
 let inSnapshot = false;
 
 // --- connection: /hello until a snapshot arrives, /ping to notice a restarted or missing brain ---
-let connected = false, bootId = null, lastPong = 0;
+let connected = false,
+  bootId = null,
+  lastPong = 0;
 
 // Errors from the brain (a type that didn't load or stopped) show in the transport bar for a while.
 let errorTimer = null;
@@ -23,7 +27,9 @@ function showError(message) {
   $('status').textContent = message;
   $('status').title = message;
   clearTimeout(errorTimer);
-  errorTimer = setTimeout(() => { if (connected) $('status').textContent = ''; }, 8000);
+  errorTimer = setTimeout(() => {
+    if (connected) $('status').textContent = '';
+  }, 8000);
 }
 
 function setConnected(on) {
@@ -53,18 +59,23 @@ function renderAll() {
 // once, or not during a snapshot (everything renders at /state/end). Momentary events (beats,
 // notes, learning, errors) show directly. ---
 const specOf = (type, name) => model.types.get(type)?.find((s) => s.name === name);
-const setSpec = (key) => (type, name, value) => { const s = specOf(type, name); if (s) s[key] = value; };
+const setSpec = (key) => (type, name, value) => {
+  const s = specOf(type, name);
+  if (s) s[key] = value;
+};
 const chunks = (a, n) => Array.from({ length: Math.floor(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
 
 const handlers = {
   '/pong': (id) => {
     lastPong = Date.now();
-    if (bootId !== null && id !== bootId) setConnected(false);  // brain restarted: re-/hello
+    if (bootId !== null && id !== bootId) setConnected(false); // brain restarted: re-/hello
     bootId = id;
   },
   '/state/begin': () => {
     inSnapshot = true;
-    Object.values(model).forEach((v) => { if (v instanceof Map) v.clear(); });
+    Object.values(model).forEach((v) => {
+      if (v instanceof Map) v.clear();
+    });
     model.live = null;
   },
   '/state/end': () => {
@@ -75,16 +86,38 @@ const handlers = {
   },
   '/transport': (playing, bpm) => {
     Object.assign(model, { playing: !!playing, bpm });
-    return () => { renderTransport(); renderMainClock(); };
+    return () => {
+      renderTransport();
+      renderMainClock();
+    };
   },
-  '/ports': (...names) => { model.ports = names; return renderPorts; },
-  '/chord': (mode, armed, ...pitches) => { model.chord = { mode, armed: !!armed, pitches }; return renderChord; },
+  '/ports': (...names) => {
+    model.ports = names;
+    return renderPorts;
+  },
+  '/chord': (mode, armed, ...pitches) => {
+    model.chord = { mode, armed: !!armed, pitches };
+    return renderChord;
+  },
 
   '/library/type': (name, builtin, favorite, loaded, bar, changed, description, mtime) => {
-    model.library.set(name, { name, builtin: !!builtin, favorite: !!favorite, loaded: !!loaded, bar: !!bar, changed: !!changed, description, mtime });
+    model.library.set(name, {
+      name,
+      builtin: !!builtin,
+      favorite: !!favorite,
+      loaded: !!loaded,
+      bar: !!bar,
+      changed: !!changed,
+      description,
+      mtime,
+    });
   },
-  '/adhoc/loaded': (name) => { typeLoaded(name); },
-  '/error': (message) => { showError(message); },
+  '/adhoc/loaded': (name) => {
+    typeLoaded(name);
+  },
+  '/error': (message) => {
+    showError(message);
+  },
   '/gen/schema': (type, name, kind, def, ...args) => {
     if (!model.types.has(type)) model.types.set(type, []);
     model.types.get(type).push({ name, kind, def, args });
@@ -92,8 +125,14 @@ const handlers = {
   '/gen/label': setSpec('label'),
   '/gen/section': setSpec('section'),
   '/gen/slider': setSpec('slider'),
-  '/gen/action': (type, name) => { const specs = model.types.get(type); if (specs) (specs.actions ??= []).push(name); },
-  '/gen/nooutput': (type) => { const specs = model.types.get(type); if (specs) specs.noOutput = true; },
+  '/gen/action': (type, name) => {
+    const specs = model.types.get(type);
+    if (specs) specs.actions = [...(specs.actions ?? []), name];
+  },
+  '/gen/nooutput': (type) => {
+    const specs = model.types.get(type);
+    if (specs) specs.noOutput = true;
+  },
   '/gen/show': (type, name, param, ...values) => setSpec('show')(type, name, { param, values: values.map(String) }),
 
   '/clock': (id, name, mode, num, den, factor, bpm, tempo) => {
@@ -101,22 +140,34 @@ const handlers = {
     model.clocks.set(id, c);
     return () => updateClock(c);
   },
-  '/clock/removed': (id) => { model.clocks.delete(id); return renderClocks; },
+  '/clock/removed': (id) => {
+    model.clocks.delete(id);
+    return renderClocks;
+  },
 
   '/dest': (id, name, port, channel, instrument) => {
     model.dests.set(id, { id, name, port, channel, instrument });
     return renderOutputs;
   },
-  '/dest/removed': (id) => { model.dests.delete(id); return renderOutputs; },
+  '/dest/removed': (id) => {
+    model.dests.delete(id);
+    return renderOutputs;
+  },
   '/live/tracks': (...a) => {
     model.live = chunks(a, 4).map(([name, port, channel, instrument]) => ({ name, port, channel, instrument }));
     return renderOutputs;
   },
-  '/live/tracks/clear': () => { model.live = null; return renderOutputs; },
+  '/live/tracks/clear': () => {
+    model.live = null;
+    return renderOutputs;
+  },
 
   '/gen': (id, type, dest, active, group = 0) => {
     let gen = model.gens.get(id);
-    if (!gen) model.gens.set(id, gen = { id, type, params: {}, card: null });
+    if (!gen) {
+      gen = { id, type, params: {}, card: null };
+      model.gens.set(id, gen);
+    }
     const moved = gen.group !== group;
     Object.assign(gen, { dest, active: !!active, group });
     return () => updateGen(gen, moved);
@@ -131,12 +182,18 @@ const handlers = {
     g.pins = chunks(flat, 2);
     return renderGroups;
   },
-  '/group/removed': (id) => { model.groups.delete(id); return renderGroups; },
+  '/group/removed': (id) => {
+    model.groups.delete(id);
+    return renderGroups;
+  },
   '/gen/param': (id, name, value) => {
     const gen = model.gens.get(id);
     if (!gen) return;
     gen.params[name] = value;
-    return () => { gen.card?.param(name, value); updatePin(id, name, value); };
+    return () => {
+      gen.card?.param(name, value);
+      updatePin(id, name, value);
+    };
   },
   '/gen/removed': (id) => {
     const gen = model.gens.get(id);
@@ -144,9 +201,16 @@ const handlers = {
     return () => unmountCard(gen);
   },
 
-  '/gen/learn': (id, name, on) => { model.gens.get(id)?.card?.learning(name, !!on); },
-  '/beat': (b) => { if (model.playing) showBeat(b); },
-  '/note': (id) => { model.gens.get(id)?.card?.flash(); flashSummary(id); },
+  '/gen/learn': (id, name, on) => {
+    model.gens.get(id)?.card?.learning(name, !!on);
+  },
+  '/beat': (b) => {
+    if (model.playing) showBeat(b);
+  },
+  '/note': (id) => {
+    model.gens.get(id)?.card?.flash();
+    flashSummary(id);
+  },
 };
 osc.on(({ addr, args }) => {
   const render = handlers[addr]?.(...args);

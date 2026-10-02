@@ -2,6 +2,13 @@
 # Starts the brain in test mode, runs the timing, generator, protocol, CLI and library tests against it, stops the brain.
 # Sends MIDI on IAC Bus 1 channels 1–2 (Live tracks listening there will play it) and CCs on Bus 2.
 cd "$(dirname "$0")/.."
+# lint and format check for the JavaScript (Biome; npm install at the repo root once)
+if [ -x node_modules/.bin/biome ]; then
+  node_modules/.bin/biome check . --reporter=summary > /tmp/perturbed-lint.$$ 2>&1 && echo "LINT PASSED" || { cat /tmp/perturbed-lint.$$; echo "LINT FAILED (npm run format fixes formatting)"; lint_failed=1; }
+  rm -f /tmp/perturbed-lint.$$
+else
+  echo "LINT SKIPPED (npm install at the repo root to enable)"
+fi
 # The test brain gets its own port so tests never touch a live brain on 57120.
 export PERFORMED_PORT=57140
 SCLANG=/Applications/SuperCollider.app/Contents/MacOS/sclang
@@ -34,4 +41,5 @@ limit 20 node tests/adhoc.js || status=1
 
 # (cli.js loads a missing file and adhoc.js loads broken types on purpose: those messages are expected)
 grep -E "ERROR|WARNING: [^A]" "$LOG" | grep -v "load failed\|_FileLength\|broken\|crashy\|noSuchMethod\|didn't load\|unexpected INTEGER\|Command line parse" && echo "(brain log: $LOG)"
+[ -n "$lint_failed" ] && status=1
 exit $status

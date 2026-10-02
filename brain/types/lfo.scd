@@ -6,7 +6,10 @@
 // Rate is like Ableton's LFO: sync = one cycle per num/den beats of its clock, counted from the
 // grid origin (so it lines up with Live's bars); free = cycles per second from play. It sends about
 // 50 values a second, only when the value changes, timestamped like notes.
-~lfoPort = { |p| ~controlNames.indexOfEqual(p[\port].asString) !? (_ + 1) ? 0 };  // 0 = no such bus: silent
+// One value on its bus, channel and cc (a bus not in config `control` is silent).
+~lfoCC = { |p, v, now = false|
+	~cc.(~controlNames.indexOfEqual(p[\port].asString) !? (_ + 1) ? 0, p[\channel].asString.asInteger, p[\cc], v, now);
+};
 (
 params: [
 	[\shape, "sine", \choice, "sine", "triangle", "saw up", "saw down", "square", "random", "smooth random"],
@@ -32,7 +35,7 @@ actions: (
 	// one value now, alternating from/to so a mapped parameter visibly moves
 	Send: { |g, p|
 		g[\sendTo] = (g[\sendTo] ? false).not;
-		~cc.(~lfoPort.(p), p[\channel].asString.asInteger, p[\cc], if(g[\sendTo]) { p[\high] } { p[\low] }, true);
+		~lfoCC.(p, if(g[\sendTo]) { p[\high] } { p[\low] }, true);
 	},
 ),
 
@@ -55,7 +58,7 @@ run: { |g, p|
 			{ 0.5 + (0.5 * sin(2pi * f)) });
 		var v = (p[\low].asFloat + ((p[\high].asFloat - p[\low].asFloat) * u)).round.asInteger;
 		if(~sounds.(g).not) { last = nil } {  // muted by its group: silent, and resends when back
-			if(v != last) { ~cc.(~lfoPort.(p), p[\channel].asString.asInteger, p[\cc], v); last = v };
+			if(v != last) { ~lfoCC.(p, v); last = v };
 		};
 		(0.02 * thisThread.clock.tempo).wait;
 	};

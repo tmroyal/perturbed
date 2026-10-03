@@ -70,7 +70,9 @@ tools/perturbed global map density 2 velocity 100 60 exp   # from > to inverts i
 tools/perturbed global set density value=0.3
 ```
 
-A mapped setting is locked (setting it says so); `global unmap` frees it. Settings that restart a
+A mapped setting is locked (setting it says so); `global unmap` frees it. A global can follow a
+knob on the performer's controller (they learn it in the app with **Knob**; or `global knob density
+1 74` for channel 1, CC 74), which puts everything it moves under one hand. Settings that restart a
 generator (num, den, clock) can't be mapped.
 
 Notes are MIDI numbers or names (C4 = 60); outputs and clocks can be named (`output="Piano 1"`,

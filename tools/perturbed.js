@@ -28,6 +28,8 @@ const HELP = `perturbed — change the running performance
                                      the setting follows the global (and is locked): from..to in its units
                                      (from > to inverts); curve linear|exp|steps|threshold
   global unmap <global> <gen id> <setting>
+  global knob <global> <channel> <cc> | none   a knob or fader on the controller drives it (or learn
+                                     it in the app: Knob, then turn it)
 
   adhoc list                         the type library: built-in and AdHoc types, stars, descriptions
   adhoc show <name>                  a type's source
@@ -129,6 +131,7 @@ const COMMANDS = {
     },
   ],
   'global map': [3, '<global> <gen id> <setting> [from to [curve [amount]]]', (b, [g, id, s, ...r]) => b.map(g, id, s, ...r)],
+  'global knob': [2, '<global> <channel> <cc> | none', (b, [g, ch, cc]) => b.knob(g, ch, cc)],
   'global unmap': [3, '<global> <gen id> <setting>', (b, [g, id, s]) => b.unmap(g, id, s)],
 
   'adhoc list': [0, '', (b) => b.library()],

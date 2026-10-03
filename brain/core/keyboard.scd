@@ -14,6 +14,8 @@
 	MIDIIn.connectAll;
 	MIDIdef.noteOn(\keyOn, { |vel, note, ch, src| if(~inputUids.includes(src)) { ~key.(note, vel) } });
 	MIDIdef.noteOff(\keyOff, { |vel, note, ch, src| if(~inputUids.includes(src)) { ~key.(note, 0) } });
+	// knobs and faders: control changes from the same inputs drive globals (core/globals.scd)
+	MIDIdef.cc(\knob, { |val, num, ch, src| if(~inputUids.includes(src)) { ~knob.(ch + 1, num, val) } });
 	"MIDI inputs: %".format(MIDIClient.sources.select { |e| ~inputUids.includes(e.uid) }
 		.collect { |e| e.device + e.name }).postln;
 };

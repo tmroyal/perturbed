@@ -2,7 +2,8 @@
 // 0–1 slider that moves every setting mapped to it (brain/core/globals.scd). Map mode: press a
 // global's Map, then click setting names on cards; each becomes a mapping, tuned in the list under
 // the global (from → to in the setting's units, from > to inverts; curve). Mapped settings are
-// locked on their cards and tagged with the global's name.
+// locked on their cards and tagged with the global's name. Knob: press it and turn a knob or fader on
+// the controller; the global follows it from then on.
 const CURVES = ['linear', 'exp', 'steps', 'threshold'];
 const globalRows = new Map(); // id -> { update(gl) }, so a dragged slider isn't rebuilt under the pointer
 const expanded = new Set(); // ids of globals whose mappings are shown
@@ -97,6 +98,22 @@ function globalRow(gl) {
     onclick: () => setMapMode(mapping === gl.id ? null : gl.id),
   });
   setOn(map, mapping === gl.id, mapping === gl.id ? 'Done' : 'Map');
+  const knob = el('button', {
+    className: 'knob',
+    onclick: () => osc.send('/global/learn', gl.id, model.knobLearning === gl.id ? 0 : 1),
+  });
+  const clearKnob = closeButton('Forget the knob', () => osc.send('/global/knob', gl.id, 0, 0));
+  const showKnob = (g) => {
+    const learning = model.knobLearning === g.id;
+    setOn(knob, learning, learning ? 'Turn…' : g.knob ? `CC ${g.knob.cc}` : 'Knob');
+    knob.title = learning
+      ? 'Turn a knob or fader on your controller (press again to cancel)'
+      : g.knob
+        ? `Follows CC ${g.knob.cc} on channel ${g.knob.channel}: press to learn another`
+        : 'Learn a knob: press, then turn a knob or fader on your controller';
+    clearKnob.hidden = !g.knob || learning;
+  };
+  showKnob(gl);
   const root = el(
     'div',
     { className: 'global' },
@@ -105,6 +122,8 @@ function globalRow(gl) {
       { className: 'global-head' },
       name,
       el('span', { className: 'hint', textContent: `${gl.mappings.length} mapped` }),
+      knob,
+      clearKnob,
       map,
       el('button', {
         className: 'fold',
@@ -126,6 +145,7 @@ function globalRow(gl) {
     root,
     update(g) {
       value.set(g.value);
+      showKnob(g);
       if (!editing(name)) name.value = g.name;
     },
   };

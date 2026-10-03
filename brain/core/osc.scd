@@ -34,6 +34,8 @@
 //   /global/remove    <id>
 //   /global/map       <id> <genId> <param> [<from> <to> <curve> <amount>]   add or update a mapping
 //   /global/unmap     <id> <genId> <param>
+//   /global/learn     <id> 1|0                   the next knob turned (control change) drives it
+//   /global/knob      <id> <channel> <cc>        set its knob; channel 0 = none
 //   /cc               <port> <channel> <cc> <value>   one control change now; port = control bus 1, 2, ...
 //   /adhoc/load       <name>                     load (or reload) a library type: rescans adhoc/, then
 //                                                a full snapshot and /adhoc/loaded (or /error)
@@ -77,7 +79,8 @@
 //   /gen              <id> <type> <dest> <active> <group>
 //   /group            <id> <name> <on> <solo> <collapsed>
 //   /group/removed    <id>
-//   /global           <id> <name> <value>
+//   /global           <id> <name> <value> <knobChannel> <knobCC>    knob channel 0 = none
+//   /global/learn     <id> 1|0                   learning a knob started / ended
 //   /global/mappings  <id> (<genId> <param> <from> <to> <curve> <amount>)...   amount -1 = default
 //   /global/removed   <id>
 //   /group/pins       <id> (<genId> <param>)...  the group's pins, in order
@@ -183,6 +186,8 @@
 	~onObject.('/global/set', \globals, \setGlobal);
 	~onObject.('/global/map', \globals, \map);
 	~onObject.('/global/unmap', \globals, \unmap);
+	~onObject.('/global/learn', \globals, \learnKnob);
+	~onObject.('/global/knob', \globals, \setKnob);
 
 	OSCdef(\save, { |msg|
 		try { ~savePerformance.(msg[1].asString); ~send.('/saved', msg[1].asString) } { |e| ~report.("save failed: " ++ e.errorString) };

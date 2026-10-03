@@ -1,7 +1,7 @@
 // generators.scd — plays into a running test-mode brain (its input is IAC Bus 2) and checks the
 // current chord (auto and arm modes, clear), the basic generator (note sources, Set, rhythm and
-// velocity modes), passthrough (transpose, zone), and control changes (/cc, the lfo type) on the
-// test control bus (Bus 2).
+// velocity modes), passthrough (transpose, zone), groups, knobs driving globals, and control
+// changes (/cc, the lfo type) on the test control bus (Bus 2).
 // Run via tests/run.sh.
 (
 var brain = NetAddr("127.0.0.1", "PERFORMED_PORT".getenv.asInteger);
@@ -231,6 +231,28 @@ Routine {
 	check.(~count.() >= 4, "no groups: plays");
 	brain.sendMsg('/gen/remove', genId);
 	0.1.wait;
+
+	// --- knobs: a global learns a knob by turning it; that knob (only) moves it ---
+	OSCdef(\global, { |msg| ~globalMsg = msg[1..] }, '/global');
+	brain.sendMsg('/global/add', "knobbed");
+	0.1.wait;
+	~gid = ~globalMsg[0];
+	brain.sendMsg('/global/learn', ~gid, 1);
+	0.05.wait;
+	out.control(0, 74, 0);
+	0.1.wait;
+	check.(~globalMsg[3] == 1 and: { ~globalMsg[4] == 74 }, "knob learned by turning it (%)".format(~globalMsg));
+	out.control(0, 74, 127);
+	0.1.wait;
+	check.((~globalMsg[2] - 1).abs < 0.001, "the knob moves the global (%)".format(~globalMsg[2]));
+	out.control(0, 75, 0);
+	0.1.wait;
+	check.((~globalMsg[2] - 1).abs < 0.001, "other knobs don't");
+	brain.sendMsg('/global/knob', ~gid, 0, 0);
+	0.05.wait;
+	check.(~globalMsg[3] == 0, "knob cleared");
+	brain.sendMsg('/global/remove', ~gid);
+	0.05.wait;
 
 	// --- control changes ---
 	~ccs.clear;

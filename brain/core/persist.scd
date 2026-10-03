@@ -75,6 +75,7 @@
 	(perf["globals"] ? []).do { |saved|
 		var gl = ~addGlobal.(saved["name"], saved["id"].asInteger);
 		gl[\value] = saved["value"].asFloat;
+		gl[\knob] = saved["knob"] !? { |k| k.collect(_.asInteger) };
 		gl[\mappings] = (saved["mappings"] ? []).collect { |m|
 			(gen: m["gen"].asInteger, param: m["param"].asSymbol, from: m["from"].asFloat, to: m["to"].asFloat,
 				curve: m["curve"].asSymbol, amount: m["amount"] !? (_.asFloat))

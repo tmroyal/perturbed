@@ -180,7 +180,13 @@ class Brain {
         break;
       }
       case '/global':
-        m.globals.set(a[0], { id: a[0], name: a[1], value: +a[2].toFixed(4), mappings: m.globals.get(a[0])?.mappings ?? [] });
+        m.globals.set(a[0], {
+          id: a[0],
+          name: a[1],
+          value: +a[2].toFixed(4),
+          knob: a[3] ? { channel: a[3], cc: a[4] } : null,
+          mappings: m.globals.get(a[0])?.mappings ?? [],
+        });
         break;
       case '/global/mappings': {
         const g = m.globals.get(a[0]);
@@ -553,6 +559,15 @@ class Brain {
       '/global/mappings',
       (gid, ...flat) => gid === id && flat.some((x, i) => i % 6 === 0 && x === g.id && flat[i + 1] === param),
     );
+    return this.model.globals.get(id);
+  }
+
+  // A global follows a knob or fader (MIDI channel 1–16, cc 0–127); 'none' forgets it.
+  async knob(globalRef, channel, cc) {
+    const id = this.global(globalRef) || fail('which global?');
+    const none = channel === undefined || channel === 'none';
+    if (!none && !(+channel >= 1 && +channel <= 16 && +cc >= 0 && +cc <= 127)) fail('a knob is a channel 1–16 and a cc 0–127, or none');
+    await this.request('/global/knob', [id, none ? 0 : +channel, none ? 0 : +cc], '/global', (gid) => gid === id);
     return this.model.globals.get(id);
   }
 

@@ -11,6 +11,10 @@
 // global and is locked while it does: /gen/set for it is refused (core/osc.scd). Settings that
 // restart a generator (restartOn), clocks and text can't be mapped. AdHoc types read globals with
 // ~global.(\name) and declare them (`globals: [\name]`), which creates missing ones on load.
+//
+// Knobs: a global can follow a knob or fader on the performer's controller ([channel, cc], channel
+// 1-based): learned by turning it (/global/learn) or set (/global/knob); 0–127 → 0–1. A knob drives
+// one global; learning it for another moves it there.
 (
 ~globals = ();
 ~curves = [\linear, \exp, \steps, \threshold];
@@ -18,7 +22,7 @@
 ~addGlobal = { |name, id|
 	var gl;
 	id = ~newId.(\global, id);
-	gl = (id: id, name: (name ?? { "Meta %".format(id) }).asString, value: 0.0, mappings: []);
+	gl = (id: id, name: (name ?? { "Meta %".format(id) }).asString, value: 0.0, mappings: [], knob: nil);
 	~globals[id] = gl;
 	~sendGlobal.(gl);
 	~sendMappings.(gl);
@@ -32,7 +36,37 @@
 	~sendGlobal.(gl);
 };
 
-~removeGlobal = { |id| ~globals.removeAt(id) !? { ~send.('/global/removed', id) } };
+~removeGlobal = { |id|
+	if(~knobLearning == id) { ~knobLearning = nil };
+	~globals.removeAt(id) !? { ~send.('/global/removed', id) };
+};
+
+// --- knobs ---
+~knobLearning = nil;  // the global waiting for a knob to be turned
+
+~learnKnob = { |gl, on|
+	~knobLearning !? { |id| ~send.('/global/learn', id, 0) };
+	~knobLearning = if(on.asInteger == 1) { gl[\id] };
+	~knobLearning !? { |id| ~send.('/global/learn', id, 1) };
+};
+
+// Assigns a knob ([channel, cc]) to a global, taking it from any other; channel 0 clears.
+~setKnob = { |gl, channel, cc|
+	var knob = if(channel.asInteger > 0) { [channel.asInteger, cc.asInteger] };
+	knob !? { ~globals.do { |o| if(o !== gl and: { o[\knob] == knob }) { o[\knob] = nil; ~sendGlobal.(o) } } };
+	gl[\knob] = knob;
+	~sendGlobal.(gl);
+};
+
+// A control change from the performer's inputs: learn it, and move the globals that follow it.
+~knob = { |channel, cc, val|
+	~knobLearning !? { |id|
+		~knobLearning = nil;
+		~send.('/global/learn', id, 0);
+		~globals[id] !? { |gl| ~setKnob.(gl, channel, cc) };
+	};
+	~globals.do { |gl| if(gl[\knob] == [channel, cc]) { ~setGlobal.(gl, \value, val / 127) } };
+};
 
 // For AdHoc types: a global's value by name (0 if there's none).
 ~global = { |name|
@@ -122,7 +156,7 @@
 	};
 };
 
-~sendGlobal = { |gl| ~send.('/global', gl[\id], gl[\name], gl[\value]) };
+~sendGlobal = { |gl| ~send.('/global', gl[\id], gl[\name], gl[\value], *(gl[\knob] ? [0, 0])) };
 ~sendMappings = { |gl|
 	~send.('/global/mappings', gl[\id], *gl[\mappings].collect { |m| [m[\gen], m[\param], m[\from], m[\to], m[\curve], m[\amount] ? -1] }.flatten);
 };

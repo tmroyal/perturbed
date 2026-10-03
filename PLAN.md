@@ -56,10 +56,10 @@ so the Live API can create audio clips from files).
   notes per generator"), canon/echo of another generator, walk, phase, additive process, tone
   row, cloud, drone. Some of these may start life as AdHoc types and graduate to `brain/types/`.
 - **Other note sources:** sequence, transforms (transpose, invert, subset) of the chord.
-- **Controllers:** CC mapping (MiniLab knobs) to any generator parameter; generator-to-generator
-  modulation.
+- **Controllers:** generator-to-generator modulation. (Knobs drive globals: §5.10.)
 - **LFOs:** LFO-to-LFO modulation (rate, depth); the current value shown on the card.
-- **Globals:** a global driven by knobs (with knob mapping) or by an LFO; a global on a group's
+- **Globals:** a global driven by an LFO; soft takeover for knobs (no jump when a knob and its
+  global disagree); a global on a group's
   header; offset mode (editing a mapped setting shifts its range instead of being refused).
 - **Groups:** drag and drop cards between groups; renamable pins; shared group settings (output, clock, velocity for all
   members); fades for On/Off.
@@ -285,6 +285,9 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
 - Protocol: `/global/add [name]`, `/global/set <id> name|value <v>`, `/global/remove`,
   `/global/map <id> <gen> <param> [from to curve amount]`, `/global/unmap`; echoes `/global`,
   `/global/mappings <id> (gen param from to curve amount)...`, `/global/removed`.
-- Surface (`surface/globals.js`): a sidebar row per global (name, slider, Map, ▸ mappings, ×);
+- **Knobs:** a global can follow a knob or fader on the performer's inputs ([channel, cc], 0–127 →
+  0–1): learned by turning it (`/global/learn <id> 1|0`) or set (`/global/knob <id> <ch> <cc>`,
+  channel 0 = none); one knob drives one global; saved with it. `/global` carries the knob.
+- Surface (`surface/globals.js`): a sidebar row per global (name, slider, Knob, Map, ▸ mappings, ×);
   Map mode makes setting names on cards clickable targets. CLI: `global add|set|remove|map|unmap`;
   `state` lists globals and each generator's `follows`.

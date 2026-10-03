@@ -54,6 +54,7 @@ first (the brain lists the MIDI inputs it found in the terminal). The first run 
   for many settings. Press its **Map**, click setting names on cards, press **Done**; ▸ shows the
   mappings: *from → to* in the setting's units (from > to inverts it) and a curve (linear, exp,
   steps, threshold). A mapped setting is locked on its card and tagged with the global's name.
+  **Knob**: press it, turn a knob or fader on your controller, and the global follows it (× forgets it).
 - **Library:** the add bar holds your favorite generator types; *Library ▾* lists every type,
   built-in and AdHoc (written by Claude for a piece, kept in `adhoc/`), with ☆ to star one for the
   bar, *+ Add*, and × to delete an AdHoc type (its file moves to `adhoc/old/`). Errors from a type show at the top right.

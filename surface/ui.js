@@ -107,7 +107,7 @@ function slider(min, max, onChange, { step = 1, log = false } = {}) {
   });
   const set = (v) => {
     if (!editing(input)) input.value = toPos(v);
-    if (!editing(field)) field.value = v;
+    if (!editing(field)) field.value = round(v); // values from the brain can carry float noise (0.7874015…)
   };
   return { root: el('div', { className: 'row' }, input, field), set };
 }

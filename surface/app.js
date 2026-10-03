@@ -12,7 +12,8 @@ const model = {
   live: null, // Live's tracks on the brain's buses [{ name, port, channel, instrument }]; null = no bridge
   gens: new Map(), // id -> { id, type, dest, active, group, params, card }
   groups: new Map(), // id -> { id, name, on, solo, collapsed, pins: [[genId, param], ...] }
-  globals: new Map(), // id -> { id, name, value, mappings: [{ gen, param, from, to, curve, amount }] }
+  globals: new Map(), // id -> { id, name, value, knob: { channel, cc } | null, mappings: [{ gen, param, from, to, curve, amount }] }
+  knobLearning: null, // the global waiting for a knob to be turned
   library: new Map(), // type name -> { name, builtin, favorite, loaded, bar, changed, description, mtime }
 };
 let inSnapshot = false;
@@ -184,9 +185,9 @@ const handlers = {
     g.pins = chunks(flat, 2);
     return renderGroups;
   },
-  '/global': (id, name, value) => {
+  '/global': (id, name, value, channel = 0, cc = 0) => {
     const known = model.globals.get(id);
-    const gl = { id, name, value, mappings: known?.mappings ?? [] };
+    const gl = { id, name, value, knob: channel ? { channel, cc } : null, mappings: known?.mappings ?? [] };
     model.globals.set(id, gl);
     return known ? () => updateGlobal(gl) : renderGlobals;
   },
@@ -205,6 +206,10 @@ const handlers = {
       renderGlobals();
       renderCards();
     };
+  },
+  '/global/learn': (id, on) => {
+    model.knobLearning = on ? id : null;
+    return renderGlobals;
   },
   '/global/removed': (id) => {
     model.globals.delete(id);

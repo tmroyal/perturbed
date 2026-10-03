@@ -95,6 +95,7 @@ try {
   check(!run('global', 'map', 'Meta 1', String(g.id), 'num').ok, "settings that restart the generator can't be mapped");
   json('global', 'unmap', 'Meta 1', String(g.id), 'velocity');
   check(run('set', String(g.id), 'velocity=99').ok, 'unmapped: settable again');
+  check(json('global', 'knob', 'Meta 1', '1', '74').knob?.cc === 74, 'global knob');
 
   const c = json('clock', 'add', 'mode=factor', 'factor=1.01');
   check(c.mode === 'factor' && Math.abs(c.factor - 1.01) < 1e-3, `clock add (${c.name})`);
@@ -124,8 +125,8 @@ try {
   );
   const back = json('state').globals.find((x) => x.name === 'Meta 1');
   check(
-    back?.mappings.some((m) => m.setting === 'prob' && m.curve === 'threshold' && Math.abs(m.amount - 0.7) < 1e-6),
-    'load keeps globals and their mappings',
+    back?.mappings.some((m) => m.setting === 'prob' && m.curve === 'threshold' && Math.abs(m.amount - 0.7) < 1e-6) && back?.knob?.cc === 74,
+    'load keeps globals, their mappings and knobs',
   );
   fs.unlinkSync(file);
 

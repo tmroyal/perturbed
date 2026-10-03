@@ -15,6 +15,8 @@
 //   labels:    (param: "label") display names; the param name is shown otherwise
 //   sections:  (param: "Title") params that start a new titled group on the surface
 //   restartOn: params whose change restarts `run` (re-quantizes to the new grid)
+//   onChange:  (param: { |g, p, old, new| }) called when that setting changes (from anywhere: card,
+//              pin, global, Claude), after it's stored; may call ~restart.(g). Errors are reported.
 //   actions:   (Name: { |g, p| }) buttons on the card; pressing one runs it (/gen/do)
 //   sliders:   (param: \lin | \log) range params shown as a slider (+ field); by default a range
 //              wider than 32 is a slider, others a number field, and num/den always fields
@@ -67,6 +69,9 @@
 	};
 };
 
+// Restarts a running generator's run (re-quantizing to its grid); for restartOn and onChange.
+~restart = { |g| if(g[\task].notNil) { ~startGen.(g) } };
+
 ~stopGen = { |g|
 	g[\task].stop;
 	g[\task] = nil;
@@ -117,9 +122,17 @@
 		~sendGen.(g);
 	}
 	{ g[\p].includesKey(key) } {
+		var old = g[\p][key];
 		g[\p][key] = val;
-		if(g[\task].notNil and: { (g[\type][\restartOn] ? []).includes(key) }) { ~startGen.(g) };
+		if((g[\type][\restartOn] ? []).includes(key)) { ~restart.(g) };
 		~send.('/gen/param', g[\id], key, val);
+		if(old.asString != val.asString) {
+			(g[\type][\onChange] ? ()).at(key) !? { |fn|
+				try { fn.(g, g[\p], old, val) } { |e|
+					~report.("generator % (%): onChange for % failed: %".format(g[\id], g[\typeName], key, e.errorString));
+				};
+			};
+		};
 	}
 	{ "gen %: unknown param %".format(g[\id], key).warn };
 };

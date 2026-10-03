@@ -146,6 +146,24 @@ sock.bind(0, async () => {
       `~grid with a function follows the step live (${slow} then ${fast} notes a second)`,
     );
 
+    // onChange: called with old and new values when a setting changes; a failing one is reported, the change stands
+    loaded = next('/adhoc/loaded');
+    send('/adhoc/load', 'on-change');
+    await loaded;
+    const oc = next('/gen', (_id, t) => t === 'on-change');
+    send('/gen/add', 'on-change');
+    const [ocId] = await oc;
+    const changed = next('/test/changed', (id, old, nu) => id === ocId && old === 60 && nu === 67);
+    send('/gen/set', ocId, 'note', 67);
+    await changed;
+    const boom = next('/error', (m) => /onChange for boom failed/.test(m));
+    const stored = next('/gen/param', (id, p, v) => id === ocId && p === 'boom' && v === 1);
+    send('/gen/set', ocId, 'boom', 1);
+    await boom;
+    await stored;
+    send('/gen/remove', ocId);
+    check(true, 'onChange gets old and new; a failing one is reported and the setting still changes');
+
     // an edited file: shown as changed until reloaded; reloading keeps the old version and the settings
     send('/gen/set', g, 'note', 72);
     await next('/gen/param', (id, p) => id === g && p === 'note');

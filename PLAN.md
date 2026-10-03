@@ -264,6 +264,8 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   hand (its recipes are complete files, checked by loading and playing them); AGENTS.md teaches
   Claude the same format. `~grid.(beats, fn)` (core/clock.scd) is the idiom for playing in step (`basic` uses it);
   `beats` can be a function, read before every point, re-aligning when its value changes.
+  `onChange: (param: { |g, p, old, new| })` reacts to a setting's change (from anywhere; errors
+  reported); `~restart.(g)` restarts `run`, which `restartOn` does for every change.
   `agent-settings.json` lets Claude write `adhoc/`.
 - **Later:** graduating a type from `adhoc/` to `brain/types/` is a developer task (tests, AGENTS
   table).

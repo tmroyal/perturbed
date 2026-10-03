@@ -246,7 +246,8 @@ run: { |g, p|
   say what it *does*. Line 2: when and for which piece.
 - **params:** `[name, default, kind, ...]`, kind `range` (min max [step]), `note`, `choice`
   (options...), `text`, `clock` (`~clockParam`). Optional keys: `showWhen`, `labels`, `sections`,
-  `restartOn`, `sliders`, `actions` (card buttons), `output: false`.
+  `restartOn`, `onChange` (`(x: { |g, p, old, new| ... })`, may call `~restart.(g)`), `sliders`,
+  `actions` (card buttons), `globals`, `output: false`.
 - **run** `{ |g, p| }` is a routine on its clock while the transport plays (waits in beats); play
   on the grid with `~grid.(beats, { |k| ... })` so it lines up with every other generator;
   **key** `{ |g, p, note, vel| }` gets keyboard notes (vel 0 = up) whether or not it plays.

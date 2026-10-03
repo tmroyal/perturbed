@@ -123,6 +123,7 @@ A type needs at least one of them. It can have both.
 | `showWhen` | `(steps: [\mode, "random"])` | show `steps` only when `mode` is `random` |
 | `sliders` | `(speed: \log)` | force a slider (`\lin` or `\log`) for a number setting |
 | `restartOn` | `[\every, \clock]` | restart `run` when these change (needed for anything `run` reads only once, like the grid step) |
+| `onChange` | `(scale: { \|g, p, old, new\| ... })` | a function called when that setting changes (see §6) |
 | `actions` | `(Reset: { \|g, p\| ... })` | buttons on the card that run a function |
 | `globals` | `[\density]` | global parameters this type reads (created if missing; see §6) |
 | `output: false` | | the type plays into no output (like `lfo`, which sends control changes) |
@@ -231,6 +232,27 @@ run: { |g, p|
 	});
 },
 ```
+
+### Reacting to a change: `onChange`
+
+Sometimes a type should *do* something the moment a setting moves, not just read the new value on
+its next step. Give it an `onChange` function per setting; it gets the generator, its settings, and
+the old and new values:
+
+```supercollider
+onChange: (
+	scale: { |g, p, old, new| g[\table] = ~buildTable.(new) },          // recompute something once
+	mode:  { |g, p, old, new| if(new.asString == "random") { ~restart.(g) } },   // restart, sometimes
+	level: { |g, p, old, new| ~cc.(1, 1, 20, new) },                     // send it right away
+),
+```
+
+- It runs whenever the setting really changes, wherever the change came from: the card, a pin, a
+  global, `perturbed`, Claude.
+- `~restart.(g)` restarts `run` on the grid (it's what `restartOn` does, for every change).
+- An error inside it is reported in the status bar; the setting still changes and the generator
+  keeps playing.
+- Keep it quick: a global sweeping across a mapped setting calls it many times a second.
 
 ### Reusing the built-in building blocks
 
@@ -419,5 +441,6 @@ key: { |g, p, note, vel|
 | **later** | `thisThread.clock.sched(beats, { ...; nil })` |
 | **read** | `p[\x]`, `~chord`, `~global.(\x)`, `~gens[id][\sounding]`, `~beats.()` |
 | **CC** | `~cc.(bus, channel, cc, value)` |
+| **react** | `onChange: (x: { \|g, p, old, new\| ... })`, `~restart.(g)` |
 | **card** | `labels`, `sections`, `showWhen`, `sliders`, `actions`, `restartOn`, `globals`, `output: false` |
 | **tools** | `tools/perturbed adhoc check \| load \| show \| list`, `add <name> ...`, `state` |

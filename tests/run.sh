@@ -39,7 +39,7 @@ limit 10 node tests/protocol.js || status=1
 limit 30 node tests/cli.js || status=1
 limit 20 node tests/adhoc.js || status=1
 
-# (cli.js loads a missing file and adhoc.js loads broken types on purpose: those messages are expected)
-grep -E "ERROR|WARNING: [^A]" "$LOG" | grep -v "load failed\|_FileLength\|broken\|crashy\|noSuchMethod\|didn't load\|unexpected INTEGER\|Command line parse" && echo "(brain log: $LOG)"
+# (cli.js loads a missing file and sets a locked setting, adhoc.js loads broken types, on purpose: those messages are expected)
+grep -E "ERROR|WARNING: [^A]" "$LOG" | grep -v "load failed\|_FileLength\|broken\|crashy\|noSuchMethod\|didn't load\|unexpected INTEGER\|Command line parse\|follows Meta\|can't map" && echo "(brain log: $LOG)"
 [ -n "$lint_failed" ] && status=1
 exit $status

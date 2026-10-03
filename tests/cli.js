@@ -69,6 +69,28 @@ try {
   run('off', String(g.id));
   check(json('state').generators.find((x) => x.id === g.id).group === null && grp.id > 0, 'group remove: generator ungrouped');
 
+  // global parameters: inverted, curves, menus, locking, cleanup
+  const meta = json('global', 'add');
+  check(meta.name === 'Meta 1' && meta.value === 0, 'global add: Meta 1 at 0');
+  const param = (v, name) => {
+    json('global', 'set', 'Meta 1', `value=${v}`);
+    return json('state').generators.find((x) => x.id === g.id).params[name];
+  };
+  json('global', 'map', 'Meta 1', String(g.id), 'velocity', '50', '30');
+  check(param(0, 'velocity') === 50 && param(1, 'velocity') === 30 && param(0.5, 'velocity') === 40, 'inverted mapping 0..1 -> 50..30');
+  json('global', 'map', 'Meta 1', String(g.id), 'velocity', '20', '120', 'exp');
+  check(param(0.5, 'velocity') < 70 && param(1, 'velocity') === 120, 'exp curve: below the midpoint at 0.5');
+  json('global', 'map', 'Meta 1', String(g.id), 'prob', '0', '100', 'threshold', '0.7');
+  check(param(0.6, 'prob') === 0 && param(0.7, 'prob') === 100, 'threshold jumps at its point');
+  json('global', 'map', 'Meta 1', String(g.id), 'rhythm', 'every', 'phrase');
+  check(param(0.34, 'rhythm') === 'euclid', 'menus map over their options');
+  const locked = run('set', String(g.id), 'velocity=99');
+  check(!locked.ok && /follows Meta 1/.test(locked.out), 'a mapped setting is locked');
+  check(json('state').generators.find((x) => x.id === g.id).follows?.velocity === 'Meta 1', 'state shows what follows a global');
+  check(!run('global', 'map', 'Meta 1', String(g.id), 'num').ok, "settings that restart the generator can't be mapped");
+  json('global', 'unmap', 'Meta 1', String(g.id), 'velocity');
+  check(run('set', String(g.id), 'velocity=99').ok, 'unmapped: settable again');
+
   const c = json('clock', 'add', 'mode=factor', 'factor=1.01');
   check(c.mode === 'factor' && Math.abs(c.factor - 1.01) < 1e-3, `clock add (${c.name})`);
   check(json('set', String(g.id), `clock=${c.name}`).params.clock === c.id, 'generator onto the clock by name');
@@ -90,9 +112,15 @@ try {
   check(run('save', file).ok && fs.existsSync(file), 'save writes the file');
   run('remove', String(g.id));
   check(!json('state').generators.some((x) => x.id === g.id), 'remove');
+  check(!json('state').globals.find((x) => x.name === 'Meta 1').mappings.length, 'removing a generator drops its mappings');
   check(
     run('load', file).ok && json('state').generators.some((x) => x.id === g.id && x.params.source === 'arpeggio'),
     'load brings it back',
+  );
+  const back = json('state').globals.find((x) => x.name === 'Meta 1');
+  check(
+    back?.mappings.some((m) => m.setting === 'prob' && m.curve === 'threshold' && Math.abs(m.amount - 0.7) < 1e-6),
+    'load keeps globals and their mappings',
   );
   fs.unlinkSync(file);
 
@@ -103,6 +131,7 @@ try {
   run('output', 'remove', 'cli');
   run('clock', 'remove', c.name);
   run('chord', 'clear');
+  run('global', 'remove', 'Meta 1');
   const s = json('state');
   check(
     !s.generators.some((x) => x.id === g.id) && !s.outputs.some((o) => o.name === 'cli') && !s.clocks.some((x) => x.id === c.id),

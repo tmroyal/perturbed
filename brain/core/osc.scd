@@ -29,6 +29,11 @@
 //   /dest/add         <name> <port> <channel> <instrument>     port and channel are 1-based
 //   /dest/remove      <id>
 //   /gen/do           <id> <action>              run one of the type's actions (a card button)
+//   /global/add       [<name>]                   a global parameter ("Meta n" by default); core/globals.scd
+//   /global/set       <id> name|value <v>        value 0–1 moves every mapped setting
+//   /global/remove    <id>
+//   /global/map       <id> <genId> <param> [<from> <to> <curve> <amount>]   add or update a mapping
+//   /global/unmap     <id> <genId> <param>
 //   /cc               <port> <channel> <cc> <value>   one control change now; port = control bus 1, 2, ...
 //   /adhoc/load       <name>                     load (or reload) a library type: rescans adhoc/, then
 //                                                a full snapshot and /adhoc/loaded (or /error)
@@ -72,6 +77,9 @@
 //   /gen              <id> <type> <dest> <active> <group>
 //   /group            <id> <name> <on> <solo> <collapsed>
 //   /group/removed    <id>
+//   /global           <id> <name> <value>
+//   /global/mappings  <id> (<genId> <param> <from> <to> <curve> <amount>)...   amount -1 = default
+//   /global/removed   <id>
 //   /group/pins       <id> (<genId> <param>)...  the group's pins, in order
 //   /gen/param        <id> <param> <value>
 //   /gen/removed      <id>
@@ -105,6 +113,7 @@
 	~sendLiveTracks.();
 	~inOrder.(~gens).do { |g| ~sendGen.(g); ~sendParams.(g) };
 	~inOrder.(~groups).do(~sendPins);  // after the generators they point at
+	~inOrder.(~globals).do { |gl| ~sendGlobal.(gl); ~sendMappings.(gl) };
 	~send.('/state/end');
 };
 
@@ -145,7 +154,7 @@
 	OSCdef(\genAdd, { |msg| ~addGen.(msg[1], msg[2] ? 0) }, '/gen/add');
 	OSCdef(\genRemove, { |msg| ~removeGen.(msg[1].asInteger) }, '/gen/remove');
 	OSCdef(\genLearn, { |msg| ~learnGen.(msg[1].asInteger, msg[2], msg[3].asInteger == 1) }, '/gen/learn');
-	~onObject.('/gen/set', \gens, \setGen);
+	~onObject.('/gen/set', \gens, \setGenByHand);  // refused for settings that follow a global
 	~onObject.('/gen/do', \gens, \genDo);
 
 	OSCdef(\groupAdd, { |msg| ~addGroup.(msg[1]) }, '/group/add');
@@ -168,6 +177,12 @@
 	OSCdef(\cc, { |msg| ~cc.(msg[1], msg[2], msg[3], msg[4], true) }, '/cc');
 	OSCdef(\liveTracks, { |msg| ~setLiveTracks.(msg[1..].collect { |x| if(x.isKindOf(Symbol)) { x.asString } { x } }) }, '/live/tracks');
 	OSCdef(\liveTracksClear, { ~setLiveTracks.(nil) }, '/live/tracks/clear');
+
+	OSCdef(\globalAdd, { |msg| ~addGlobal.(msg[1]) }, '/global/add');
+	OSCdef(\globalRemove, { |msg| ~removeGlobal.(msg[1].asInteger) }, '/global/remove');
+	~onObject.('/global/set', \globals, \setGlobal);
+	~onObject.('/global/map', \globals, \map);
+	~onObject.('/global/unmap', \globals, \unmap);
 
 	OSCdef(\save, { |msg|
 		try { ~savePerformance.(msg[1].asString); ~send.('/saved', msg[1].asString) } { |e| ~report.("save failed: " ++ e.errorString) };

@@ -51,6 +51,7 @@ class Brain {
       clocks: new Map(),
       dests: new Map(),
       gens: new Map(),
+      globals: new Map(),
       groups: new Map(),
       live: null,
       library: new Map(), // every type, built-in and AdHoc
@@ -151,6 +152,7 @@ class Brain {
         m.dests.clear();
         m.gens.clear();
         m.groups.clear();
+        m.globals.clear();
         m.library.clear();
         m.live = null;
         break;
@@ -177,6 +179,29 @@ class Brain {
         }
         break;
       }
+      case '/global':
+        m.globals.set(a[0], { id: a[0], name: a[1], value: +a[2].toFixed(4), mappings: m.globals.get(a[0])?.mappings ?? [] });
+        break;
+      case '/global/mappings': {
+        const g = m.globals.get(a[0]);
+        if (g) {
+          g.mappings = [];
+          for (let i = 1; i + 5 < a.length; i += 6) {
+            g.mappings.push({
+              generator: a[i],
+              setting: a[i + 1],
+              from: a[i + 2],
+              to: a[i + 3],
+              curve: a[i + 4],
+              amount: a[i + 5] < 0 ? null : a[i + 5],
+            });
+          }
+        }
+        break;
+      }
+      case '/global/removed':
+        m.globals.delete(a[0]);
+        break;
       case '/group/removed':
         m.groups.delete(a[0]);
         break;
@@ -263,6 +288,9 @@ class Brain {
   dest(v) {
     return this.find(this.model.dests, v, 'output', listed(this.model.dests));
   }
+  global(v) {
+    return this.find(this.model.globals, v, 'global', listed(this.model.globals));
+  }
   group(v) {
     return this.find(this.model.groups, v, 'group', listed(this.model.groups));
   }
@@ -334,6 +362,7 @@ class Brain {
       outputs: [...m.dests.values()],
       live_tracks: m.live, // Live's tracks on the brain's buses (null: no bridge)
       groups: [...m.groups.values()],
+      globals: [...m.globals.values()],
       generators: [...m.gens.values()].map((g) => ({
         id: g.id,
         type: g.type,
@@ -342,8 +371,16 @@ class Brain {
         group: g.group ? { id: g.group, name: m.groups.get(g.group)?.name ?? null } : null,
         ...(this.model.types.get(g.type)?.output === false ? {} : { output: g.dest ? { id: g.dest, name: destName(g.dest) } : null }),
         params: g.params,
+        ...(this.mappedSettings(g.id) ? { follows: this.mappedSettings(g.id) } : {}), // setting -> global (locked)
       })),
     };
+  }
+
+  // { setting: global name } for a generator's settings that follow a global, or null
+  mappedSettings(genId) {
+    const out = {};
+    for (const gl of this.model.globals.values()) for (const m of gl.mappings) if (m.generator === genId) out[m.setting] = gl.name;
+    return Object.keys(out).length ? out : null;
   }
 
   // whether a generator sounds: on, its group on, and not soloed out (core/groups.scd)
@@ -465,6 +502,64 @@ class Brain {
       await this.request('/group/set', [id, k, k === 'name' ? String(val) : flag(k, val)], '/group', (gid) => gid === id);
     }
     return this.model.groups.get(id);
+  }
+
+  // --- global parameters (core/globals.scd) ---
+  async addGlobal(name, settings = {}) {
+    const id = await this.create('/global/add', name ? [String(name)] : [], '/global', this.model.globals);
+    return Object.keys(settings).length ? this.setGlobal(id, settings) : this.model.globals.get(id);
+  }
+
+  // settings: name, value (0–1)
+  async setGlobal(v, settings) {
+    const id = this.global(v) || fail('which global?');
+    for (const [k, val] of Object.entries(settings)) {
+      if (k === 'value' && !(+val >= 0 && +val <= 1)) fail("a global's value is 0 to 1");
+      if (!['name', 'value'].includes(k)) fail(`globals have name and value, not "${k}"`);
+      await this.request('/global/set', [id, k, k === 'name' ? String(val) : +val], '/global', (gid) => gid === id);
+    }
+    return this.model.globals.get(id);
+  }
+
+  async removeGlobal(v) {
+    const id = this.global(v) || fail('which global?');
+    await this.request('/global/remove', [id], '/global/removed', (gid) => gid === id);
+  }
+
+  // Maps a generator's setting to a global. from/to in the setting's units (notes by name, menu
+  // options by name), from > to inverts; curve linear|exp|steps|threshold, amount = steps or the
+  // threshold point. Left out: from = the current value, to = the far end of the range.
+  async map(globalRef, genId, param, from, to, curve = 'linear', amount) {
+    const id = this.global(globalRef) || fail('which global?');
+    const g = this.gen(genId);
+    const s = this.type(g.type).params.find((p) => p.name === param);
+    if (!s || !['range', 'note', 'choice'].includes(s.kind))
+      fail(`${g.type} has no mappable setting "${param}" (numbers, notes and menus)`);
+    if (!['linear', 'exp', 'steps', 'threshold'].includes(curve)) fail(`curve is linear, exp, steps or threshold, not "${curve}"`);
+    const unit = (v) => {
+      if (v === undefined) return undefined;
+      if (s.kind === 'note') return parseNote(v);
+      if (s.kind === 'choice' && !/^\d+$/.test(String(v))) {
+        const i = s.args.findIndex((o) => String(o).toLowerCase() === String(v).toLowerCase());
+        return i >= 0 ? i : fail(`${param} is one of ${s.args.join(', ')}, not "${v}"`);
+      }
+      return Number.isFinite(+v) ? +v : fail(`"${v}" isn't a number`);
+    };
+    const args = [id, g.id, param];
+    if (from !== undefined) args.push(unit(from), unit(to ?? from), curve, ...(amount !== undefined ? [+amount] : []));
+    await this.request(
+      '/global/map',
+      args,
+      '/global/mappings',
+      (gid, ...flat) => gid === id && flat.some((x, i) => i % 6 === 0 && x === g.id && flat[i + 1] === param),
+    );
+    return this.model.globals.get(id);
+  }
+
+  async unmap(globalRef, genId, param) {
+    const id = this.global(globalRef) || fail('which global?');
+    await this.request('/global/unmap', [id, +genId, param], '/global/mappings', (gid) => gid === id);
+    return this.model.globals.get(id);
   }
 
   // Pin a member's setting to the group's header (range, choice and note settings).

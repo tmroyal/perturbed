@@ -21,6 +21,14 @@ const HELP = `perturbed — change the running performance
   group unpin <name|id> <gen id> <setting>
   set <id> group=<name|id|none>      put a generator in a group (also: add basic group=...)
 
+  global add [name] [value=]          a global parameter (Meta 1, ...): one control, 0–1, for many settings
+  global set <name|id> value=0.7 name=...
+  global remove <name|id>
+  global map <global> <gen id> <setting> [from to [curve [amount]]]
+                                     the setting follows the global (and is locked): from..to in its units
+                                     (from > to inverts); curve linear|exp|steps|threshold
+  global unmap <global> <gen id> <setting>
+
   adhoc list                         the type library: built-in and AdHoc types, stars, descriptions
   adhoc show <name>                  a type's source
   adhoc load <name>                  load or reload a type (after writing or editing adhoc/<name>.scd)
@@ -102,6 +110,26 @@ const COMMANDS = {
   ],
   'group pin': [3, '<name|id> <gen id> <setting>', (b, [g, id, s]) => b.pin(g, id, s, true)],
   'group unpin': [3, '<name|id> <gen id> <setting>', (b, [g, id, s]) => b.pin(g, id, s, false)],
+
+  'global add': [
+    0,
+    '[name] [value=0..1]',
+    (b, r) => {
+      const named = r[0] && !r[0].includes('=');
+      return b.addGlobal(named ? r[0] : undefined, settings(named ? r.slice(1) : r));
+    },
+  ],
+  'global set': [2, '<name|id> value=0..1 name=...', (b, [g, ...s]) => b.setGlobal(g, settings(s))],
+  'global remove': [
+    1,
+    '<name|id>',
+    async (b, [g]) => {
+      await b.removeGlobal(g);
+      return `removed global ${g}`;
+    },
+  ],
+  'global map': [3, '<global> <gen id> <setting> [from to [curve [amount]]]', (b, [g, id, s, ...r]) => b.map(g, id, s, ...r)],
+  'global unmap': [3, '<global> <gen id> <setting>', (b, [g, id, s]) => b.unmap(g, id, s)],
 
   'adhoc list': [0, '', (b) => b.library()],
   'adhoc show': [1, '<name>', (b, [name]) => b.source(name)],

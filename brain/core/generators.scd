@@ -87,7 +87,7 @@
 };
 
 ~removeGen = { |id|
-	~gens.removeAt(id) !? { |g| ~stopGen.(g); ~releaseHeld.(g); ~dropPins.(id); ~send.('/gen/removed', id) };
+	~gens.removeAt(id) !? { |g| ~stopGen.(g); ~releaseHeld.(g); ~dropPins.(id); ~dropGenMappings.(id); ~send.('/gen/removed', id) };
 };
 
 // A type's params: kept from `old` (a generator's settings) where the param exists, else defaults.

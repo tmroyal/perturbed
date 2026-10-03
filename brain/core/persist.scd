@@ -14,6 +14,7 @@
 		},
 		destinations: ~inOrder.(~dests),
 		groups: ~inOrder.(~groups),
+		globals: ~inOrder.(~globals),
 		adhoc: ().putPairs(~gens.values.collect(_[\typeName]).asSet.asArray
 			.reject { |name| ~library[name] !? (_[\builtin]) ? false }
 			.collect { |name| [name, ~typeSource[name].split($\n)] }.flatten(1)),  // as lines: readable, diffable
@@ -31,6 +32,7 @@
 	~dests.keys.copy.do(~removeDest);
 	~clocks.keys.copy.do(~removeClock);
 	~groups.keys.copy.do(~removeGroup);
+	~globals.keys.copy.do(~removeGlobal);
 	~nextIds = ();  // ids come from the file
 
 	~setTempo.(perf["tempo"]);  // also sets Link tempo
@@ -69,6 +71,15 @@
 		};
 	};
 	~groups.do { |gr| gr[\pins] = gr[\pins].select { |p| ~gens[p[0]] !? { |g| g[\group] == gr[\id] } ? false } };
+	// globals after the generators their mappings point at (values kept as saved, not re-applied)
+	(perf["globals"] ? []).do { |saved|
+		var gl = ~addGlobal.(saved["name"], saved["id"].asInteger);
+		gl[\value] = saved["value"].asFloat;
+		gl[\mappings] = (saved["mappings"] ? []).collect { |m|
+			(gen: m["gen"].asInteger, param: m["param"].asSymbol, from: m["from"].asFloat, to: m["to"].asFloat,
+				curve: m["curve"].asSymbol, amount: m["amount"] !? (_.asFloat))
+		}.select { |m| ~gens[m[\gen]].notNil };
+	};
 	~sendState.();
 	"loaded %".format(path).postln;
 };

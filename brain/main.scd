@@ -10,7 +10,7 @@ var root = thisProcess.nowExecutingPath.dirname;
 ~config = (root +/+ "config.scd").load;
 if(~testMode) { ~config[\inputs] = [["IAC Driver", "Bus 2"]]; ~config[\control] = [["IAC Driver", "Bus 2"]] };
 
-["json", "objects", "midi", "keyboard", "clock", "chord", "destinations", "generators", "groups", "library", "pitch", "rhythm", "velocity", "persist", "osc"].do { |name|
+["json", "objects", "midi", "keyboard", "clock", "chord", "destinations", "generators", "groups", "globals", "library", "pitch", "rhythm", "velocity", "persist", "osc"].do { |name|
 	(root +/+ "core" +/+ name ++ ".scd").load;
 };
 

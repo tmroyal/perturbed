@@ -67,6 +67,24 @@ sock.bind(0, async () => {
     send('/transport/play', 0);
     check(true, 'an AdHoc generator plays');
 
+    // a type that declares a global gets it created, and reads it while playing
+    const declared = next('/global', (id, name) => name === 'depth');
+    loaded = next('/adhoc/loaded');
+    send('/adhoc/load', 'meta-reader');
+    const [depthId] = await declared;
+    await loaded;
+    send('/global/set', depthId, 'value', 1);
+    const mg = next('/gen', (id, t) => t === 'meta-reader');
+    send('/gen/add', 'meta-reader');
+    const [mr] = await mg;
+    send('/gen/set', mr, 'active', 1);
+    const octave = next('/note', (id, pitch) => id === mr && pitch === 72);
+    send('/transport/play', 1);
+    await octave;
+    send('/transport/play', 0);
+    send('/gen/remove', mr);
+    check(true, 'globals: [\\depth] creates the global; ~global.(\\depth) reads it (note 72 at depth 1)');
+
     const err = next('/error', (m) => /broken didn't load/.test(m));
     send('/adhoc/load', 'broken');
     await err;

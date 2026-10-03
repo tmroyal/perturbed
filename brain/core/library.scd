@@ -86,6 +86,7 @@
 			File.use(~oldPath.(name, Date.getDate.stamp), "w", { |f| f.write(~typeSource[name]) });
 		};
 		~types[name] = type;
+		~declareGlobals.(type);
 		~typeSource[name] = source;
 		~gens.do { |g| if(g[\typeName] == name) { ~retype.(g, type) } };
 		true;

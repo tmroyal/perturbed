@@ -262,7 +262,8 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   `favorite`/`unfavorite`; `add` loads a library type first. `adhoc check` runs sclang's parser on a file to show the syntax error.
 - [docs/writing-generator-types.md](docs/writing-generator-types.md) is the guide for writing types by
   hand (its recipes are complete files, checked by loading and playing them); AGENTS.md teaches
-  Claude the same format. `~grid.(beats, fn)` (core/clock.scd) is the idiom for playing in step.
+  Claude the same format. `~grid.(beats, fn)` (core/clock.scd) is the idiom for playing in step (`basic` uses it);
+  `beats` can be a function, read before every point, re-aligning when its value changes.
   `agent-settings.json` lets Claude write `adhoc/`.
 - **Later:** graduating a type from `adhoc/` to `brain/types/` is a developer task (tests, AGENTS
   table).

@@ -37,9 +37,18 @@
 
 // For a generator's run: calls fn.(k) on every grid point k · dur beats from the origin (the first
 // at or after now), forever. Keeps generators in step with each other however they started.
+// `dur` is a number, or a function read before every point (e.g. { p[\num] / p[\den] }): when its
+// value changes, the grid moves to the next point of the new step, as a restart would, so it stays
+// aligned with everything else.
 ~grid = { |dur, fn|
-	var k = (~beats.() / dur - 1e-9).ceil.asInteger;
-	loop { (k * dur - ~beats.()).max(0).wait; fn.(k); k = k + 1 };
+	var step = dur.value.max(0.001), k = (~beats.() / step - 1e-9).ceil.asInteger;
+	loop {
+		var d = dur.value.max(0.001);
+		if(d != step) { step = d; k = (~beats.() / step - 1e-9).ceil.asInteger };
+		(k * step - ~beats.()).max(0).wait;
+		fn.(k);
+		k = k + 1;
+	};
 };
 
 ~setPlaying = { |on|

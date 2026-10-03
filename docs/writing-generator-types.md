@@ -146,14 +146,18 @@ run: { |g, p|
 },
 ```
 
-`~grid` reads its step once, when `run` starts. If the step comes from a setting, list that setting
-in `restartOn` so a change takes effect on the next grid point:
+**A step that follows a setting:** give `~grid` a *function* instead of a number. It's read before
+every grid point, so moving the setting changes the step at once; the grid jumps to the next point
+of the new step, so it stays in line with everything else:
 
 ```supercollider
 params: [[\num, 1, \range, 1, 32], [\den, 4, \range, 1, 32]],
-restartOn: [\num, \den],
-run: { |g, p| ~grid.(p[\num] / p[\den], { |k| ... }) },
+run: { |g, p| ~grid.({ p[\num] / p[\den] }, { |k| ... }) },   // note the { }
 ```
+
+With a plain number (`~grid.(p[\num] / p[\den], ...)`) the step is read once, when `run` starts;
+then list the settings in `restartOn: [\num, \den]`, which restarts `run` (and anything it counts)
+when they change.
 
 **Something later than the grid point** (a strum, an echo): schedule it on the same clock, in beats
 from now:
@@ -273,7 +277,7 @@ See `brain/types/basic.scd` and `brain/core/pitch.scd`, `rhythm.scd`, `velocity.
 | *"type x didn't load: …"* with another reason | it parsed, but isn't a usable type (no `params`, no `run`/`key`, or an error while evaluating) | read the message; the previous version stays loaded |
 | *"generator 3 (x) stopped: …"* | your `run` or `key` hit an error while playing | only that generator stops and switches off; fix, reload, turn it on again |
 | it plays on the off-beat, or drifts | bare `wait`s from the moment Play was pressed | use `~grid` (§4) |
-| changing a setting does nothing | `run` read it once (e.g. the grid step) | add it to `restartOn` |
+| changing a setting does nothing | `run` read it once (e.g. the grid step) | read it inside the loop, give `~grid` a function (§4), or add it to `restartOn` |
 | silence | the card has no output, the generator is off, its group is muted, or the chord is empty | check the card; `tools/perturbed state` shows `sounding` |
 
 ### SuperCollider traps
@@ -408,7 +412,7 @@ key: { |g, p, note, vel|
 |---|---|
 | **file** | `adhoc/<name>.scd`, first line `// <name> — <one sentence>.` |
 | **settings** | `[\name, default, \range, min, max, (step)]`, `[\name, 60, \note]`, `[\name, "a", \choice, "a", "b"]`, `[\name, "", \text]`, `~clockParam` |
-| **play in time** | `run: { \|g, p\| ~grid.(beats, { \|k\| ... }) }` |
+| **play in time** | `run: { \|g, p\| ~grid.(beats, { \|k\| ... }) }`; `~grid.({ p[\x] }, ...)` follows a setting live |
 | **react to keys** | `key: { \|g, p, note, vel\| ... }` (vel 0 = up) |
 | **one note** | `~strike.(g, note, vel)`, `~release.(g)` |
 | **many notes** | `d = ~dests[g[\dest]]`; check `~sounds.(g)`; `~noteOn.(d, n, v)`; keep `g[\held][key] = [d, n]` |

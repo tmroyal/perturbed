@@ -14,18 +14,14 @@ sections: (source: "Pitch", num: "Rhythm", velMode: "Velocity", clock: "Clock"),
 restartOn: [\clock, \num, \den],
 
 run: { |g, p|
-	var dur = p[\num].asInteger.max(1) / p[\den].asInteger.max(1);
-	var k = (~beats.() / dur - 1e-9).ceil.asInteger;  // next grid index at or after now
 	var step = 0;  // notes played, for arpeggio and permute
-	loop {
+	~grid.(p[\num].asInteger.max(1) / p[\den].asInteger.max(1), { |k|
 		var note;
-		(k * dur - ~beats.()).max(0).wait;
 		if(~rhythmGate.(p, k)) {
 			note = ~pitch.(p, step);
 			if(note.notNil) { ~strike.(g, note, ~velocity.(g, p, k)) } { ~release.(g) };
 			step = step + 1;
 		};
-		k = k + 1;
-	};
+	});
 }
 )

@@ -121,6 +121,31 @@ sock.bind(0, async () => {
     send('/favorite', 'basic', 1);
     await snap;
 
+    // ~grid with a function: the step follows its setting live, without a restart
+    loaded = next('/adhoc/loaded');
+    send('/adhoc/load', 'live-grid');
+    await loaded;
+    const lg = next('/gen', (_id, t) => t === 'live-grid');
+    send('/gen/add', 'live-grid');
+    const [lgId] = await lg;
+    send('/gen/set', lgId, 'active', 1);
+    const count = async (ms) => {
+      const from = inbox.length;
+      await new Promise((r) => setTimeout(r, ms));
+      return inbox.slice(from).filter((m) => m.addr === '/note' && m.args[0] === lgId).length;
+    };
+    send('/transport/play', 1);
+    const slow = await count(1000); // 0.25 beat at 120 bpm: 8 a second
+    send('/gen/set', lgId, 'step', 0.125);
+    await new Promise((r) => setTimeout(r, 100));
+    const fast = await count(1000); // 16 a second
+    send('/transport/play', 0);
+    send('/gen/remove', lgId);
+    check(
+      slow >= 6 && slow <= 10 && fast >= 13 && fast <= 18,
+      `~grid with a function follows the step live (${slow} then ${fast} notes a second)`,
+    );
+
     // an edited file: shown as changed until reloaded; reloading keeps the old version and the settings
     send('/gen/set', g, 'note', 72);
     await next('/gen/param', (id, p) => id === g && p === 'note');

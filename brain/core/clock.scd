@@ -35,6 +35,13 @@
 // Beats since the grid origin, for routines on any clock (extra clocks start at the origin).
 ~beats = { var b = thisThread.beats; if(thisThread.clock === ~clock) { b - ~origin } { b } };
 
+// For a generator's run: calls fn.(k) on every grid point k · dur beats from the origin (the first
+// at or after now), forever. Keeps generators in step with each other however they started.
+~grid = { |dur, fn|
+	var k = (~beats.() / dur - 1e-9).ceil.asInteger;
+	loop { (k * dur - ~beats.()).max(0).wait; fn.(k); k = k + 1 };
+};
+
 ~setPlaying = { |on|
 	var t0;
 	~gens.do { |g| ~stopGen.(g) };

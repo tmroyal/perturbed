@@ -99,5 +99,6 @@ archive/   the first proof of concept
 ```
 
 Rig settings (IAC ports, MIDI inputs, latency, default outputs) are in `brain/config.scd`.
+**Writing your own generator types:** [docs/writing-generator-types.md](docs/writing-generator-types.md).
 Architecture, protocol, plans and gotchas: [PLAN.md](PLAN.md). Rules for coding agents and for
 Claude as performance assistant: [AGENTS.md](AGENTS.md).

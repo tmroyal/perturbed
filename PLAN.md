@@ -260,7 +260,10 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
 - **Surface:** the add bar (favorites), *Library ▾* (star, + Add, Reload when changed, × to delete),
   brain errors in the status area. **CLI:** `adhoc list|show|load|check|delete`,
   `favorite`/`unfavorite`; `add` loads a library type first. `adhoc check` runs sclang's parser on a file to show the syntax error.
-- AGENTS.md teaches Claude the format and workflow; `agent-settings.json` lets it write `adhoc/`.
+- [docs/writing-generator-types.md](docs/writing-generator-types.md) is the guide for writing types by
+  hand (its recipes are complete files, checked by loading and playing them); AGENTS.md teaches
+  Claude the same format. `~grid.(beats, fn)` (core/clock.scd) is the idiom for playing in step.
+  `agent-settings.json` lets Claude write `adhoc/`.
 - **Later:** graduating a type from `adhoc/` to `brain/types/` is a developer task (tests, AGENTS
   table).
 

@@ -207,40 +207,37 @@ performer may mean one that exists ("the rolling strum from last week"): `adhoc 
 6. Delete a type only when the performer asks: `tools/perturbed adhoc delete <name>` (its file
    moves to `adhoc/old/`; refused while generators use it).
 
-**Format** (the same as the built-in types in `brain/types/`; read `basic.scd`, `passthrough.scd`
-and `lfo.scd` as examples, and `brain/core/generators.scd` for the full list of keys):
+**Format:** [docs/writing-generator-types.md](docs/writing-generator-types.md) is the full guide
+(anatomy, time, notes, reading the world, troubleshooting, recipes); the built-in types in
+`brain/types/` are working examples. In short:
 
 ```supercollider
 // rolling-strum — strums the current chord upward on each grid step, spread over `spread` beats.
 // made 2026-10-01 for "Winter piece"
 (
 params: [
-	[\num, 1, \range, 1, 32], [\den, 1, \range, 1, 32],      // grid step = num/den beats
-	[\spread, 0.25, \range, 0, 2, 0.05],                    // beats from lowest to highest note
+	[\num, 1, \range, 1, 32], [\den, 1, \range, 1, 32],
+	[\spread, 0.25, \range, 0, 2, 0.05],
 	[\velocity, 80, \range, 1, 127],
-	~clockParam,                                            // which clock it runs on
+	~clockParam,
 ],
-sliders: (spread: \lin),
+labels: (spread: "spread (beats)"),
 restartOn: [\num, \den, \clock],
 run: { |g, p|
-	var dur = p[\num] / p[\den];
-	var k = (~beats.() / dur - 1e-9).ceil.asInteger;        // next grid point at or after now
-	loop {
-		(k * dur - ~beats.()).max(0).wait;                  // waits are in beats of its clock
-		~chord.do { |note, i|                               // the current chord, low to high
-			var d = ~dests[g[\dest]];
-			var at = p[\spread] * i / (~chord.size - 1).max(1);
+	~grid.(p[\num] / p[\den], { |k|
+		var notes = ~chord, d = ~dests[g[\dest]];
+		notes.do { |note, i|
+			var at = p[\spread] * i / (notes.size - 1).max(1);
 			thisThread.clock.sched(at, {
-				if(d.notNil and: { ~sounds.(g) }) {             // muted by its group: stay silent
+				if(d.notNil and: { ~sounds.(g) }) {
 					g[\held][note] !? { |h| ~noteOff.(h[0], h[1]) };
 					~noteOn.(d, note, p[\velocity]);
-					g[\held][note] = [d, note];                // released on stop, mute, removal
+					g[\held][note] = [d, note];
 				};
 				nil
 			});
 		};
-		k = k + 1;
-	};
+	});
 },
 )
 ```
@@ -250,7 +247,8 @@ run: { |g, p|
 - **params:** `[name, default, kind, ...]`, kind `range` (min max [step]), `note`, `choice`
   (options...), `text`, `clock` (`~clockParam`). Optional keys: `showWhen`, `labels`, `sections`,
   `restartOn`, `sliders`, `actions` (card buttons), `output: false`.
-- **run** `{ |g, p| }` is a routine on its clock while the transport plays (waits in beats);
+- **run** `{ |g, p| }` is a routine on its clock while the transport plays (waits in beats); play
+  on the grid with `~grid.(beats, { |k| ... })` so it lines up with every other generator;
   **key** `{ |g, p, note, vel| }` gets keyboard notes (vel 0 = up) whether or not it plays.
 - **Playing notes:** one at a time: `~strike.(g, note, vel)` (releases the previous, respects
   mutes) and `~release.(g)`. Several at once: `~noteOn.(dest, note, vel)` / `~noteOff.(dest, note)`

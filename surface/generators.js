@@ -109,7 +109,8 @@ function buildCard(gen) {
   const updaters = {},
     learners = {},
     refreshers = [],
-    pins = {}; // refreshers: menus of clocks
+    pins = {}, // refreshers: menus of clocks
+    mappable = {}; // param -> { label, control, tag }: locked and tagged while it follows a global
   const conditional = []; // rows shown only for some values of another param
   const applyShow = () =>
     conditional.forEach(({ show, els }) => {
@@ -148,6 +149,11 @@ function buildCard(gen) {
     const c = paramControl(spec, gen.id);
     const label = el('label', { textContent: spec.label ?? spec.name });
     if (['range', 'choice', 'note'].includes(spec.kind)) {
+      // its name is what Map mode clicks (globals.js); the tag shows the global it follows
+      Object.assign(label.dataset, { gen: gen.id, param: spec.name });
+      const tag = el('span', { className: 'follows' });
+      label.append(tag);
+      mappable[spec.name] = { label, control: c.control, tag };
       // ◇ pins the setting to the group's header (shown only while the card is in a group)
       const pin = el('button', {
         className: 'pin-toggle',
@@ -193,6 +199,13 @@ function buildCard(gen) {
       for (const [param, pin] of Object.entries(pins)) {
         const on = isPinned(gen, param);
         setOn(pin, on, on ? '◆' : '◇');
+      }
+      for (const [param, { label, control, tag }] of Object.entries(mappable)) {
+        const gl = followedBy(gen.id, param);
+        label.classList.toggle('mapped', !!gl);
+        control.classList.toggle('locked', !!gl);
+        tag.textContent = gl ? `← ${gl.name}` : '';
+        control.title = gl ? `follows ${gl.name}: unmap it there to set it here` : '';
       }
       output.refresh(gen.dest);
       group.refresh(gen.group);

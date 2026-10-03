@@ -50,6 +50,10 @@ first (the brain lists the MIDI inputs it found in the terminal). The first run 
   *Arm* (*Arm* mode). *Clear* empties it.
 - **Outputs:** Live's tracks on the IAC buses are listed under *In Live*; **+** (or *Add all*)
   makes them outputs. A **!** marks an output no Live track listens to.
+- **Globals:** *+ Global* adds a global parameter (Meta 1, …; click the name to rename): one slider
+  for many settings. Press its **Map**, click setting names on cards, press **Done**; ▸ shows the
+  mappings: *from → to* in the setting's units (from > to inverts it) and a curve (linear, exp,
+  steps, threshold). A mapped setting is locked on its card and tagged with the global's name.
 - **Library:** the add bar holds your favorite generator types; *Library ▾* lists every type,
   built-in and AdHoc (written by Claude for a piece, kept in `adhoc/`), with ☆ to star one for the
   bar, *+ Add*, and × to delete an AdHoc type (its file moves to `adhoc/old/`). Errors from a type show at the top right.

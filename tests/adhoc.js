@@ -68,13 +68,13 @@ sock.bind(0, async () => {
     check(true, 'an AdHoc generator plays');
 
     // a type that declares a global gets it created, and reads it while playing
-    const declared = next('/global', (id, name) => name === 'depth');
+    const declared = next('/global', (_id, name) => name === 'depth');
     loaded = next('/adhoc/loaded');
     send('/adhoc/load', 'meta-reader');
     const [depthId] = await declared;
     await loaded;
     send('/global/set', depthId, 'value', 1);
-    const mg = next('/gen', (id, t) => t === 'meta-reader');
+    const mg = next('/gen', (_id, t) => t === 'meta-reader');
     send('/gen/add', 'meta-reader');
     const [mr] = await mg;
     send('/gen/set', mr, 'active', 1);

@@ -84,6 +84,11 @@ try {
   check(param(0.6, 'prob') === 0 && param(0.7, 'prob') === 100, 'threshold jumps at its point');
   json('global', 'map', 'Meta 1', String(g.id), 'rhythm', 'every', 'phrase');
   check(param(0.34, 'rhythm') === 'euclid', 'menus map over their options');
+  const byDefault = json('global', 'map', 'Meta 1', String(g.id), 'humanize').mappings.find((m) => m.setting === 'humanize');
+  check(
+    byDefault?.curve === 'linear' && byDefault.from === 0 && byDefault.to === 32,
+    'a mapping made with no range: current value -> max, linear',
+  );
   const locked = run('set', String(g.id), 'velocity=99');
   check(!locked.ok && /follows Meta 1/.test(locked.out), 'a mapped setting is locked');
   check(json('state').generators.find((x) => x.id === g.id).follows?.velocity === 'Meta 1', 'state shows what follows a global');

@@ -3,7 +3,8 @@
 Perturbed is an algorithmic performance toolbox: generators on shared clocks read the chord you
 play and send MIDI to instruments in Ableton Live, played from the Perturbed app (§5 describes
 the system). Claude runs in a drawer in the app (§5.6) and sets up the running performance with the `perturbed`
-command (§5.7). Claude can also write its own generator types into a library (§5.9). **Next: to be chosen.**
+command (§5.7). Claude can also write its own generator types into a library (§5.9); global parameters reshape
+many settings at once (§5.10). **Next: to be chosen.**
 
 **The idea.** A performer describes the piece they want to play ("two pianos phasing on an
 arpeggio of whatever I play, a slow bass on the lowest note, echo my right hand an octave up")
@@ -47,27 +48,6 @@ so the Live API can create audio clips from files).
   moment ("stretch 8x, freeze the attack, reverse the tail"), run it, and the clip appears:
   AdHoc processes, alongside AdHoc generators (§5.9).
 
-### 2.2 Global parameters ("juicy")
-
-Named, performance-wide parameters: one control (say *juicy*, 0–1) that moves many generator
-settings at once, each in its own way, so a single gesture reshapes the piece.
-
-- **Parameters:** a list in the sidebar (like clocks), each with a name, a value 0–1 and a slider;
-  added, renamed and removed freely; saved with the performance.
-- **Mappings:** each parameter drives any number of generator settings (velocity, prob, pulses,
-  note, an lfo's range, ...), each with its own range and curve: linear, inverted, exponential,
-  stepped (snaps to a few values), threshold (switches at a point), so "more juicy" can mean
-  louder here, denser there and an LFO opening up. Mapped from the card (like pins) or the
-  parameter's row; a setting follows at most one parameter.
-- **Brain:** the brain applies a parameter by setting the mapped settings (echoed as usual, so
-  cards and pins move with it). Settings that restart a generator (num, den, clock) aren't mappable.
-- **AdHoc types** can read parameters directly (`~global.(\juicy)`, declared in the type, e.g.
-  `globals: [\juicy]`), so Claude can write a generator around what a parameter *means* (juicier =
-  more notes in the strum, wider spread), beyond what mapping a setting can express.
-- **Control:** a natural target for knob mapping (backlog) and for Claude
-  (`perturbed global add juicy`, `global map juicy 3 velocity 60..120 exp`, `global set juicy 0.8`).
-  It generalizes the group "macro" idea in the backlog.
-
 ---
 
 ## 3. Backlog
@@ -79,8 +59,9 @@ settings at once, each in its own way, so a single gesture reshapes the piece.
 - **Controllers:** CC mapping (MiniLab knobs) to any generator parameter; generator-to-generator
   modulation.
 - **LFOs:** LFO-to-LFO modulation (rate, depth); the current value shown on the card.
-- **Groups:** drag and drop cards between groups; renamable pins, and one pin driving the same
-  setting on several members (a macro); shared group settings (output, clock, velocity for all
+- **Globals:** a global driven by knobs (with knob mapping) or by an LFO; a global on a group's
+  header; offset mode (editing a mapped setting shifts its range instead of being refused).
+- **Groups:** drag and drop cards between groups; renamable pins; shared group settings (output, clock, velocity for all
   members); fades for On/Off.
 - **Live:** Link start/stop sync (Live's transport follows Play, for recording a performance);
   outputs that *are* Live's tracks (auto-sync, instead of one click each; needs a rule for
@@ -282,3 +263,22 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
 - AGENTS.md teaches Claude the format and workflow; `agent-settings.json` lets it write `adhoc/`.
 - **Later:** graduating a type from `adhoc/` to `brain/types/` is a developer task (tests, AGENTS
   table).
+
+### 5.10 Global parameters
+
+- Named, performance-wide controls (`brain/core/globals.scd`): *Meta 1, Meta 2, …* by default,
+  renamable, value 0–1, saved with the performance. Each maps to any number of generator settings:
+  `from + (to − from) · curve(x)` in the setting's units (from > to inverts), curves linear, exp,
+  steps (`amount` levels), threshold (jumps at `amount`); menus map over their option indexes.
+  Settings that restart a generator, clocks and text can't be mapped.
+- A mapped setting follows one global and is **locked**: `/gen/set` for it is refused with a
+  message (`~setGenByHand`) and its card control is greyed and tagged `← name`. Removing a
+  generator drops its mappings.
+- **AdHoc types** read globals (`~global.(\\name)`) and declare them (`globals: [...]`), which
+  creates missing ones when the type loads.
+- Protocol: `/global/add [name]`, `/global/set <id> name|value <v>`, `/global/remove`,
+  `/global/map <id> <gen> <param> [from to curve amount]`, `/global/unmap`; echoes `/global`,
+  `/global/mappings <id> (gen param from to curve amount)...`, `/global/removed`.
+- Surface (`surface/globals.js`): a sidebar row per global (name, slider, Map, ▸ mappings, ×);
+  Map mode makes setting names on cards clickable targets. CLI: `global add|set|remove|map|unmap`;
+  `state` lists globals and each generator's `follows`.

@@ -53,6 +53,7 @@
 ~map = { |gl, genId, param, from, to, curve, amount|
 	var g = ~gens[genId.asInteger], spec, max, cur;
 	param = param.asSymbol;
+	curve = (curve ? \linear).asSymbol;
 	spec = g !? { g[\type][\params].detect { |s| s[0] == param } };
 	if(g.isNil or: { ~mappable.(g, spec).not }) {
 		~report.("can't map %: %".format(param, if(g.isNil) { "no generator %".format(genId) } { "only numbers, notes and menus that don't restart the generator" }));
@@ -62,7 +63,7 @@
 		~globals.do { |other| ~dropMapping.(other, g[\id], param) };
 		gl[\mappings] = gl[\mappings].add((gen: g[\id], param: param,
 			from: (from ? cur).asFloat, to: (to ?? { if(cur == max) { ~settingMin.(spec) } { max } }).asFloat,
-			curve: if(~curves.includes((curve ? \linear).asSymbol)) { curve.asSymbol } { \linear },
+			curve: if(~curves.includes(curve)) { curve } { \linear },
 			amount: amount !? (_.asFloat)));
 		~sendMappings.(gl);
 		~applyGlobal.(gl);

@@ -12,6 +12,7 @@ const model = {
   live: null, // Live's tracks on the brain's buses [{ name, port, channel, instrument }]; null = no bridge
   gens: new Map(), // id -> { id, type, dest, active, group, params, card }
   groups: new Map(), // id -> { id, name, on, solo, collapsed, pins: [[genId, param], ...] }
+  globals: new Map(), // id -> { id, name, value, mappings: [{ gen, param, from, to, curve, amount }] }
   library: new Map(), // type name -> { name, builtin, favorite, loaded, bar, changed, description, mtime }
 };
 let inSnapshot = false;
@@ -51,6 +52,7 @@ function renderAll() {
   renderPorts();
   renderChord();
   renderClocks();
+  renderGlobals();
   renderOutputs();
   renderGens();
 }
@@ -181,6 +183,36 @@ const handlers = {
     if (!g) return;
     g.pins = chunks(flat, 2);
     return renderGroups;
+  },
+  '/global': (id, name, value) => {
+    const known = model.globals.get(id);
+    const gl = { id, name, value, mappings: known?.mappings ?? [] };
+    model.globals.set(id, gl);
+    return known ? () => updateGlobal(gl) : renderGlobals;
+  },
+  '/global/mappings': (id, ...flat) => {
+    const gl = model.globals.get(id);
+    if (!gl) return;
+    gl.mappings = chunks(flat, 6).map(([gen, param, from, to, curve, amount]) => ({
+      gen,
+      param,
+      from,
+      to,
+      curve,
+      amount: amount < 0 ? null : amount,
+    }));
+    return () => {
+      renderGlobals();
+      renderCards();
+    };
+  },
+  '/global/removed': (id) => {
+    model.globals.delete(id);
+    if (mapping === id) mapping = null;
+    return () => {
+      renderGlobals();
+      renderCards();
+    };
   },
   '/group/removed': (id) => {
     model.groups.delete(id);

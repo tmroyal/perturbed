@@ -57,6 +57,22 @@ ones you set up (`group set "Phasing pianos" collapsed=on`) so the surface stays
 the few settings worth playing live to the group's header (`group pin "Phasing pianos" 3 velocity`):
 they stay visible when the group is folded.
 
+**Give pieces a few global parameters:** one control that reshapes a lot at once (a global, 0–1,
+in the sidebar), each mapped setting with its own range and curve. Name them for what they do to
+the music ("density", "brightness"; the default is "Meta 1"), and tell the performer what each one
+moves:
+
+```sh
+tools/perturbed global add density
+tools/perturbed global map density 3 prob 20 90            # from → to, in the setting's units
+tools/perturbed global map density 4 pulses 3 7 steps      # curves: linear, exp, steps, threshold
+tools/perturbed global map density 2 velocity 100 60 exp   # from > to inverts it
+tools/perturbed global set density value=0.3
+```
+
+A mapped setting is locked (setting it says so); `global unmap` frees it. Settings that restart a
+generator (num, den, clock) can't be mapped.
+
 Notes are MIDI numbers or names (C4 = 60); outputs and clocks can be named (`output="Piano 1"`,
 `clock=B`). Add generators off, set them up, then turn them on (or leave that to the performer).
 `tools/perturbed help` lists every command.
@@ -78,6 +94,10 @@ stops the transport; generators keep their on/off state, so Play starts the piec
   ],
   "destinations": [                   // outputs: one Live MIDI track each
     {"id": 1, "name": "Piano 1", "port": 1, "channel": 1, "instrument": "Pianoteq 9"}
+  ],
+  "globals": [                        // optional: global parameters and what they move
+    {"id": 1, "name": "density", "value": 0.3,
+     "mappings": [{"gen": 1, "param": "prob", "from": 20, "to": 90, "curve": "linear"}]}
   ],
   "groups": [                         // optional: layers the performer switches, solos and folds
     {"id": 1, "name": "Phasing pianos", "on": true, "solo": false, "collapsed": true,
@@ -236,6 +256,10 @@ run: { |g, p|
   mutes) and `~release.(g)`. Several at once: `~noteOn.(dest, note, vel)` / `~noteOff.(dest, note)`
   with `dest = ~dests[g[\dest]]`, check `~sounds.(g)` first, and keep what you hold in
   `g[\held][key] = [dest, note]` so stopping or muting releases it.
+- **Global parameters:** declare the ones the type reads (`globals: [\\density]`: created if
+  missing when the type loads) and read them live with `~global.(\\density)` (0–1). This lets a
+  type give a global a meaning no single setting has (denser = more notes in the strum *and* a
+  wider spread).
 - **Reading the world:** `~chord` (current chord, MIDI, sorted; may be empty: rest), `~beats.()`
   (beats since the grid origin), `p[\name]` (its settings, read live), `~gens` (other generators,
   e.g. for a canon: `~gens[id][\sounding]` is `[dest, note]` or nil). Shared building blocks:

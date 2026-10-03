@@ -98,6 +98,26 @@ button.learn.on, #chord-arm.on, .lib-row .reload { background: var(--nord12); bo
 .lib-row .star.on { color: var(--nord13); }
 .lib-spacer { width: 26px; flex: none; }
 
+/* --- globals --- */
+#globals { display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px; }
+.global { background: var(--nord2); border-radius: 6px; padding: 6px 8px 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.global-head { display: flex; align-items: center; gap: 6px; }
+.global-head .global-name {
+  flex: 1; min-width: 0; background: none; border-color: transparent; font-weight: 600; color: var(--nord6); padding: 3px 4px;
+}
+.global-head .global-name:hover { border-color: var(--nord3); }
+.global-head .map { padding: 3px 10px; font-size: 12px; }
+.global-head .map.on { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
+.global .mapping { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; border-top: 1px solid var(--nord3); }
+.global .mapping .what { color: var(--nord9); font-size: 12px; }
+.global .mapping .row { display: flex; align-items: center; gap: 4px; }
+.global .mapping input[type=number] { width: 52px; }
+.global .mapping select { min-width: 0; max-width: 88px; }
+/* map mode: setting names on cards become targets; mapped settings are locked and tagged */
+body.map-mode .card label[data-param] { cursor: crosshair; color: var(--nord12); text-decoration: underline dotted; }
+.fields label .follows { color: var(--nord15); font-size: 11px; margin-left: 4px; }
+.fields .locked { pointer-events: none; opacity: .55; }
+
 /* --- groups --- */
 .group { margin-bottom: 20px; border-left: 3px solid var(--nord10); padding-left: 14px; }
 .group.off { border-left-color: var(--nord3); }

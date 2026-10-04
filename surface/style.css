@@ -41,7 +41,7 @@ input[type=range]::-webkit-slider-thumb {
 .segmented button:last-child { border-radius: 0 6px 6px 0; border-left: none; }
 .segmented button.on { background: var(--nord7); border-color: var(--nord7); color: var(--nord0); }
 /* icon buttons: just the glyph */
-.close, .pin-toggle, .lib-row .star, .group-head .fold { background: none; border: none; }
+.close, .pin-toggle, .lib-row .star, .group-head .fold, .global-head .fold { background: none; border: none; }
 .close { color: var(--nord3); padding: 0 4px; font-size: 18px; line-height: 1; }
 .close:hover { background: none; color: var(--nord11); }
 button.power, button.solo { padding: 3px 12px; font-size: 12px; min-width: 48px; }
@@ -103,10 +103,16 @@ button.learn.on, #chord-arm.on, .lib-row .reload { background: var(--nord12); bo
 .global { background: var(--nord2); border-radius: 6px; padding: 6px 8px 8px 10px; display: flex; flex-direction: column; gap: 6px; }
 .global-head { display: flex; align-items: center; gap: 6px; }
 .global-head .global-name {
-  flex: 1; min-width: 0; background: none; border-color: transparent; font-weight: 600; color: var(--nord6); padding: 3px 4px;
+  flex: 1; min-width: 70px; background: none; border-color: transparent; font-weight: 600; color: var(--nord6); padding: 3px 4px;
 }
 .global-head .global-name:hover { border-color: var(--nord3); }
-.global-head .map, .global-head .knob { padding: 3px 10px; font-size: 12px; }
+.global-head .map, .global-head .knob { padding: 3px 10px; font-size: 12px; flex: none; }
+.global-head .fold { color: var(--nord4); padding: 0 4px; font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; flex: none; }
+.global-head .fold:hover { background: none; color: var(--nord6); }
+/* the value slider: on the row's own grey the track vanished, so it gets the page's darker grey */
+.global > .row { display: flex; align-items: center; gap: 8px; }
+.global > .row input[type=range] { background: var(--nord0); }
+.global > .row input[type=number].value { width: 56px; text-align: right; flex: none; }
 .global-head .knob { font-variant-numeric: tabular-nums; }
 .global-head .map.on, .global-head .knob.on { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
 .global .mapping { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; border-top: 1px solid var(--nord3); }

@@ -121,14 +121,13 @@ function globalRow(gl) {
       'div',
       { className: 'global-head' },
       name,
-      el('span', { className: 'hint', textContent: `${gl.mappings.length} mapped` }),
       knob,
       clearKnob,
       map,
       el('button', {
         className: 'fold',
-        textContent: open ? '▾' : '▸',
-        title: open ? 'Hide mappings' : 'Show mappings',
+        textContent: `${open ? '▾' : '▸'} ${gl.mappings.length}`,
+        title: `${gl.mappings.length} mapped setting${gl.mappings.length === 1 ? '' : 's'}: ${open ? 'hide' : 'show'}`,
         onclick: () => {
           if (open) expanded.delete(gl.id);
           else expanded.add(gl.id);

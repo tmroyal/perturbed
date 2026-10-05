@@ -75,6 +75,8 @@ knob on the performer's controller (they learn it in the app with **Knob**; or `
 1 74` for channel 1, CC 74), which puts everything it moves under one hand. Settings that restart a
 generator (num, den, clock) can't be mapped.
 
+Fold generators the performer won't touch (`set 3 collapsed=on`): a folded card is one line.
+
 Notes are MIDI numbers or names (C4 = 60); outputs and clocks can be named (`output="Piano 1"`,
 `clock=B`). Add generators off, set them up, then turn them on (or leave that to the performer).
 `tools/perturbed help` lists every command.

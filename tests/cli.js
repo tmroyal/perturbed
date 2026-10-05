@@ -46,6 +46,7 @@ try {
   check(!r.ok && /no setting "wobble"/.test(r.out), 'unknown setting is refused with the list');
 
   check(json('on', String(g.id)).active === true && json('off', String(g.id)).active === false, 'on / off');
+  check(json('set', String(g.id), 'collapsed=on').collapsed === true, 'a generator folds (collapsed)');
 
   const grp = json('group', 'add', 'Layer A');
   const inG = json('set', String(g.id), 'group=Layer A', 'active=on');
@@ -123,6 +124,7 @@ try {
     run('load', file).ok && json('state').generators.some((x) => x.id === g.id && x.params.source === 'arpeggio'),
     'load brings it back',
   );
+  check(json('state').generators.find((x) => x.id === g.id).collapsed === true, 'load keeps a folded generator folded');
   const back = json('state').globals.find((x) => x.name === 'Meta 1');
   check(
     back?.mappings.some((m) => m.setting === 'prob' && m.curve === 'threshold' && Math.abs(m.amount - 0.7) < 1e-6) && back?.knob?.cc === 74,

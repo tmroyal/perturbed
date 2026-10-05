@@ -58,6 +58,8 @@ first (the brain lists the MIDI inputs it found in the terminal). The first run 
 - **Library:** the add bar holds your favorite generator types; *Library ▾* lists every type,
   built-in and AdHoc (written by Claude for a piece, kept in `adhoc/`), with ☆ to star one for the
   bar, *+ Add*, and × to delete an AdHoc type (its file moves to `adhoc/old/`). Errors from a type show at the top right.
+- **Folding:** ▾ (or a click on a card's name) folds a generator down to one line: light, name,
+  output, On/Off. Folded cards stay folded when you save and reopen.
 - **Generators:** *+ Basic* adds a generator. Pick an output, turn it *On*, press *Play* (or
   space). Set where its pitch comes from (a note or the chord: index, lowest, highest, arpeggio,
   permute), its rhythm (every, euclid, random, phrase on a num/den grid) and velocity (set,

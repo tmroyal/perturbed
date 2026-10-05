@@ -171,21 +171,28 @@ function buildCard(gen) {
     fields.push(label, c.control);
   }
 
+  // folded, a card is its header: light, name, output, On/Off, remove (saved with the performance)
+  const toggleFold = () => set('collapsed', gen.collapsed ? 0 : 1);
+  const fold = el('button', { className: 'fold', onclick: toggleFold });
+  const where = el('span', { className: 'hint where' });
+  const body = el('div', { className: 'fields' }, ...fields);
   const root = el(
     'section',
     { className: 'card gen' },
     el(
       'header',
       {},
+      fold,
       led,
-      el('h2', { textContent: genName(gen) }),
+      el('h2', { textContent: genName(gen), title: 'Fold / unfold', onclick: toggleFold }),
+      where,
       ...(specs.actions ?? []).map((a) =>
         el('button', { className: 'power', textContent: a, onclick: () => osc.send('/gen/do', gen.id, a) }),
       ),
       power,
       closeButton('Remove', () => osc.send('/gen/remove', gen.id)),
     ),
-    el('div', { className: 'fields' }, ...fields),
+    body,
   );
 
   return {
@@ -196,6 +203,11 @@ function buildCard(gen) {
       root.classList.toggle('active', gen.active);
       root.classList.toggle('silenced', gen.active && !sounds(gen)); // on, but muted by a group
       root.classList.toggle('grouped', !!gen.group);
+      root.classList.toggle('collapsed', !!gen.collapsed);
+      body.hidden = !!gen.collapsed;
+      fold.textContent = gen.collapsed ? '▸' : '▾';
+      fold.title = gen.collapsed ? 'Unfold' : 'Fold away';
+      where.textContent = gen.collapsed ? (model.dests.get(gen.dest)?.name ?? '') : '';
       for (const [param, pin] of Object.entries(pins)) {
         const on = isPinned(gen, param);
         setOn(pin, on, on ? '◆' : '◇');

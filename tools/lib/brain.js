@@ -266,7 +266,7 @@ class Brain {
         break;
       case '/gen': {
         const g = m.gens.get(a[0]) ?? { id: a[0], params: {} };
-        Object.assign(g, { type: a[1], dest: a[2], active: !!a[3], group: a[4] ?? 0 });
+        Object.assign(g, { type: a[1], dest: a[2], active: !!a[3], group: a[4] ?? 0, collapsed: !!a[5] });
         m.gens.set(a[0], g);
         break;
       }
@@ -324,11 +324,12 @@ class Brain {
     if (param === 'active') return flag('active', value);
     if (param === 'output' || param === 'dest') return this.dest(value);
     if (param === 'group') return this.group(value);
+    if (param === 'collapsed') return flag('collapsed', value);
     const t = this.type(g.type);
     const s =
       this.param(g.type, param) ??
       fail(
-        `${g.type} has no setting "${param}" (settings: active, group, ${t.output ? 'output, ' : ''}${t.params.map((p) => p.name).join(', ')})`,
+        `${g.type} has no setting "${param}" (settings: active, group, collapsed, ${t.output ? 'output, ' : ''}${t.params.map((p) => p.name).join(', ')})`,
       );
     switch (s.kind) {
       case 'choice': {
@@ -374,6 +375,7 @@ class Brain {
         type: g.type,
         active: g.active,
         sounding: this.sounds(g),
+        collapsed: !!g.collapsed,
         group: g.group ? { id: g.group, name: m.groups.get(g.group)?.name ?? null } : null,
         ...(this.model.types.get(g.type)?.output === false ? {} : { output: g.dest ? { id: g.dest, name: destName(g.dest) } : null }),
         params: g.params,
@@ -440,7 +442,7 @@ class Brain {
     const entries = Object.entries(settings).sort(([a], [b]) => (a === 'active') - (b === 'active'));
     const checked = entries.map(([p, v]) => [p === 'output' ? 'dest' : p, this.coerce(g, p, v)]);
     for (const [p, v] of checked) {
-      if (p === 'active' || p === 'dest' || p === 'group') await this.request('/gen/set', [g.id, p, v], '/gen', (gid) => gid === g.id);
+      if (['active', 'dest', 'group', 'collapsed'].includes(p)) await this.request('/gen/set', [g.id, p, v], '/gen', (gid) => gid === g.id);
       else await this.request('/gen/set', [g.id, p, v], '/gen/param', (gid, name) => gid === g.id && name === p);
     }
     return this.state().generators.find((x) => x.id === g.id);

@@ -83,7 +83,7 @@
 	if(type.isNil) { "unknown generator type %".format(typeName).warn; nil } {
 		id = ~newId.(\gen, id);
 		g = (id: id, typeName: typeName.asSymbol, type: type, p: ~paramsFor.(type), active: false, dest: 0,
-			held: (), group: ~groupOrNone.(group));
+			held: (), group: ~groupOrNone.(group), collapsed: false);
 		~gens[id] = g;
 		~sendGen.(g);
 		~sendParams.(g);
@@ -115,6 +115,10 @@
 		g[\dest] = val.asInteger;
 		~sendGen.(g);
 	}
+	{ key == \collapsed } {  // the surface's view of its card, kept here so it's saved
+		g[\collapsed] = val.asInteger == 1;
+		~sendGen.(g);
+	}
 	{ key == \group } {
 		if(val.asInteger != g[\group]) { ~dropPins.(g[\id]) };
 		g[\group] = ~groupOrNone.(val);
@@ -140,7 +144,9 @@
 // Runs one of the type's actions (a card button); unknown actions are ignored.
 ~genDo = { |g, action| g[\type][\actions] !? { |acts| acts[action.asSymbol] !? { |fn| fn.(g, g[\p]) } } };
 
-~sendGen = { |g| ~send.('/gen', g[\id], g[\typeName], g[\dest], g[\active].binaryValue, g[\group] ? 0) };
+~sendGen = { |g|
+	~send.('/gen', g[\id], g[\typeName], g[\dest], g[\active].binaryValue, g[\group] ? 0, (g[\collapsed] ? false).binaryValue);
+};
 
 ~sendParams = { |g|
 	g[\type][\params].do { |spec| ~send.('/gen/param', g[\id], spec[0], g[\p][spec[0]]) };

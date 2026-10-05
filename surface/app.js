@@ -165,14 +165,14 @@ const handlers = {
     return renderOutputs;
   },
 
-  '/gen': (id, type, dest, active, group = 0) => {
+  '/gen': (id, type, dest, active, group = 0, collapsed = 0) => {
     let gen = model.gens.get(id);
     if (!gen) {
       gen = { id, type, params: {}, card: null };
       model.gens.set(id, gen);
     }
     const moved = gen.group !== group;
-    Object.assign(gen, { dest, active: !!active, group });
+    Object.assign(gen, { dest, active: !!active, group, collapsed: !!collapsed });
     return () => updateGen(gen, moved);
   },
   '/group': (id, name, on, solo, collapsed) => {

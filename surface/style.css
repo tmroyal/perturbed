@@ -79,7 +79,7 @@ button.learn.on, #chord-arm.on, .lib-row .reload { background: var(--nord12); bo
 #add-gen { display: flex; gap: 8px; }
 #gens-pane { padding: 24px; position: relative; }
 #sidebar { padding: 24px; background: var(--nord1); border-left: 1px solid var(--nord2); }
-.gen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.gen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; align-items: start; }
 #grid.empty::before { content: 'Add a generator to begin.'; color: var(--nord3); }
 #ungrouped:not(:empty) { margin-bottom: 24px; }
 
@@ -167,7 +167,12 @@ button.solo.on { background: var(--nord13); border-color: var(--nord13); color: 
 .card { background: var(--nord1); border-radius: 8px; padding: 14px 16px; border-top: 3px solid var(--nord3); }
 .gen.active { border-top-color: var(--nord8); }
 .card header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-.card h2 { margin: 0; font-size: 14px; font-weight: 600; color: var(--nord6); margin-right: auto; }
+.card h2 { margin: 0; font-size: 14px; font-weight: 600; color: var(--nord6); cursor: pointer; }
+.card header .where { margin-right: auto; overflow: hidden; text-overflow: ellipsis; }
+.card header .fold { background: none; border: none; color: var(--nord9); padding: 0 2px; font-size: 14px; }
+.card header .fold:hover { background: none; color: var(--nord6); }
+.card.collapsed { padding-bottom: 12px; }
+.card.collapsed header { margin-bottom: 0; }
 .led { width: 10px; height: 10px; border-radius: 50%; background: var(--nord2); flex: none; }
 /* minmax(0, …) lets the value column shrink below its content (long names) instead of overflowing */
 .fields { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 10px 12px; align-items: center; }

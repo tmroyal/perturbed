@@ -16,7 +16,7 @@
 //   /chord/clear
 //   /gen/add          <type> [<group>]           brain assigns the id; optionally into a group
 //   /gen/remove       <id>
-//   /gen/set          <id> <param> <value>       param = active | dest | group | a type param
+//   /gen/set          <id> <param> <value>       param = active | dest | group | collapsed | a type param
 //   /gen/learn        <id> <param> 1|0           the next key played sets param
 //   /group/add        [<name>]                   brain assigns the id
 //   /group/set        <id> name|on|solo|collapsed <value>     see core/groups.scd
@@ -77,7 +77,7 @@
 //   /dest/removed     <id>
 //   /live/tracks      (<name> <port> <channel> <instrument>)...   as received from the bridge
 //   /live/tracks/clear                           no bridge (Live's tracks unknown)
-//   /gen              <id> <type> <dest> <active> <group>
+//   /gen              <id> <type> <dest> <active> <group> <collapsed>
 //   /group            <id> <name> <on> <solo> <collapsed>
 //   /group/removed    <id>
 //   /global           <id> <name> <value> <knobChannel> <knobCC>    knob channel 0 = none

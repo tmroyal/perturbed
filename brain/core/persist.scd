@@ -19,7 +19,8 @@
 			.reject { |name| ~library[name] !? (_[\builtin]) ? false }
 			.collect { |name| [name, ~typeSource[name].split($\n)] }.flatten(1)),  // as lines: readable, diffable
 		generators: ~inOrder.(~gens).collect { |g|
-			(id: g[\id], type: g[\typeName], dest: g[\dest], group: g[\group] ? 0, active: g[\active], params: g[\p])
+			(id: g[\id], type: g[\typeName], dest: g[\dest], group: g[\group] ? 0, active: g[\active],
+				collapsed: g[\collapsed] ? false, params: g[\p])
 		},
 	));
 	"saved %".format(path).postln;
@@ -83,6 +84,7 @@
 			};
 			g[\dest] = saved["dest"].asInteger;
 			g[\active] = saved["active"] == "true";
+			g[\collapsed] = saved["collapsed"] == "true";
 		};
 	};
 	~groups.do { |gr| gr[\pins] = gr[\pins].select { |p| ~gens[p[0]] !? { |g| g[\group] == gr[\id] } ? false } };

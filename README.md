@@ -76,7 +76,8 @@ first (the brain lists the MIDI inputs it found in the terminal). The first run 
   the tempo by a fraction and ⇅ flips it back.
 - **Clocks:** A is the main clock. Add B, C… at a ratio or factor of it (1.01 phases slowly), or
   at their own tempo, and put generators on them.
-- **Save… / Open…** store the whole performance in `performances/` (`example.json` is a demo).
+- **New** starts an empty performance (no outputs: add them from *In Live*). **Save… / Open…**
+  store the whole performance in `performances/` (`example.json` is a demo).
 
 ## Develop
 
@@ -99,7 +100,7 @@ performances/  saved performances
 archive/   the first proof of concept
 ```
 
-Rig settings (IAC ports, MIDI inputs, latency, default outputs) are in `brain/config.scd`.
+Rig settings (IAC ports, control buses, MIDI inputs, latency) are in `brain/config.scd`.
 **Writing your own generator types:** [docs/writing-generator-types.md](docs/writing-generator-types.md).
 Architecture, protocol, plans and gotchas: [PLAN.md](PLAN.md). Rules for coding agents and for
 Claude as performance assistant: [AGENTS.md](AGENTS.md).

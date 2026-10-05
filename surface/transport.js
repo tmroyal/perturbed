@@ -42,6 +42,12 @@ function renderTransport() {
   renderMod();
 }
 
+// New: an empty performance (asked first: what's there is gone unless it was saved).
+$('new').onclick = () => {
+  const empty = !model.gens.size && !model.dests.size && !model.groups.size && !model.globals.size && !model.clocks.size;
+  if (empty || confirm('Start a new, empty performance?\n\nAnything not saved is lost.')) osc.send('/new');
+};
+
 // The brain writes and reads the file; the surface only picks the path.
 $('save').onclick = async () => {
   const p = await files.pick('save');

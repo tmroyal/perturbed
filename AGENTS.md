@@ -24,7 +24,7 @@ change it.
 - **You may write** performance files in `performances/` and AdHoc types in `adhoc/`.
 - **The performer owns play/stop.** Don't start or stop the transport unless asked
   (`tools/perturbed play`/`stop` exist for when they do).
-- **Don't lose work.** Before replacing the current performance (`load`, or removing most of it),
+- **Don't lose work.** Before replacing the current performance (`load`, `new`, or removing most of it),
   save it (`tools/perturbed save performances/before-<time>.json`) or confirm with the performer.
 - Explain what you set up in musical terms (which generator plays what, against what) so the
   performer can adjust it by hand on the surface.
@@ -118,9 +118,10 @@ A generator sounds when it's on, its group is on, and no other group is soloed.
 **Outputs.** `port` is an IAC bus (1 = Bus 1, 2 = Bus 2), `channel` 1–16. Each output is a Live
 MIDI track the performer makes (MIDI From that bus and channel, Monitor In, an instrument
 loaded); the Perturbed Bridge reports those tracks and the app offers them as outputs.
-`instrument` is only a label. Reuse existing outputs where you can (the
-defaults are *Piano 1* = port 1 ch 1 and *Piano 2* = port 1 ch 2, Pianoteq 9), and tell the
-performer when a new one needs a Live track, with its bus, channel and the instrument you had in mind.
+`instrument` is only a label. A new performance has no outputs: look at `live_tracks` in `state`
+and make outputs from Live's tracks (`tools/perturbed output live`), reuse existing outputs where
+you can, and tell the performer when a new one needs a Live track, with its bus, channel and the
+instrument you had in mind.
 
 **Clocks.** `mode` is `ratio` (main × num/den), `factor` (main × factor; 1.01 phases slowly
 against main) or `free` (its own `bpm`). Ratio and factor clocks follow main tempo changes.

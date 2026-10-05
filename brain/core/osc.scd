@@ -46,6 +46,7 @@
 //   /live/tracks      (<name> <port> <channel> <instrument>)...   from the Perturbed Bridge: Live's
 //                                                MIDI tracks on the brain's buses (channel 0 = all)
 //   /live/tracks/clear                           the bridge is gone
+//   /new                                         a new, empty performance; brain sends a full snapshot
 //   /save             <path>                     write the performance as JSON
 //   /load             <path>                     replace everything; brain sends a full snapshot
 //
@@ -189,6 +190,7 @@
 	~onObject.('/global/learn', \globals, \learnKnob);
 	~onObject.('/global/knob', \globals, \setKnob);
 
+	OSCdef(\new, { ~newPerformance.() }, '/new');
 	OSCdef(\save, { |msg|
 		try { ~savePerformance.(msg[1].asString); ~send.('/saved', msg[1].asString) } { |e| ~report.("save failed: " ++ e.errorString) };
 	}, '/save');

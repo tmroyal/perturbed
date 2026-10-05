@@ -25,15 +25,30 @@
 	"saved %".format(path).postln;
 };
 
-~loadPerformance = { |path|
-	var perf = File.readAllString(path.standardizePath).parseJSON;
+// Stops and empties everything a performance holds (ids start over).
+~clearPerformance = {
 	~setPlaying.(false);
 	~gens.keys.copy.do(~removeGen);
 	~dests.keys.copy.do(~removeDest);
 	~clocks.keys.copy.do(~removeClock);
 	~groups.keys.copy.do(~removeGroup);
 	~globals.keys.copy.do(~removeGlobal);
-	~nextIds = ();  // ids come from the file
+	~nextIds = ();
+};
+
+// A new, empty performance: no outputs, generators, groups, globals or extra clocks, no chord.
+// The tempo stays (it's shared with Live).
+~newPerformance = {
+	~clearPerformance.();
+	~chordMode = \auto;
+	~armed = false;
+	~chord = [];
+	~sendState.();
+};
+
+~loadPerformance = { |path|
+	var perf = File.readAllString(path.standardizePath).parseJSON;
+	~clearPerformance.();  // ids come from the file
 
 	~setTempo.(perf["tempo"]);  // also sets Link tempo
 	(perf["clocks"] ? []).do { |saved|

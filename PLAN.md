@@ -211,7 +211,7 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
 
 - `tools/perturbed` (Node) changes the running performance from the shell: `state`, `schema`,
   `add`/`set`/`on`/`off`/`remove`/`do` for generators, `output add|remove|live`,
-  `clock add|set|remove`, `tempo`, `scale`, `chord`, `cc`, `play`/`stop`, `save`/`load`
+  `clock add|set|remove`, `tempo`, `scale`, `chord`, `cc`, `play`/`stop`, `new`, `save`/`load`
   (`tools/perturbed help`). Built for Claude in the drawer (allowed in `agent-settings.json`).
 - `tools/lib/brain.js` does the work: a short-lived surface (`/hello`,
   mirror the snapshot, send intents and wait for their echo, `/bye`). Settings are checked against

@@ -10,7 +10,6 @@
 // inputs: MIDI inputs to listen to (keyboard, controllers), as [device, name]; nil = every input
 //         except the devices of `ports` and `control` (the brain's own output) and Max's "from Max" ports.
 // latency: seconds between logical time and when notes sound; MIDI is timestamped this far ahead.
-// destinations: created at boot (not in test mode): [name, port, channel, instrument].
 (
 ports: [
 	["IAC Driver", "Bus 1"],
@@ -22,8 +21,4 @@ control: [
 ],
 inputs: nil,
 latency: 0.05,
-destinations: [
-	["Piano 1", 1, 1, "Pianoteq 9"],
-	["Piano 2", 1, 2, "Pianoteq 9"],
-],
 )

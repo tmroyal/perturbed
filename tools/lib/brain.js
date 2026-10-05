@@ -709,6 +709,11 @@ class Brain {
   }
 
   // --- files: paths are made absolute (the brain runs elsewhere) ---
+  // A new, empty performance (everything goes: save first).
+  async newPerformance() {
+    await this.request('/new', [], '/state/end', () => true, 3000);
+  }
+
   async save(file) {
     const p = path.resolve(file);
     await this.request('/save', [p], '/saved');

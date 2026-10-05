@@ -143,6 +143,28 @@ try {
     !s.generators.some((x) => x.id === g.id) && !s.outputs.some((o) => o.name === 'cli') && !s.clocks.some((x) => x.id === c.id),
     'cleaned up',
   );
+
+  // new: everything goes (the test brain's leftovers from earlier tests too), the tempo stays
+  run('output', 'add', 'gone', '1', '5');
+  run('add', 'basic');
+  run('group', 'add', 'gone');
+  run('global', 'add');
+  run('chord', 'C4', 'E4');
+  const tempo = json('state').tempo;
+  check(run('new').ok, 'new');
+  const fresh = json('state');
+  check(
+    !fresh.generators.length &&
+      !fresh.outputs.length &&
+      !fresh.groups.length &&
+      !fresh.globals.length &&
+      fresh.clocks.length === 1 &&
+      !fresh.chord.pitches.length &&
+      fresh.tempo === tempo,
+    'new: no outputs, generators, groups, globals, extra clocks or chord; tempo kept',
+  );
+  check(json('add', 'basic').id === 1, 'ids start over in a new performance');
+  run('remove', '1');
 } catch (e) {
   check(false, e.message);
 }

@@ -53,6 +53,7 @@ const HELP = `perturbed — change the running performance
   cc <bus> <channel> <cc> <value>    one MIDI CC on a control bus (1 = Perturbed CTL 1)
   play | stop                        (the performer owns these: only when asked)
   save <file> | load <file>          performance files (load replaces everything)
+  new                                a new, empty performance (everything goes: save first)
 
 Notes are MIDI numbers or names (C4 = 60). Values with spaces need quotes: set 2 phrase="1 2 1".`;
 
@@ -227,6 +228,14 @@ const COMMANDS = {
     async (b) => {
       await b.play(false);
       return 'stopped';
+    },
+  ],
+  new: [
+    0,
+    '',
+    async (b) => {
+      await b.newPerformance();
+      return 'new, empty performance';
     },
   ],
   save: [1, '<file>', async (b, [file]) => `saved ${await b.save(file)}`],

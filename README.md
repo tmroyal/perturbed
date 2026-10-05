@@ -62,7 +62,8 @@ first (the brain lists the MIDI inputs it found in the terminal). The first run 
   output, On/Off. Folded cards stay folded when you save and reopen.
 - **Generators:** *+ Basic* adds a generator. Pick an output, turn it *On*, press *Play* (or
   space). Set where its pitch comes from (a note or the chord: index, lowest, highest, arpeggio,
-  permute), its rhythm (every, euclid, random, phrase on a num/den grid) and velocity (set,
+  permute), its rhythm (every, euclid, random, phrase on a num/den grid, with a *chance* per note
+  and a note length: hold, or a percentage of the step) and velocity (set,
   accent, random, drift, ramp, pattern, humanize).
 - **Groups:** *+ Group* makes a section; put generators in it with their *group* menu. **On/Off**
   and **Solo** mute without losing time (a group comes back on the beat); ▸ folds it away to a

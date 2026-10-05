@@ -2,6 +2,9 @@
 // ~rhythmParams to its params (with ~rhythmShow and ~rhythmLabels), runs with grid steps of num/den
 // beats (of its clock, see ~clockParam in core/clock.scd), and plays step k (counted from transport
 // start) when ~rhythmGate.(p, k) is true. A skipped step lets the previous note ring on.
+// On top of any rhythm: `chance` (% of the notes that play; ~rhythmChance.(p)), and how long a note
+// lasts: `length` hold (until the next note) or percent (`duration` % of the grid step, over 100
+// to ring into skipped steps; ~noteBeats.(p, dur) gives the beats, nil for hold).
 //   every   every `interval`th step, starting at `offset`
 //   euclid  `pulses` spread evenly over `steps`, rotated by `offset`
 //   random  each step plays with probability `prob` %
@@ -17,6 +20,9 @@
 	[\offset, 0, \range, 0, 31],
 	[\prob, 50, \range, 0, 100],
 	[\phrase, "1 2 1 1 2", \text],
+	[\chance, 100, \range, 0, 100],
+	[\length, "hold", \choice, "hold", "percent"],
+	[\duration, 100, \range, 1, 400],
 ];
 
 ~rhythmShow = (
@@ -26,9 +32,17 @@
 	offset: [\rhythm, "every", "euclid"],
 	prob: [\rhythm, "random"],
 	phrase: [\rhythm, "phrase"],
+	duration: [\length, "percent"],
 );
 
-~rhythmLabels = (rhythm: "play", interval: "every", steps: "of", prob: "chance %", phrase: "gaps");
+~rhythmLabels = (rhythm: "play", interval: "every", steps: "of", prob: "random %", phrase: "gaps",
+	chance: "chance %", length: "note length", duration: "% of step");
+
+// Does this note play? (`chance` % of the time.)
+~rhythmChance = { |p| (p[\chance] ? 100) >= 100 or: { ((p[\chance] ? 100).asFloat / 100).coin } };
+
+// A note's length in beats for a grid step of `dur` beats, or nil for hold (until the next note).
+~noteBeats = { |p, dur| if((p[\length] ? "hold").asString == "percent") { dur * (p[\duration] ? 100).asFloat / 100 } };
 
 // Onset positions within one cycle of a phrase, and the cycle length: "1 2" → [[0, 1], 3].
 ~phraseCycle = { |text|

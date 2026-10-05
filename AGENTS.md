@@ -130,7 +130,8 @@ against main) or `free` (its own `bpm`). Ratio and factor clocks follow main tem
 
 ### Generator types and params
 
-**basic** — one note at a time on a grid of num/den beats, each note released by the next.
+**basic** — one note at a time on a grid of num/den beats, each note released by the next (or
+after its own `duration`).
 
 | param | values (default) | meaning |
 |---|---|---|
@@ -145,6 +146,8 @@ against main) or `free` (its own `bpm`). Ratio and factor clocks follow main tem
 | `pulses`, `steps` | 1–19 (3), 2–19 (8) | `euclid`: pulses spread over steps |
 | `prob` | 0–100 (50) | `random`: chance per step, % |
 | `phrase` | text ("1 2 1 1 2") | `phrase`: gaps between notes in steps, cycling |
+| `chance` | 0–100 (100) | % of the rhythm's notes that actually play (the pattern keeps its place) |
+| `length`, `duration` | hold, percent (hold); 1–400 (100) | `hold`: each note lasts until the next; `percent`: `duration` % of the grid step (over 100 rings into skipped steps) |
 | `velMode` | set, accent, random, drift, ramp, pattern (set) | velocity mode |
 | `velocity` | 1–127 (80) | `set`; also the unaccented value for `accent` |
 | `accent`, `every` | 1–127 (110), 1–32 (4) | `accent`: accent on every n-th grid step |

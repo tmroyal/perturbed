@@ -180,6 +180,9 @@ thisThread.clock.sched(0.5, { ~strike.(g, 67, 80); nil });   // half a beat late
 ~release.(g);                  // just release (a rest)
 ```
 
+`~strikeFor.(g, note, velocity, beats)` is the same with a length: the note is released after
+`beats` beats, unless another has been struck by then.
+
 `~strike` does the bookkeeping for you: it plays on the card's output, flashes the card's light,
 stays silent when the generator's group is muted, and releases its note when the generator stops.
 Use it whenever you can.
@@ -436,7 +439,7 @@ key: { |g, p, note, vel|
 | **settings** | `[\name, default, \range, min, max, (step)]`, `[\name, 60, \note]`, `[\name, "a", \choice, "a", "b"]`, `[\name, "", \text]`, `~clockParam` |
 | **play in time** | `run: { \|g, p\| ~grid.(beats, { \|k\| ... }) }`; `~grid.({ p[\x] }, ...)` follows a setting live |
 | **react to keys** | `key: { \|g, p, note, vel\| ... }` (vel 0 = up) |
-| **one note** | `~strike.(g, note, vel)`, `~release.(g)` |
+| **one note** | `~strike.(g, note, vel)`, `~strikeFor.(g, note, vel, beats)`, `~release.(g)` |
 | **many notes** | `d = ~dests[g[\dest]]`; check `~sounds.(g)`; `~noteOn.(d, n, v)`; keep `g[\held][key] = [d, n]` |
 | **later** | `thisThread.clock.sched(beats, { ...; nil })` |
 | **read** | `p[\x]`, `~chord`, `~global.(\x)`, `~gens[id][\sounding]`, `~beats.()` |

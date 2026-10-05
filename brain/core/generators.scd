@@ -38,6 +38,15 @@
 	};
 };
 
+// ~strike for `beats` beats (nil: until the next strike): released then, unless another note has
+// been struck since.
+~strikeFor = { |g, note, vel, beats|
+	var n = (g[\strikes] ? 0) + 1;
+	g[\strikes] = n;
+	~strike.(g, note, vel);
+	beats !? { thisThread.clock.sched(beats, { if(g[\strikes] == n) { ~release.(g) }; nil }) };
+};
+
 ~release = { |g|
 	g[\sounding] !? { |sn| ~noteOff.(sn[0], sn[1]) };
 	g[\sounding] = nil;

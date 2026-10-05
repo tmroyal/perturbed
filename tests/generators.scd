@@ -38,6 +38,10 @@ MIDIClient.sources.select { |e| e.device == "IAC Driver" and: { e.name == "Bus 2
 MIDIdef.cc(\ccs, { |val, num, ch| ~ccs.add([ch, num, val]) });
 MIDIdef.noteOn(\passOn, { |vel, note, ch| if(ch == 2) { ~midi.add([\on, note]) } });
 MIDIdef.noteOff(\passOff, { |vel, note, ch| if(ch == 2) { ~midi.add([\off, note]) } });
+// the same notes with their times, for note lengths: [time, \on|\off]
+~timed = List[];
+MIDIdef.noteOn(\timedOn, { |vel, note, ch| if(ch == 2) { ~timed.add([Main.elapsedTime, \on]) } });
+MIDIdef.noteOff(\timedOff, { |vel, note, ch| if(ch == 2) { ~timed.add([Main.elapsedTime, \off]) } });
 OSCdef(\param, { |msg| if(msg[1] == genId and: { msg[2] == 'note' }) { ~noteParam = msg[3] } }, '/gen/param');
 OSCdef(\note, { |msg| if(msg[1] == genId) { notes.add(msg[2]); vels.add(msg[3]); times.add(Main.elapsedTime) } }, '/note');
 // plays n quarter-beat grid steps with the given params; returns the grid steps that played.
@@ -229,6 +233,34 @@ Routine {
 	check.(~count.() == 0, "group removed: ungrouped, silenced by h's solo");
 	brain.sendMsg('/group/remove', ~h); 0.05.wait;
 	check.(~count.() >= 4, "no groups: plays");
+	brain.sendMsg('/gen/remove', genId);
+	0.1.wait;
+
+	// --- chance and note length (basic): 1 beat steps at 240 bpm = 0.25 s; MIDI on port 1 ch 3 ---
+	brain.sendMsg('/gen/add', "basic");
+	brain.sendMsg('/dest/add', "len", 1, 3, "none");
+	0.1.wait;
+	[[\dest, ~destId], [\active, 1], [\chance, 0]].do { |m| brain.sendMsg('/gen/set', genId, *m) };
+	0.05.wait;
+	check.(~count.() == 0, "chance 0: nothing plays");
+	brain.sendMsg('/gen/set', genId, \chance, 100);
+	0.05.wait;
+	// the lengths of the notes played in ~0.9 s (on → its off)
+	~lengths = {
+		var ons;
+		~timed.clear;
+		brain.sendMsg('/transport/play', 1); 0.9.wait; brain.sendMsg('/transport/play', 0); 0.2.wait;
+		ons = ~timed.select { |e| e[1] == \on };
+		ons.collect { |on| (~timed.detect { |e| e[1] == \off and: { e[0] >= on[0] } } !? (_[0]) ? inf) - on[0] };
+	};
+	v = ~lengths.();
+	check.(v.size >= 3 and: { v.drop(-1).every { |x| (x - 0.25).abs < 0.03 } }, "hold: each note lasts until the next (%)".format(v.round(0.01)));
+	brain.sendMsg('/gen/set', genId, \length, "percent");
+	brain.sendMsg('/gen/set', genId, \duration, 40);
+	0.05.wait;
+	v = ~lengths.();
+	check.(v.size >= 3 and: { v.every { |x| (x - 0.1).abs < 0.03 } }, "length 40 percent of the step: 0.1 s notes (%)".format(v.round(0.01)));
+	brain.sendMsg('/dest/remove', ~destId);
 	brain.sendMsg('/gen/remove', genId);
 	0.1.wait;
 

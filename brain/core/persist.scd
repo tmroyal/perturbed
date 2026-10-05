@@ -20,7 +20,7 @@
 			.collect { |name| [name, ~typeSource[name].split($\n)] }.flatten(1)),  // as lines: readable, diffable
 		generators: ~inOrder.(~gens).collect { |g|
 			(id: g[\id], type: g[\typeName], dest: g[\dest], group: g[\group] ? 0, active: g[\active],
-				collapsed: g[\collapsed] ? false, params: g[\p])
+				collapsed: g[\collapsed] ? false, params: g[\p], mappings: g[\mappings] ? [])
 		},
 	));
 	"saved %".format(path).postln;
@@ -48,7 +48,7 @@
 };
 
 ~loadPerformance = { |path|
-	var perf = File.readAllString(path.standardizePath).parseJSON;
+	var perf = File.readAllString(path.standardizePath).parseJSON, readMappings;
 	~clearPerformance.();  // ids come from the file
 
 	~setTempo.(perf["tempo"]);  // also sets Link tempo
@@ -88,16 +88,21 @@
 		};
 	};
 	~groups.do { |gr| gr[\pins] = gr[\pins].select { |p| ~gens[p[0]] !? { |g| g[\group] == gr[\id] } ? false } };
-	// globals after the generators their mappings point at (values kept as saved, not re-applied)
-	(perf["globals"] ? []).do { |saved|
-		var gl = ~addGlobal.(saved["name"], saved["id"].asInteger);
-		gl[\value] = saved["value"].asFloat;
-		gl[\knob] = saved["knob"] !? { |k| k.collect(_.asInteger) };
-		gl[\mappings] = (saved["mappings"] ? []).collect { |m|
+	// mappings, once the generators they point at exist: of globals (values kept as saved, not
+	// re-applied) and of generators that drive settings (lfo)
+	readMappings = { |saved|
+		(saved["mappings"] ? []).collect { |m|
 			(gen: m["gen"].asInteger, param: m["param"].asSymbol, from: m["from"].asFloat, to: m["to"].asFloat,
 				curve: m["curve"].asSymbol, amount: m["amount"] !? (_.asFloat))
 		}.select { |m| ~gens[m[\gen]].notNil };
 	};
+	(perf["globals"] ? []).do { |saved|
+		var gl = ~addGlobal.(saved["name"], saved["id"].asInteger);
+		gl[\value] = saved["value"].asFloat;
+		gl[\knob] = saved["knob"] !? { |k| k.collect(_.asInteger) };
+		gl[\mappings] = readMappings.(saved);
+	};
+	perf["generators"].do { |saved| ~gens[saved["id"].asInteger] !? { |g| g[\mappings] = readMappings.(saved) } };
 	~sendState.();
 	"loaded %".format(path).postln;
 };

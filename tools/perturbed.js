@@ -13,6 +13,9 @@ const HELP = `perturbed — change the running performance
   on <id> | off <id>                 switch a generator
   remove <id>
   do <id> <action>                   press a card button (lfo: Send)
+  map <lfo id> <gen id> <setting> [from to]   the lfo moves that setting over from..to (and locks it);
+                                     another lfo's hz, low or high works too
+  unmap <lfo id> <gen id> <setting>
 
   group add [name] [on= solo= collapsed=]   a group: switch, solo and fold several generators
   group set <name|id> on=on|off solo=on|off collapsed=on|off name=...
@@ -93,6 +96,9 @@ const COMMANDS = {
       return `${a} on generator ${id}`;
     },
   ],
+
+  map: [3, '<lfo id> <gen id> <setting> [from to [curve [amount]]]', (b, [d, id, st, ...r]) => b.mapFrom(d, id, st, ...r)],
+  unmap: [3, '<lfo id> <gen id> <setting>', (b, [d, id, st]) => b.unmapFrom(d, id, st)],
 
   'group add': [
     0,

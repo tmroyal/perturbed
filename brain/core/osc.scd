@@ -29,6 +29,9 @@
 //   /dest/add         <name> <port> <channel> <instrument>     port and channel are 1-based
 //   /dest/remove      <id>
 //   /gen/do           <id> <action>              run one of the type's actions (a card button)
+//   /gen/map          <id> <genId> <param> [<from> <to> <curve> <amount>]   a generator that maps (lfo)
+//                                                drives that setting; like /global/map
+//   /gen/unmap        <id> <genId> <param>
 //   /global/add       [<name>]                   a global parameter ("Meta n" by default); core/globals.scd
 //   /global/set       <id> name|value <v>        value 0–1 moves every mapped setting
 //   /global/remove    <id>
@@ -68,6 +71,8 @@
 //   /gen/label        <type> <param> <label>     display name
 //   /gen/action       <type> <name>              the type has an action: show a button
 //   /gen/slider       <type> <param> lin|log     show the param as a slider
+//   /gen/maps         <type>                     the type drives settings: Map button and targets
+//   /gen/targets      <id> (<genId> <param> <from> <to> <curve> <amount>)...   what generator <id> drives
 //   /gen/nooutput     <type>                     the type plays into no output (hide the output menu)
 //   /gen/section      <type> <param> <title>     param starts a new titled group
 //   /gen/learn        <id> <param> 1|0           learning started / ended
@@ -118,6 +123,7 @@
 	~inOrder.(~gens).do { |g| ~sendGen.(g); ~sendParams.(g) };
 	~inOrder.(~groups).do(~sendPins);  // after the generators they point at
 	~inOrder.(~globals).do { |gl| ~sendGlobal.(gl); ~sendMappings.(gl) };
+	~inOrder.(~gens).do { |g| if(g[\type][\maps] == true) { ~sendMappings.(g) } };
 	~send.('/state/end');
 };
 
@@ -160,6 +166,8 @@
 	OSCdef(\genLearn, { |msg| ~learnGen.(msg[1].asInteger, msg[2], msg[3].asInteger == 1) }, '/gen/learn');
 	~onObject.('/gen/set', \gens, \setGenByHand);  // refused for settings that follow a global
 	~onObject.('/gen/do', \gens, \genDo);
+	~onObject.('/gen/map', \gens, \mapFromGen);
+	~onObject.('/gen/unmap', \gens, \unmap);
 
 	OSCdef(\groupAdd, { |msg| ~addGroup.(msg[1]) }, '/group/add');
 	OSCdef(\groupRemove, { |msg| ~removeGroup.(msg[1].asInteger) }, '/group/remove');

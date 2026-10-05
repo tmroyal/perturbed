@@ -98,6 +98,34 @@ try {
   check(run('set', String(g.id), 'velocity=99').ok, 'unmapped: settable again');
   check(json('global', 'knob', 'Meta 1', '1', '74').knob?.cc === 74, 'global knob');
 
+  // an lfo drives settings: its own range per target, locked, taken over from a global, moving while it plays
+  const lfo = json('add', 'lfo', 'shape=square', 'num=1', 'den=4', 'sendCC=off', 'active=on');
+  const driven = json('map', String(lfo.id), String(g.id), 'humanize', '2', '30');
+  check(
+    driven.targets.some((t) => t.generator === g.id && t.setting === 'humanize' && t.from === 2 && t.to === 30),
+    'lfo map: a target with its range',
+  );
+  check(
+    !json('state')
+      .globals.find((x) => x.name === 'Meta 1')
+      .mappings.some((m) => m.setting === 'humanize'),
+    'a setting has one driver: the global let go',
+  );
+  const lfoLock = run('set', String(g.id), 'humanize=5');
+  check(!lfoLock.ok && /follows Lfo \d+/.test(lfoLock.out), 'a setting driven by an lfo is locked');
+  run('play');
+  const seen = new Set();
+  for (let i = 0; i < 10; i++) seen.add(json('state').generators.find((x) => x.id === g.id).params.humanize);
+  run('stop');
+  check(seen.has(2) && seen.has(30) && seen.size === 2, `the lfo moves the setting between its ends (${[...seen].join(', ')})`);
+  check(!run('map', String(lfo.id), String(lfo.id), 'hz').ok, "an lfo can't drive its own settings");
+  check(!run('map', String(g.id), String(lfo.id), 'hz').ok, 'only generators that map (lfo) can drive settings');
+  const lfo2 = json('add', 'lfo', 'sendCC=off');
+  check(
+    json('map', String(lfo2.id), String(lfo.id), 'phase', '0', '1').targets.some((t) => t.generator === lfo.id && t.setting === 'phase'),
+    "lfo to lfo: one lfo drives another's phase",
+  );
+
   const c = json('clock', 'add', 'mode=factor', 'factor=1.01');
   check(c.mode === 'factor' && Math.abs(c.factor - 1.01) < 1e-3, `clock add (${c.name})`);
   check(json('set', String(g.id), `clock=${c.name}`).params.clock === c.id, 'generator onto the clock by name');
@@ -125,6 +153,12 @@ try {
     'load brings it back',
   );
   check(json('state').generators.find((x) => x.id === g.id).collapsed === true, 'load keeps a folded generator folded');
+  check(
+    json('state')
+      .generators.find((x) => x.id === lfo.id)
+      ?.targets.some((t) => t.generator === g.id && t.setting === 'humanize' && t.to === 30),
+    "load keeps an lfo's targets",
+  );
   const back = json('state').globals.find((x) => x.name === 'Meta 1');
   check(
     back?.mappings.some((m) => m.setting === 'prob' && m.curve === 'threshold' && Math.abs(m.amount - 0.7) < 1e-6) && back?.knob?.cc === 74,

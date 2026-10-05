@@ -21,6 +21,8 @@
 //   sliders:   (param: \lin | \log) range params shown as a slider (+ field); by default a range
 //              wider than 32 is a slider, others a number field, and num/den always fields
 //   output:    false for types that don't play into an output (lfo); the surface hides the menu
+//   maps:      true for types that drive other generators' settings (lfo): the card gets a Map
+//              button and a list of targets; the type calls ~drive.(g, x) with x in 0–1 (core/globals.scd)
 // Shared building blocks: core/pitch.scd (which note), core/rhythm.scd (which grid steps play),
 // core/velocity.scd (how loud).
 (
@@ -92,7 +94,7 @@
 	if(type.isNil) { "unknown generator type %".format(typeName).warn; nil } {
 		id = ~newId.(\gen, id);
 		g = (id: id, typeName: typeName.asSymbol, type: type, p: ~paramsFor.(type), active: false, dest: 0,
-			held: (), group: ~groupOrNone.(group), collapsed: false);
+			held: (), group: ~groupOrNone.(group), collapsed: false, mappings: []);
 		~gens[id] = g;
 		~sendGen.(g);
 		~sendParams.(g);
@@ -168,6 +170,7 @@
 		(type[\labels] ? ()).keysValuesDo { |param, label| ~send.('/gen/label', name, param, label) };
 		(type[\sections] ? ()).keysValuesDo { |param, title| ~send.('/gen/section', name, param, title) };
 		if(type[\output] == false) { ~send.('/gen/nooutput', name) };
+		if(type[\maps] == true) { ~send.('/gen/maps', name) };
 		(type[\sliders] ? ()).keysValuesDo { |param, scale| ~send.('/gen/slider', name, param, scale) };
 		(type[\actions] ? ()).keys.asArray.sort.do { |a| ~send.('/gen/action', name, a) };
 	};

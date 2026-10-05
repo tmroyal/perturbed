@@ -188,8 +188,9 @@ class Brain {
           mappings: m.globals.get(a[0])?.mappings ?? [],
         });
         break;
-      case '/global/mappings': {
-        const g = m.globals.get(a[0]);
+      case '/global/mappings':
+      case '/gen/targets': {
+        const g = (addr === '/gen/targets' ? m.gens : m.globals).get(a[0]); // a driver: a global, or a generator that maps
         if (g) {
           g.mappings = [];
           for (let i = 1; i + 5 < a.length; i += 6) {
@@ -241,6 +242,9 @@ class Brain {
       }
       case '/gen/nooutput':
         type(a[0]).output = false;
+        break;
+      case '/gen/maps':
+        type(a[0]).maps = true;
         break;
       case '/gen/action':
         type(a[0]).actions.push(a[1]);
@@ -376,6 +380,7 @@ class Brain {
         active: g.active,
         sounding: this.sounds(g),
         collapsed: !!g.collapsed,
+        ...(this.model.types.get(g.type)?.maps ? { targets: g.mappings ?? [] } : {}), // what it drives
         group: g.group ? { id: g.group, name: m.groups.get(g.group)?.name ?? null } : null,
         ...(this.model.types.get(g.type)?.output === false ? {} : { output: g.dest ? { id: g.dest, name: destName(g.dest) } : null }),
         params: g.params,
@@ -388,6 +393,10 @@ class Brain {
   mappedSettings(genId) {
     const out = {};
     for (const gl of this.model.globals.values()) for (const m of gl.mappings) if (m.generator === genId) out[m.setting] = gl.name;
+    // generators that drive settings (lfo)
+    for (const d of this.model.gens.values()) {
+      for (const m of d.mappings ?? []) if (m.generator === genId) out[m.setting] = `${d.type[0].toUpperCase()}${d.type.slice(1)} ${d.id}`;
+    }
     return Object.keys(out).length ? out : null;
   }
 
@@ -538,7 +547,25 @@ class Brain {
   // options by name), from > to inverts; curve linear|exp|steps|threshold, amount = steps or the
   // threshold point. Left out: from = the current value, to = the far end of the range.
   async map(globalRef, genId, param, from, to, curve = 'linear', amount) {
-    const id = this.global(globalRef) || fail('which global?');
+    return this.mapTo({ kind: 'global', id: this.global(globalRef) || fail('which global?') }, genId, param, from, to, curve, amount);
+  }
+
+  // The same from a generator that drives settings (lfo): `lfoId` moves the setting over from..to.
+  async mapFrom(lfoId, genId, param, from, to, curve = 'linear', amount) {
+    const d = this.gen(lfoId);
+    if (!this.type(d.type).maps) fail(`generator ${d.id} (${d.type}) can't drive settings: an lfo can`);
+    return this.mapTo({ kind: 'gen', id: d.id }, genId, param, from, to, curve, amount);
+  }
+
+  async unmapFrom(lfoId, genId, param) {
+    const d = this.gen(lfoId);
+    await this.request('/gen/unmap', [d.id, +genId, param], '/gen/targets', (gid) => gid === d.id);
+    return this.state().generators.find((x) => x.id === d.id);
+  }
+
+  async mapTo(driver, genId, param, from, to, curve, amount) {
+    const { id } = driver;
+    const [addr, echo] = driver.kind === 'global' ? ['/global/map', '/global/mappings'] : ['/gen/map', '/gen/targets'];
     const g = this.gen(genId);
     const s = this.type(g.type).params.find((p) => p.name === param);
     if (!s || !['range', 'note', 'choice'].includes(s.kind))
@@ -556,12 +583,12 @@ class Brain {
     const args = [id, g.id, param];
     if (from !== undefined) args.push(unit(from), unit(to ?? from), curve, ...(amount !== undefined ? [+amount] : []));
     await this.request(
-      '/global/map',
+      addr,
       args,
-      '/global/mappings',
+      echo,
       (gid, ...flat) => gid === id && flat.some((x, i) => i % 6 === 0 && x === g.id && flat[i + 1] === param),
     );
-    return this.model.globals.get(id);
+    return driver.kind === 'global' ? this.model.globals.get(id) : this.state().generators.find((x) => x.id === id);
   }
 
   // A global follows a knob or fader (MIDI channel 1–16, cc 0–127); 'none' forgets it.

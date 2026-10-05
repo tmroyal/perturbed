@@ -1,5 +1,6 @@
-// lfo — a low-frequency oscillator sent as MIDI control changes on a control bus (config
-// `control`, picked by name), not to an output. In Live, map it with MIDI Map mode (⌘M, click a parameter, let the
+// lfo — a low-frequency oscillator that moves settings of other generators (Map, then click them:
+// each target has its own from → to; another lfo's Hz or range can be a target), and/or is sent as
+// MIDI control changes on a control bus (config `control`, picked by name). Not to an output. In Live, map it with MIDI Map mode (⌘M, click a parameter, let the
 // LFO move) or a plugin's MIDI learn. The card's Send button sends one value (from/to in turn),
 // for mapping without playing.
 //
@@ -18,18 +19,21 @@ params: [
 	[\den, 1, \range, 1, 32],
 	[\hz, 0.25, \range, 0.01, 20, 0.01],
 	[\phase, 0, \range, 0, 1, 0.01],
-	[\low, 0, \range, 0, 127],
-	[\high, 127, \range, 0, 127],
+	[\sendCC, "on", \choice, "on", "off"],
 	[\port, ~controlNames.first ? "", \choice] ++ ~controlNames,
 	[\channel, "1", \choice] ++ (1..16).collect(_.asString),
 	[\cc, 1, \range, 0, 127],
+	[\low, 0, \range, 0, 127],
+	[\high, 127, \range, 0, 127],
 	~clockParam,
 ],
 output: false,
+maps: true,
 sliders: (hz: \log, phase: \lin),
-showWhen: (num: [\rate, "sync"], den: [\rate, "sync"], clock: [\rate, "sync"], hz: [\rate, "free"]),
-labels: (rate: "rate", num: "cycle", hz: "Hz", low: "from", high: "to", port: "bus"),
-sections: (shape: "Wave", low: "Range", port: "MIDI CC", clock: "Clock"),
+showWhen: (num: [\rate, "sync"], den: [\rate, "sync"], clock: [\rate, "sync"], hz: [\rate, "free"],
+	low: [\sendCC, "on"], high: [\sendCC, "on"], port: [\sendCC, "on"], channel: [\sendCC, "on"], cc: [\sendCC, "on"]),
+labels: (rate: "rate", num: "cycle", hz: "Hz", low: "from", high: "to", port: "bus", sendCC: "send CC"),
+sections: (shape: "Wave", sendCC: "MIDI CC", clock: "Clock"),
 restartOn: [\clock],
 actions: (
 	// one value now, alternating from/to so a mapped parameter visibly moves
@@ -58,7 +62,8 @@ run: { |g, p|
 			{ 0.5 + (0.5 * sin(2pi * f)) });
 		var v = (p[\low].asFloat + ((p[\high].asFloat - p[\low].asFloat) * u)).round.asInteger;
 		if(~sounds.(g).not) { last = nil } {  // muted by its group: silent, and resends when back
-			if(v != last) { ~lfoCC.(p, v); last = v };
+			~drive.(g, u);  // the settings mapped to it (each over its own range)
+			if(p[\sendCC].asString == "on") { if(v != last) { ~lfoCC.(p, v); last = v } } { last = nil };
 		};
 		(0.02 * thisThread.clock.tempo).wait;
 	};

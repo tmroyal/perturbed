@@ -4,19 +4,30 @@
 // the global (from → to in the setting's units, from > to inverts; curve). Mapped settings are
 // locked on their cards and tagged with the global's name. Knob: press it and turn a knob or fader on
 // the controller; the global follows it from then on.
+//
+// Generators that drive settings (lfo) map the same way: their card has the Map button and the
+// list of targets (generators.js); Map mode, the rows and the lock are shared here.
 const CURVES = ['linear', 'exp', 'steps', 'threshold'];
 const globalRows = new Map(); // id -> { update(gl) }, so a dragged slider isn't rebuilt under the pointer
 const expanded = new Set(); // ids of globals whose mappings are shown
-let mapping = null; // the global in Map mode, or null
+let mapping = null; // what's in Map mode: { kind: 'global' | 'gen', id }, or null
+const isMapping = (kind, id) => mapping?.kind === kind && mapping.id === id;
 
-// The global a setting follows, or undefined.
-const followedBy = (genId, param) =>
-  [...model.globals.values()].find((gl) => gl.mappings.some((m) => m.gen === genId && m.param === param));
+// What a setting follows (a global, or a generator that drives it), as { name }; or undefined.
+function followedBy(genId, param) {
+  const drives = (d) => (d.mappings ?? []).some((m) => m.gen === genId && m.param === param);
+  const gl = [...model.globals.values()].find(drives);
+  if (gl) return gl;
+  const gen = [...model.gens.values()].find(drives);
+  return gen && { name: genName(gen) };
+}
 
-function setMapMode(id) {
-  mapping = id;
-  document.body.classList.toggle('map-mode', id !== null);
+// Map mode for a global or a generator (again: off).
+function toggleMapMode(kind, id) {
+  mapping = isMapping(kind, id) ? null : { kind, id };
+  document.body.classList.toggle('map-mode', mapping !== null);
   renderGlobals();
+  renderCards();
 }
 
 // In Map mode a click on a setting's name maps it (the brain refuses settings that can't be mapped).
@@ -27,22 +38,23 @@ document.addEventListener(
     if (!label) return;
     e.preventDefault();
     e.stopPropagation();
-    osc.send('/global/map', mapping, +label.dataset.gen, label.dataset.param);
+    osc.send(`/${mapping.kind}/map`, mapping.id, +label.dataset.gen, label.dataset.param);
   },
   true,
 );
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && mapping !== null) setMapMode(null);
+  if (e.key === 'Escape' && mapping !== null) toggleMapMode(mapping.kind, mapping.id);
 });
 
-// One mapping: from → to (menus for menu settings), curve, its amount when it has one, ×.
-function mappingRow(gl, m) {
+// One mapping of a driver (kind 'global' or 'gen'): from → to (menus for menu settings), curve, its
+// amount when it has one, ×.
+function mappingRow(gl, m, kind = 'global') {
   const gen = model.gens.get(m.gen);
   const spec = gen && specOf(gen.type, m.param);
   if (!spec) return '';
   const send = (patch) => {
     const n = { ...m, ...patch };
-    osc.send('/global/map', gl.id, m.gen, m.param, n.from, n.to, n.curve, ...(n.amount === null ? [] : [n.amount]));
+    osc.send(`/${kind}/map`, gl.id, m.gen, m.param, n.from, n.to, n.curve, ...(n.amount === null ? [] : [n.amount]));
   };
   const end = (key) => {
     if (spec.kind === 'choice') {
@@ -81,7 +93,7 @@ function mappingRow(gl, m) {
       end('to'),
       curve,
       amount,
-      closeButton('Unmap', () => osc.send('/global/unmap', gl.id, m.gen, m.param)),
+      closeButton('Unmap', () => osc.send(`/${kind}/unmap`, gl.id, m.gen, m.param)),
     ),
   );
 }
@@ -95,9 +107,9 @@ function globalRow(gl) {
   const map = el('button', {
     className: 'map',
     title: 'Map: then click setting names on cards (Esc or Map again to finish)',
-    onclick: () => setMapMode(mapping === gl.id ? null : gl.id),
+    onclick: () => toggleMapMode('global', gl.id),
   });
-  setOn(map, mapping === gl.id, mapping === gl.id ? 'Done' : 'Map');
+  setOn(map, isMapping('global', gl.id), isMapping('global', gl.id) ? 'Done' : 'Map');
   const knob = el('button', {
     className: 'knob',
     onclick: () => osc.send('/global/learn', gl.id, model.knobLearning === gl.id ? 0 : 1),

@@ -47,6 +47,7 @@ tools/perturbed output add "Piano 3" 1 3 "Pianoteq 9"
 tools/perturbed tempo 84                                # scale 3 2 for metric modulation
 tools/perturbed chord C3 G3 E4 B4                       # audition a chord; the performer's playing replaces it
 tools/perturbed add lfo shape=triangle num=16 den=1 port="Perturbed CTL 1" channel=1 cc=20
+tools/perturbed add lfo shape=sine num=8 den=1 sendCC=off   # then: map <its id> 3 velocity 40 110
 tools/perturbed save performances/<name>.json           # load replaces everything
 ```
 
@@ -166,9 +167,13 @@ after its own `duration`).
 | `lo`, `hi` | 0–127 (0, 127) | only keys in this range pass (a zone; the key as played) |
 | `delay` | 0–16 beats of the main tempo, quarter steps (0) | delay notes (and note-offs) |
 
-**lfo** — a MIDI CC wave on a control bus (not an output). Live maps it to a parameter (MIDI
-Map mode); tell the performer which channel/cc you used and what it's meant to move, since the
-mapping is done by hand in Live.
+**lfo** — a slow wave that moves things. It can **drive settings of other generators**
+(`tools/perturbed map <lfo id> <gen id> <setting> <from> <to>`: each target has its own range, is
+locked while driven, and follows one driver, an lfo or a global; another lfo's `hz`, `phase`, `low`
+or `high` can be a target), and/or send **MIDI CC** on a control bus for Live to map to a parameter
+(MIDI Map mode; tell the performer which channel/cc you used and what it's meant to move, since that
+mapping is done by hand in Live). Set `sendCC=off` for an lfo that only moves settings. It only
+moves things while it's on and the transport runs.
 
 | param | values (default) | meaning |
 |---|---|---|
@@ -177,6 +182,7 @@ mapping is done by hand in Live.
 | `num`, `den` | 1–64, 1–32 (4, 1) | cycle length in beats, for sync |
 | `hz` | 0.01–20 (0.25) | cycles per second, for free |
 | `phase` | 0–1 (0) | start point in the cycle |
+| `sendCC` | on, off (on) | whether it sends MIDI CC (the settings below) |
 | `low`, `high` | 0–127 (0, 127) | CC range (low > high inverts) |
 | `port` | a control bus by name ("Perturbed CTL 1") | which control bus |
 | `channel`, `cc` | "1"–"16" ("1"), 0–127 (1) | where it goes on that bus (channel is a menu: a string) |

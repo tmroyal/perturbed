@@ -127,6 +127,7 @@ A type needs at least one of them. It can have both.
 | `actions` | `(Reset: { \|g, p\| ... })` | buttons on the card that run a function |
 | `globals` | `[\density]` | global parameters this type reads (created if missing; see §6) |
 | `output: false` | | the type plays into no output (like `lfo`, which sends control changes) |
+| `maps: true` | | the type drives other generators' settings (like `lfo`): its card gets a **Map** button and a list of targets, and `run` calls `~drive.(g, x)` with `x` from 0 to 1 to move them |
 
 ---
 

@@ -175,6 +175,15 @@ function buildCard(gen) {
   const toggleFold = () => set('collapsed', gen.collapsed ? 0 : 1);
   const fold = el('button', { className: 'fold', onclick: toggleFold });
   const where = el('span', { className: 'hint where' });
+  // a type that drives settings (lfo): Map (then click setting names on other cards) and its targets
+  const map = specs.maps
+    ? el('button', {
+        className: 'power map',
+        title: 'Map: then click setting names on other cards (Esc or Map again to finish)',
+        onclick: () => toggleMapMode('gen', gen.id),
+      })
+    : '';
+  const targets = el('div', { className: 'targets' });
   const body = el('div', { className: 'fields' }, ...fields);
   const root = el(
     'section',
@@ -189,10 +198,12 @@ function buildCard(gen) {
       ...(specs.actions ?? []).map((a) =>
         el('button', { className: 'power', textContent: a, onclick: () => osc.send('/gen/do', gen.id, a) }),
       ),
+      map,
       power,
       closeButton('Remove', () => osc.send('/gen/remove', gen.id)),
     ),
     body,
+    targets,
   );
 
   return {
@@ -205,6 +216,12 @@ function buildCard(gen) {
       root.classList.toggle('grouped', !!gen.group);
       root.classList.toggle('collapsed', !!gen.collapsed);
       body.hidden = !!gen.collapsed;
+      targets.hidden = !!gen.collapsed;
+      if (map) setOn(map, isMapping('gen', gen.id), isMapping('gen', gen.id) ? 'Done' : 'Map');
+      targets.replaceChildren(
+        ...(gen.mappings?.length ? [el('div', { className: 'section', textContent: 'Moves' })] : []),
+        ...(gen.mappings ?? []).map((m) => mappingRow(gen, m, 'gen')),
+      );
       fold.textContent = gen.collapsed ? '▸' : '▾';
       fold.title = gen.collapsed ? 'Unfold' : 'Fold away';
       where.textContent = gen.collapsed ? (model.dests.get(gen.dest)?.name ?? '') : '';

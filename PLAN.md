@@ -57,7 +57,7 @@ so the Live API can create audio clips from files).
   row, cloud, drone. Some of these may start life as AdHoc types and graduate to `brain/types/`.
 - **Other note sources:** sequence, transforms (transpose, invert, subset) of the chord.
 - **Controllers:** generator-to-generator modulation. (Knobs drive globals: §5.10.)
-- **LFOs:** LFO-to-LFO modulation (rate, depth); the current value shown on the card.
+- **LFOs:** depth as a setting (scaling every target's range at once), so one LFO can fade another in.
 - **Globals:** a global driven by an LFO; soft takeover for knobs (no jump when a knob and its
   global disagree); a global on a group's
   header; offset mode (editing a mapped setting shifts its range instead of being refused).
@@ -291,3 +291,19 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
 - Surface (`surface/globals.js`): a sidebar row per global (name, slider, Knob, Map, ▸ mappings, ×);
   Map mode makes setting names on cards clickable targets. CLI: `global add|set|remove|map|unmap`;
   `state` lists globals and each generator's `follows`.
+
+### 5.11 Drivers: LFOs that move settings
+
+- A generator whose type has `maps: true` (`lfo`) holds mappings exactly like a global
+  (`g[\mappings]`, the same from → to, curves and lock): globals and such generators are *drivers*
+  (`~drivers`, `~mappedBy`, `~driverName` in `core/globals.scd`), and a setting follows at most one,
+  whichever kind. `/gen/map <id> <gen> <param> [from to curve amount]`, `/gen/unmap`, echoed as
+  `/gen/targets` (the layout of `/global/mappings`); `/gen/maps <type>` in the schema.
+- The lfo calls `~drive.(g, u)` from its run with its wave in 0–1, so it moves its targets only
+  while it's on, sounding (not muted by its group) and the transport runs. A generator can't drive
+  its own settings; another lfo's can be driven (LFO-to-LFO). MIDI CC is optional (`sendCC`).
+- Surface: Map on the lfo's card (Map mode is shared with globals, `surface/globals.js`), targets
+  under *Moves*; driven settings are locked, tagged `← Lfo n` and show their moving value.
+  CLI: `map`/`unmap <lfo id> <gen id> <setting>`; `state` shows `targets` and `follows`.
+- Also here: generator cards fold (`collapsed`, saved); basic has `chance`, and `length`/`duration`
+  (`~strikeFor`, `~rhythmChance`, `~noteBeats`).

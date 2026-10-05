@@ -132,6 +132,23 @@ const handlers = {
     const specs = model.types.get(type);
     if (specs) specs.actions = [...(specs.actions ?? []), name];
   },
+  '/gen/maps': (type) => {
+    const specs = model.types.get(type);
+    if (specs) specs.maps = true;
+  },
+  '/gen/targets': (id, ...flat) => {
+    const gen = model.gens.get(id);
+    if (!gen) return;
+    gen.mappings = chunks(flat, 6).map(([g, param, from, to, curve, amount]) => ({
+      gen: g,
+      param,
+      from,
+      to,
+      curve,
+      amount: amount < 0 ? null : amount,
+    }));
+    return renderCards;
+  },
   '/gen/nooutput': (type) => {
     const specs = model.types.get(type);
     if (specs) specs.noOutput = true;
@@ -213,7 +230,7 @@ const handlers = {
   },
   '/global/removed': (id) => {
     model.globals.delete(id);
-    if (mapping === id) mapping = null;
+    if (isMapping('global', id)) toggleMapMode('global', id);
     return () => {
       renderGlobals();
       renderCards();
@@ -235,7 +252,10 @@ const handlers = {
   '/gen/removed': (id) => {
     const gen = model.gens.get(id);
     model.gens.delete(id);
-    return () => unmountCard(gen);
+    return () => {
+      unmountCard(gen);
+      if (isMapping('gen', id)) toggleMapMode('gen', id); // it was in Map mode: leave it
+    };
   },
 
   '/gen/learn': (id, name, on) => {

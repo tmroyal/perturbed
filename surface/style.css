@@ -115,11 +115,17 @@ button.learn.on, #chord-arm.on, .lib-row .reload { background: var(--nord12); bo
 .global > .row input[type=number].value { width: 56px; text-align: right; flex: none; }
 .global-head .knob { font-variant-numeric: tabular-nums; }
 .global-head .map.on, .global-head .knob.on { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
-.global .mapping { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; border-top: 1px solid var(--nord3); }
-.global .mapping .what { color: var(--nord9); font-size: 12px; }
-.global .mapping .row { display: flex; align-items: center; gap: 4px; }
-.global .mapping input[type=number] { width: 52px; }
-.global .mapping select { min-width: 0; max-width: 88px; }
+.mapping { display: flex; flex-direction: column; gap: 4px; padding-top: 6px; border-top: 1px solid var(--nord3); }
+.mapping .what { color: var(--nord9); font-size: 12px; }
+.mapping .row { display: flex; align-items: center; gap: 4px; }
+.mapping input[type=number] { width: 52px; }
+.mapping select { min-width: 0; max-width: 88px; }
+/* a generator that drives settings (lfo): its Map button and targets, under the card's fields */
+.card .targets { display: flex; flex-direction: column; gap: 6px; }
+.card .targets:not(:empty) { margin-top: 12px; }
+.card .targets .section { margin: 0; padding-top: 10px; border-top: 1px solid var(--nord2); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--nord3); }
+.card .targets .mapping { border-top: none; padding-top: 0; }
+.card header .map.on { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
 /* map mode: setting names on cards become targets; mapped settings are locked and tagged */
 body.map-mode .card label[data-param] { cursor: crosshair; color: var(--nord12); text-decoration: underline dotted; }
 .fields label .follows { color: var(--nord15); font-size: 11px; margin-left: 4px; }

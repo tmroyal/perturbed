@@ -82,7 +82,8 @@ first (the brain lists the MIDI inputs it found in the terminal). The first run 
 - **Clocks:** A is the main clock. Add B, C… at a ratio or factor of it (1.01 phases slowly), or
   at their own tempo, and put generators on them.
 - **New** starts an empty performance (no outputs: add them from *In Live*). **Save… / Open…**
-  store the whole performance in `performances/` (`example.json` is a demo).
+  store the whole performance in `performances/` (`example.json` is a demo). A dot on *Save…* means
+  there are unsaved changes; closing the window, New and Open… ask before losing them.
 
 ## Develop
 

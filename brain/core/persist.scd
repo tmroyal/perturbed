@@ -44,6 +44,7 @@
 	~chordMode = \auto;
 	~armed = false;
 	~chord = [];
+	~dirty = false;
 	~sendState.();
 };
 
@@ -103,6 +104,7 @@
 		gl[\mappings] = readMappings.(saved);
 	};
 	perf["generators"].do { |saved| ~gens[saved["id"].asInteger] !? { |g| g[\mappings] = readMappings.(saved) } };
+	~dirty = false;
 	~sendState.();
 	"loaded %".format(path).postln;
 };

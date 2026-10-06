@@ -56,6 +56,8 @@
 // Brain → surfaces (on the sender's address):
 //   /state/begin, /state/end                     frame a full snapshot
 //   /pong             <bootId>                   bootId changes when the brain restarts: re-/hello
+//   /dirty            1|0                        the performance has changes since it was saved,
+//                                                opened or started new (surfaces ask before closing)
 //   /saved            <path>                     a /save was written
 //   /error            <message>                  an intent failed (e.g. /load of a bad file)
 //   /transport        <playing> <bpm>
@@ -106,11 +108,24 @@
 // An intent failed: to the log and to every surface (tools/perturbed shows it, the app's status bar too).
 ~report = { |text| text.warn; ~send.('/error', text) };
 
+// Unsaved changes: set by any intent that changes what a performance file holds (from the app, a
+// tool or Claude alike); cleared by save, load and new. Surfaces ask before throwing them away.
+~dirty = false;
+~setDirty = { |on| if(on != ~dirty) { ~dirty = on; ~send.('/dirty', on.binaryValue) } };
+~changesPerformance = { |addr|
+	var a = addr.asString;
+	["/gen/add", "/gen/remove", "/gen/set", "/gen/map", "/gen/unmap", "/group/", "/clock/", "/dest/",
+		"/chord/set", "/chord/clear", "/chord/mode", "/transport/tempo", "/transport/scale",
+		"/global/add", "/global/remove", "/global/set", "/global/map", "/global/unmap", "/global/knob"]
+	.any { |prefix| a.beginsWith(prefix) };
+};
+
 // Where to answer: the sender, or the port named in msg[1].
 ~replyAddr = { |msg, addr| msg[1] !? { |port| NetAddr(addr.ip, port.asInteger) } ? addr };
 
 ~sendState = {
 	~send.('/state/begin');
+	~send.('/dirty', ~dirty.binaryValue);
 	~sendTransport.();
 	~send.('/ports', *~config[\ports].collect(_.join(" ")));
 	~sendChord.();
@@ -198,9 +213,13 @@
 	~onObject.('/global/learn', \globals, \learnKnob);
 	~onObject.('/global/knob', \globals, \setKnob);
 
+	// every incoming message, on any port (an OSCdef without a path misses the ones on $PERFORMED_PORT)
+	thisProcess.addOSCRecvFunc({ |msg| if(~changesPerformance.(msg[0])) { ~setDirty.(true) } });
 	OSCdef(\new, { ~newPerformance.() }, '/new');
 	OSCdef(\save, { |msg|
-		try { ~savePerformance.(msg[1].asString); ~send.('/saved', msg[1].asString) } { |e| ~report.("save failed: " ++ e.errorString) };
+		try { ~savePerformance.(msg[1].asString); ~setDirty.(false); ~send.('/saved', msg[1].asString) } { |e|
+			~report.("save failed: " ++ e.errorString);
+		};
 	}, '/save');
 	OSCdef(\load, { |msg| try { ~loadPerformance.(msg[1].asString) } { |e| ~report.("load failed: " ++ e.errorString) } }, '/load');
 };

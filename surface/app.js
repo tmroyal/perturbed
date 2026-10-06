@@ -118,6 +118,11 @@ const handlers = {
   '/adhoc/loaded': (name) => {
     typeLoaded(name);
   },
+  '/dirty': (on) => {
+    model.unsaved = !!on;
+    $('save').classList.toggle('unsaved', model.unsaved);
+    $('save').title = model.unsaved ? 'There are unsaved changes' : '';
+  },
   '/error': (message) => {
     showError(message);
   },

@@ -307,3 +307,13 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   CLI: `map`/`unmap <lfo id> <gen id> <setting>`; `state` shows `targets` and `follows`.
 - Also here: generator cards fold (`collapsed`, saved); basic has `chance`, and `length`/`duration`
   (`~strikeFor`, `~rhythmChance`, `~noteBeats`).
+
+### 5.12 Unsaved changes
+
+- The brain keeps `~dirty`: set by any incoming intent that changes what a performance file holds
+  (`~changesPerformance`, checked for every message with `thisProcess.addOSCRecvFunc`, so the app,
+  `perturbed` and Claude all count), cleared by save, load and new. Sent as `/dirty 1|0` (and in
+  the snapshot). Chords played on the keyboard and knob turns don't count.
+- The app marks *Save…* with a dot, asks before New and Open…, and on closing the window or
+  quitting (`surface/main.js`): Save… (waits for `/saved`, stays open on `/error` or no answer),
+  Don't Save, Cancel. `perturbed state` shows `unsaved`.

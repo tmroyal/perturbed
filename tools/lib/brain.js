@@ -212,6 +212,9 @@ class Brain {
       case '/group/removed':
         m.groups.delete(a[0]);
         break;
+      case '/dirty':
+        m.unsaved = !!a[0];
+        break;
       case '/transport':
         m.playing = !!a[0];
         m.tempo = a[1];
@@ -364,6 +367,7 @@ class Brain {
     const destName = (id) => m.dests.get(id)?.name ?? null;
     return {
       playing: m.playing,
+      unsaved: !!m.unsaved, // changes since it was saved, opened or started new
       tempo: +m.tempo.toFixed(3),
       chord: { mode: m.chord.mode, armed: m.chord.armed, pitches: m.chord.pitches, names: m.chord.pitches.map(noteName) },
       clocks: [

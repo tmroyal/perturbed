@@ -42,10 +42,9 @@ function renderTransport() {
   renderMod();
 }
 
-// New: an empty performance (asked first: what's there is gone unless it was saved).
+// New and Open replace the performance: asked first when it has unsaved changes (the brain knows).
 $('new').onclick = () => {
-  const empty = !model.gens.size && !model.dests.size && !model.groups.size && !model.globals.size && !model.clocks.size;
-  if (empty || confirm('Start a new, empty performance?\n\nAnything not saved is lost.')) osc.send('/new');
+  if (!model.unsaved || confirm('Start a new, empty performance?\n\nChanges since the last save are lost.')) osc.send('/new');
 };
 
 // The brain writes and reads the file; the surface only picks the path.
@@ -54,6 +53,7 @@ $('save').onclick = async () => {
   if (p) osc.send('/save', p);
 };
 $('load').onclick = async () => {
+  if (model.unsaved && !confirm('Open another performance?\n\nChanges since the last save are lost.')) return;
   const p = await files.pick('load');
   if (p) osc.send('/load', p);
 };

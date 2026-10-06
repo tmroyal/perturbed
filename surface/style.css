@@ -63,6 +63,7 @@ button.learn.on, #chord-arm.on, .lib-row .reload { background: var(--nord12); bo
 }
 #transport .group { display: flex; align-items: center; gap: 8px; }
 #play { width: 80px; }
+#save.unsaved::after { content: ' •'; color: var(--nord13); }
 #tempo input[type=number] { width: 64px; }
 #mod input { width: 44px; text-align: right; }
 #mod-swap { padding: 6px 8px; }

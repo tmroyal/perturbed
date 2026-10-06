@@ -29,6 +29,7 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
   });
   win.loadFile('index.html');
+  win.on('close', askToSave);
   win.on('closed', () => {
     win = null;
     term?.kill();
@@ -90,9 +91,51 @@ ipcMain.on('term:resize', (_e, cols, rows) => {
 });
 app.on('before-quit', () => term?.kill());
 
+// --- unsaved changes: the brain says when there are some (/dirty); closing the window (or
+// quitting) then asks to save first ---
+let unsaved = false;
+let closing = false; // the answer was given: let the window go
+let saveThenClose = null; // waiting for the brain's /saved (or /error) before closing
+
+function askToSave(e) {
+  if (!unsaved || closing) return;
+  e.preventDefault();
+  const choice = dialog.showMessageBoxSync(win, {
+    type: 'warning',
+    buttons: ['Save…', "Don't Save", 'Cancel'],
+    defaultId: 0,
+    cancelId: 2,
+    message: 'Save this performance before closing?',
+    detail: "It has changes since it was last saved. They will be lost if you don't save them.",
+  });
+  if (choice === 2) return;
+  if (choice === 0) {
+    const file = dialog.showSaveDialogSync(win, { defaultPath: path.join(PERFORMANCES, 'untitled.json'), filters: FILTERS });
+    if (!file) return; // cancelled the file dialog: stay open
+    sock.send(encode('/save', [file]), SC.port, SC.host);
+    saveThenClose = setTimeout(() => saved(false, "The brain didn't answer."), 3000);
+    return;
+  }
+  closing = true;
+  win.close();
+}
+
+function saved(ok, why) {
+  if (!saveThenClose) return;
+  clearTimeout(saveThenClose);
+  saveThenClose = null;
+  if (!ok) return dialog.showErrorBox('Not saved', `${why}\nPerturbed stays open.`);
+  closing = true;
+  win?.close();
+}
+
 sock.on('message', (msg) => {
   try {
-    toRenderer('osc', decode(msg));
+    const m = decode(msg);
+    if (m.addr === '/dirty') unsaved = !!m.args[0];
+    if (m.addr === '/saved') saved(true);
+    if (m.addr === '/error') saved(false, m.args[0]);
+    toRenderer('osc', m);
   } catch (e) {
     console.error('bad OSC', e);
   }

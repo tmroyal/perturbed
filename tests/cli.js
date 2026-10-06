@@ -199,7 +199,17 @@ try {
       fresh.tempo === tempo,
     'new: no outputs, generators, groups, globals, extra clocks or chord; tempo kept',
   );
+  check(fresh.unsaved === false, 'a new performance has nothing to save');
   check(json('add', 'basic').id === 1, 'ids start over in a new performance');
+  check(json('state').unsaved === true, 'a change makes it unsaved');
+  const kept = path.join(os.tmpdir(), `perturbed-cli-unsaved-${process.pid}.json`);
+  run('save', kept);
+  check(json('state').unsaved === false, 'saving clears that');
+  run('tempo', String(tempo));
+  check(json('state').unsaved === true, 'a tempo change counts too');
+  run('load', kept);
+  check(json('state').unsaved === false, 'opening a file clears it');
+  fs.unlinkSync(kept);
   run('remove', '1');
 } catch (e) {
   check(false, e.message);

@@ -124,6 +124,19 @@ try {
   check(seen.has(2) && seen.has(30) && seen.size === 2, `the lfo moves the setting between its ends (${[...seen].join(', ')})`);
   check(!run('map', String(lfo.id), String(lfo.id), 'hz').ok, "an lfo can't drive its own settings");
   check(!run('map', String(g.id), String(lfo.id), 'hz').ok, 'only generators that map (lfo) can drive settings');
+  // free mode integrates its phase: halving Hz mid-cycle slows it down from where it is, no jump
+  const ramp = json('add', 'lfo', 'shape=saw up', 'rate=free', 'hz=0.5', 'sendCC=off', 'active=on');
+  json('map', String(ramp.id), String(g.id), 'accent', '1', '101');
+  const probNow = () => json('state').generators.find((x) => x.id === g.id).params.accent;
+  run('play');
+  execFileSync('sleep', ['0.9']);
+  const before = probNow();
+  run('set', String(ramp.id), 'hz=0.25');
+  const after = probNow();
+  run('stop');
+  check(before > 30 && Math.abs(after - before) < 20, `changing Hz doesn't reset a free lfo's position (${before} then ${after})`);
+  run('remove', String(ramp.id));
+
   const lfo2 = json('add', 'lfo', 'sendCC=off');
   check(
     json('map', String(lfo2.id), String(lfo.id), 'phase', '0', '1').targets.some((t) => t.generator === lfo.id && t.setting === 'phase'),

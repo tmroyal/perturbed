@@ -5,7 +5,9 @@
 // for mapping without playing.
 //
 // Rate is like Ableton's LFO: sync = one cycle per num/den beats of its clock, counted from the
-// grid origin (so it lines up with Live's bars); free = cycles per second from play. It sends about
+// grid origin (so it lines up with Live's bars); free = cycles per second from play, with the
+// phase integrated, so changing Hz (by hand, a global or another lfo) speeds it up or slows it
+// down from where it is instead of jumping. It sends about
 // 50 values a second, only when the value changes, timestamped like notes.
 // One value on its bus, channel and cc (a bus not in config `control` is silent).
 ~lfoCC = { |p, v, now = false|
@@ -44,15 +46,19 @@ actions: (
 ),
 
 run: { |g, p|
-	var t0 = thisThread.seconds, last = nil;
+	var then = thisThread.seconds, turns = 0, last = nil;  // turns: free mode's cycles so far
 	// a repeatable random value in 0..1 per cycle (a shader-style hash), so a restart replays the same steps
 	var rnd = { |n| ((n * 12.9898 + (g[\id] * 78.233)).sin * 43758.5453).frac };
 	loop {
-		var x = p[\phase].asFloat + if(p[\rate].asString == "free") { (thisThread.seconds - t0) * p[\hz].asFloat } {
+		var now = thisThread.seconds, x, c, f, u, v;
+		turns = turns + ((now - then) * p[\hz].asFloat);
+		then = now;
+		x = p[\phase].asFloat + if(p[\rate].asString == "free") { turns } {
 			~beats.() / (p[\num].asInteger.max(1) / p[\den].asInteger.max(1))
 		};
-		var c = x.floor, f = x - c;
-		var u = switch(p[\shape].asString,
+		c = x.floor;
+		f = x - c;
+		u = switch(p[\shape].asString,
 			"triangle", { 1 - ((2 * f) - 1).abs },
 			"saw up", { f },
 			"saw down", { 1 - f },
@@ -60,7 +66,7 @@ run: { |g, p|
 			"random", { rnd.(c) },
 			"smooth random", { rnd.(c) + ((rnd.(c + 1) - rnd.(c)) * (0.5 - (0.5 * cos(pi * f)))) },
 			{ 0.5 + (0.5 * sin(2pi * f)) });
-		var v = (p[\low].asFloat + ((p[\high].asFloat - p[\low].asFloat) * u)).round.asInteger;
+		v = (p[\low].asFloat + ((p[\high].asFloat - p[\low].asFloat) * u)).round.asInteger;
 		if(~sounds.(g).not) { last = nil } {  // muted by its group: silent, and resends when back
 			~drive.(g, u);  // the settings mapped to it (each over its own range)
 			if(p[\sendCC].asString == "on") { if(v != last) { ~lfoCC.(p, v); last = v } } { last = nil };

@@ -89,18 +89,24 @@
 	~release.(g);
 };
 
-~addGen = { |typeName, group = 0, id|
+// `like`: a generator to copy the settings, output and folding from (~duplicateGen).
+~addGen = { |typeName, group = 0, id, like|
 	var type = ~types[typeName.asSymbol], g;
 	if(type.isNil) { "unknown generator type %".format(typeName).warn; nil } {
 		id = ~newId.(\gen, id);
-		g = (id: id, typeName: typeName.asSymbol, type: type, p: ~paramsFor.(type), active: false, dest: 0,
-			held: (), group: ~groupOrNone.(group), collapsed: false, mappings: []);
+		g = (id: id, typeName: typeName.asSymbol, type: type, p: ~paramsFor.(type, like !? (_[\p])), active: false,
+			dest: like !? (_[\dest]) ? 0, held: (), group: ~groupOrNone.(group),
+			collapsed: like !? (_[\collapsed]) ? false, mappings: []);
 		~gens[id] = g;
 		~sendGen.(g);
 		~sendParams.(g);
 		id;
 	};
 };
+
+// A copy of a generator: same type, settings, output, group and folding; off, so it doesn't double
+// the original. What drives the original's settings (globals, lfos) isn't copied: a setting has one driver.
+~duplicateGen = { |g| ~addGen.(g[\typeName], g[\group], nil, g) };
 
 ~removeGen = { |id|
 	~gens.removeAt(id) !? { |g| ~stopGen.(g); ~releaseHeld.(g); ~dropPins.(id); ~dropGenMappings.(id); ~send.('/gen/removed', id) };

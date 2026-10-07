@@ -62,32 +62,43 @@ function groupSection(g) {
   const body = el('div', { className: 'gen-grid' });
   groupBodies.set(g.id, body);
   body.hidden = g.collapsed;
-  return el(
-    'section',
-    { className: `group${g.collapsed ? ' collapsed' : ''}${g.on ? '' : ' off'}` },
-    el(
-      'header',
-      { className: 'group-head' },
-      el('button', {
-        className: 'fold',
-        textContent: g.collapsed ? '▸' : '▾',
-        title: g.collapsed ? 'Unfold' : 'Fold away',
-        onclick: flip('collapsed'),
-      }),
-      name,
-      summary,
-      addInto(g),
-      setOn(
-        el('button', { className: 'power', title: 'Switch the group (a mute: it keeps time)', onclick: flip('on') }),
-        g.on,
-        g.on ? 'On' : 'Off',
-      ),
-      setOn(el('button', { className: 'solo', textContent: 'Solo', title: 'Only soloed groups sound', onclick: flip('solo') }), g.solo),
-      closeButton('Remove the group (its generators stay)', () => osc.send('/group/remove', g.id)),
+  // right-click on the header: rename, fold, add into, remove
+  const head = el('header', { className: 'group-head' });
+  head.addEventListener('contextmenu', (e) => {
+    if (e.target.closest('input, select')) return;
+    contextMenu(e, [
+      [
+        'Rename',
+        () => {
+          name.focus();
+          name.select();
+        },
+      ],
+      [g.collapsed ? 'Unfold' : 'Fold', () => set('collapsed', g.collapsed ? 0 : 1)],
+      [g.on ? 'Turn off' : 'Turn on', () => set('on', g.on ? 0 : 1)],
+      [g.solo ? 'Unsolo' : 'Solo', () => set('solo', g.solo ? 0 : 1)],
+      ['Remove (keep its generators)', () => osc.send('/group/remove', g.id)],
+    ]);
+  });
+  head.append(
+    el('button', {
+      className: 'fold',
+      textContent: g.collapsed ? '▸' : '▾',
+      title: g.collapsed ? 'Unfold' : 'Fold away',
+      onclick: flip('collapsed'),
+    }),
+    name,
+    summary,
+    addInto(g),
+    setOn(
+      el('button', { className: 'power', title: 'Switch the group (a mute: it keeps time)', onclick: flip('on') }),
+      g.on,
+      g.on ? 'On' : 'Off',
     ),
-    pinRow(g),
-    body,
+    setOn(el('button', { className: 'solo', textContent: 'Solo', title: 'Only soloed groups sound', onclick: flip('solo') }), g.solo),
+    closeButton('Remove the group (its generators stay)', () => osc.send('/group/remove', g.id)),
   );
+  return el('section', { className: `group${g.collapsed ? ' collapsed' : ''}${g.on ? '' : ' off'}` }, head, pinRow(g), body);
 }
 
 // "+": a menu of generator types; picking one adds it straight into the group.

@@ -465,6 +465,19 @@ class Brain {
     return this.state().generators.find((x) => x.id === g.id);
   }
 
+  // A copy: same type, settings, output and group, switched off.
+  async duplicateGen(id) {
+    const g = this.gen(id);
+    const t = this.type(g.type);
+    const last = t.params[t.params.length - 1]?.name;
+    const before = new Set(this.model.gens.keys());
+    // its settings arrive after it: wait for the last one, as addGen does
+    const settled = this.waitFor('/gen/param', (gid, name) => !before.has(gid) && name === last);
+    const copy = await this.create('/gen/duplicate', [g.id], '/gen', this.model.gens);
+    if (last) await settled;
+    return this.state().generators.find((x) => x.id === copy);
+  }
+
   async removeGen(id) {
     const g = this.gen(id);
     await this.request('/gen/remove', [g.id], '/gen/removed', (gid) => gid === g.id);

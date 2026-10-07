@@ -61,6 +61,9 @@ later is found with **Rescan** in the sidebar's Keyboard section. The first run 
 - **Library:** the add bar holds your favorite generator types; *Library ▾* lists every type,
   built-in and AdHoc (written by Claude for a piece, kept in `adhoc/`), with ☆ to star one for the
   bar, *+ Add*, and × to delete an AdHoc type (its file moves to `adhoc/old/`). Errors from a type show at the top right.
+- **Right-click** a generator card for *Duplicate* (a copy with the same settings, output and
+  group, switched off), Fold and Remove; right-click a group's header for *Rename*, Fold, Solo
+  and Remove.
 - **Folding:** ▾ (or a click on a card's name) folds a generator down to one line: light, name,
   output, On/Off. Folded cards stay folded when you save and reopen.
 - **Generators:** *+ Basic* adds a generator. Pick an output, turn it *On*, press *Play* (or

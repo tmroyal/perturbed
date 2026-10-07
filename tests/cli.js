@@ -46,6 +46,16 @@ try {
   check(!r.ok && /no setting "wobble"/.test(r.out), 'unknown setting is refused with the list');
 
   check(json('on', String(g.id)).active === true && json('off', String(g.id)).active === false, 'on / off');
+  const twin = json('duplicate', String(g.id));
+  check(
+    twin.id !== g.id &&
+      twin.params.source === 'arpeggio' &&
+      twin.params.note === 64 &&
+      twin.output?.name === 'cli' &&
+      twin.active === false,
+    'duplicate: a copy with the same settings and output, off',
+  );
+  run('remove', String(twin.id));
   check(json('set', String(g.id), 'collapsed=on').collapsed === true, 'a generator folds (collapsed)');
 
   const grp = json('group', 'add', 'Layer A');

@@ -205,6 +205,16 @@ function buildCard(gen) {
     body,
     targets,
   );
+  // right-click (on the card, not inside its controls): duplicate, fold, remove
+  root.addEventListener('contextmenu', (e) => {
+    if (e.target.closest('input, select')) return;
+    contextMenu(e, [
+      ['Duplicate', () => osc.send('/gen/duplicate', gen.id)],
+      [gen.collapsed ? 'Unfold' : 'Fold', toggleFold],
+      [gen.active ? 'Turn off' : 'Turn on', () => set('active', gen.active ? 0 : 1)],
+      ['Remove', () => osc.send('/gen/remove', gen.id)],
+    ]);
+  });
 
   return {
     root,

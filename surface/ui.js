@@ -44,6 +44,42 @@ function drag(target, e, move, done) {
   );
 }
 
+// A right-click menu at the pointer: items are [label, action] (falsy ones are skipped). It closes
+// on a choice, a click elsewhere or Escape.
+function contextMenu(e, items) {
+  e.preventDefault();
+  document.querySelector('.context-menu')?.remove();
+  const menu = el('div', { className: 'context-menu' });
+  const close = () => {
+    menu.remove();
+    document.removeEventListener('pointerdown', outside, true);
+    document.removeEventListener('keydown', onKey, true);
+  };
+  const outside = (ev) => {
+    if (!menu.contains(ev.target)) close();
+  };
+  const onKey = (ev) => {
+    if (ev.key === 'Escape') close();
+  };
+  for (const [label, action] of items.filter(Boolean)) {
+    menu.append(
+      el('button', {
+        textContent: label,
+        onclick: () => {
+          close();
+          action();
+        },
+      }),
+    );
+  }
+  document.body.append(menu);
+  // keep it inside the window
+  menu.style.left = `${Math.min(e.clientX, window.innerWidth - menu.offsetWidth - 8)}px`;
+  menu.style.top = `${Math.min(e.clientY, window.innerHeight - menu.offsetHeight - 8)}px`;
+  document.addEventListener('pointerdown', outside, true);
+  document.addEventListener('keydown', onKey, true);
+}
+
 function selectInput(options, onChange) {
   const sel = el('select');
   for (const [label, value] of options) sel.add(new Option(label, value));

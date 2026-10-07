@@ -15,6 +15,7 @@
 //   /chord/set        <pitch>...                 set the current chord directly
 //   /chord/clear
 //   /gen/add          <type> [<group>]           brain assigns the id; optionally into a group
+//   /gen/duplicate    <id>                       a copy (settings, output, group), off
 //   /gen/remove       <id>
 //   /gen/set          <id> <param> <value>       param = active | dest | group | collapsed | a type param
 //   /gen/learn        <id> <param> 1|0           the next key played sets param
@@ -116,7 +117,7 @@
 ~dirty = false;
 ~setDirty = { |on| if(on != ~dirty) { ~dirty = on; ~send.('/dirty', on.binaryValue) } };
 // the intents that change what a file holds (each gets a second listener that sets ~dirty)
-~changing = ['/gen/add', '/gen/remove', '/gen/set', '/gen/map', '/gen/unmap',
+~changing = ['/gen/add', '/gen/duplicate', '/gen/remove', '/gen/set', '/gen/map', '/gen/unmap',
 	'/group/add', '/group/set', '/group/remove', '/group/pin', '/group/unpin',
 	'/clock/add', '/clock/set', '/clock/remove', '/dest/add', '/dest/remove',
 	'/chord/set', '/chord/clear', '/chord/mode', '/transport/tempo', '/transport/scale',
@@ -184,6 +185,7 @@
 	OSCdef(\genLearn, { |msg| ~learnGen.(msg[1].asInteger, msg[2], msg[3].asInteger == 1) }, '/gen/learn');
 	~onObject.('/gen/set', \gens, \setGenByHand);  // refused for settings that follow a global
 	~onObject.('/gen/do', \gens, \genDo);
+	~onObject.('/gen/duplicate', \gens, \duplicateGen);
 	~onObject.('/gen/map', \gens, \mapFromGen);
 	~onObject.('/gen/unmap', \gens, \unmap);
 

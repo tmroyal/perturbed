@@ -99,6 +99,14 @@ button.learn.on, #chord-arm.on, .lib-row .reload { background: var(--nord12); bo
 .lib-row .star.on { color: var(--nord13); }
 .lib-spacer { width: 26px; flex: none; }
 
+/* --- right-click menus --- */
+.context-menu {
+  position: fixed; z-index: 30; display: flex; flex-direction: column; min-width: 150px; padding: 4px;
+  background: var(--nord1); border: 1px solid var(--nord3); border-radius: 6px; box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+}
+.context-menu button { background: none; border: none; border-radius: 4px; padding: 5px 10px; text-align: left; color: var(--nord6); }
+.context-menu button:hover { background: var(--nord3); }
+
 /* --- keyboard inputs --- */
 #inputs { display: flex; flex-direction: column; gap: 6px; margin-bottom: 28px; }
 #inputs:empty { margin-bottom: 0; }

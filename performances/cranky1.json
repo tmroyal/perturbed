@@ -1,0 +1,121 @@
+{
+  "adhoc": {},
+  "chord": [],
+  "chordMode": "auto",
+  "clocks": [],
+  "destinations": [
+    {"channel": 1, "id": 1, "instrument": "Pianoteq 9", "name": "Celesta", "port": 1},
+    {
+      "channel": 2,
+      "id": 2,
+      "instrument": "MNT_HV_FX_Nonsense_Ritual_Singing_Whispers",
+      "name": "Voice",
+      "port": 1
+    },
+    {
+      "channel": 3,
+      "id": 3,
+      "instrument": "TSP_ASL_172_drum_bristol97",
+      "name": "4-TSP_ASL_172_drum_bristol97",
+      "port": 1
+    }
+  ],
+  "generators": [
+    {
+      "active": true,
+      "dest": 1,
+      "group": 0,
+      "id": 1,
+      "params": {
+        "accent": 110,
+        "advance": 1,
+        "attack": 4,
+        "clock": 0,
+        "decay": 4,
+        "den": 1,
+        "direction": "up",
+        "every": 4,
+        "high": 100,
+        "humanize": 0,
+        "index": 0,
+        "interval": 1,
+        "low": 40,
+        "note": 49,
+        "num": 2,
+        "offset": 0,
+        "pattern": "110 60 80 60",
+        "permutation": 0,
+        "phrase": "1 2 1 1 2",
+        "prob": 50,
+        "pulses": 3,
+        "rate": 0.5,
+        "rhythm": "every",
+        "source": "note",
+        "steps": 8,
+        "velMode": "set",
+        "velocity": 24
+      },
+      "type": "basic"
+    },
+    {
+      "active": true,
+      "dest": 2,
+      "group": 0,
+      "id": 2,
+      "params": {
+        "accent": 110,
+        "advance": 1,
+        "attack": 4,
+        "clock": 0,
+        "decay": 4,
+        "den": 17,
+        "direction": "up",
+        "every": 4,
+        "high": 100,
+        "humanize": 0,
+        "index": 0,
+        "interval": 1,
+        "low": 40,
+        "note": 60,
+        "num": 2,
+        "offset": 0,
+        "pattern": "110 60 80 60",
+        "permutation": 0,
+        "phrase": "1 2 1 1 2",
+        "prob": 50,
+        "pulses": 3,
+        "rate": 0.5,
+        "rhythm": "euclid",
+        "source": "note",
+        "steps": 8,
+        "velMode": "set",
+        "velocity": 45
+      },
+      "type": "basic"
+    },
+    {
+      "active": true,
+      "dest": 0,
+      "group": 0,
+      "id": 3,
+      "params": {
+        "cc": 78,
+        "channel": "1",
+        "clock": 0,
+        "den": 8,
+        "high": 37,
+        "hz": 0.25,
+        "low": 11,
+        "num": 1,
+        "phase": 0,
+        "port": "Perturbed CTL 1",
+        "rate": "sync",
+        "shape": "smooth random"
+      },
+      "type": "lfo"
+    }
+  ],
+  "globals": [],
+  "groups": [],
+  "tempo": 60.0
+}

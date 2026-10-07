@@ -122,6 +122,22 @@ try {
   for (let i = 0; i < 10; i++) seen.add(json('state').generators.find((x) => x.id === g.id).params.humanize);
   run('stop');
   check(seen.has(2) && seen.has(30) && seen.size === 2, `the lfo moves the setting between its ends (${[...seen].join(', ')})`);
+  // scale and add: how much of the wave gets through (2..30 → 2..16 at half scale, 16..30 with add 0.5)
+  const ends = (settings) => {
+    run('set', String(lfo.id), ...settings);
+    run('play');
+    const got = new Set();
+    for (let i = 0; i < 10; i++) got.add(json('state').generators.find((x) => x.id === g.id).params.humanize);
+    run('stop');
+    return [...got].sort((x, y) => x - y).join(',');
+  };
+  check(ends(['scale=0.5']) === '2,16', 'lfo scale 0.5: half the range');
+  check(ends(['scale=0.5', 'add=0.5']) === '16,30', 'lfo add 0.5: shifted up');
+  run('set', String(lfo.id), 'scale=1', 'add=0');
+  json('global', 'map', 'Meta 1', String(lfo.id), 'scale', '0', '1');
+  check(json('state').generators.find((x) => x.id === lfo.id).follows?.scale === 'Meta 1', "a global can drive an lfo's scale");
+  json('global', 'unmap', 'Meta 1', String(lfo.id), 'scale');
+  run('set', String(lfo.id), 'scale=1');
   check(!run('map', String(lfo.id), String(lfo.id), 'hz').ok, "an lfo can't drive its own settings");
   check(!run('map', String(g.id), String(lfo.id), 'hz').ok, 'only generators that map (lfo) can drive settings');
   // free mode integrates its phase: halving Hz mid-cycle slows it down from where it is, no jump

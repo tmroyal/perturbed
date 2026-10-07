@@ -182,6 +182,7 @@ moves things while it's on and the transport runs.
 | `num`, `den` | 1–64, 1–32 (4, 1) | cycle length in beats, for sync |
 | `hz` | 0.01–20 (0.25) | cycles per second, for free |
 | `phase` | 0–1 (0) | start point in the cycle |
+| `scale`, `add` | 0–1 (1), −1–1 (0) | how much gets through: wave × scale + add, for its targets and CC alike; map a global to `scale` to fade an lfo's effect in and out |
 | `sendCC` | on, off (on) | whether it sends MIDI CC (the settings below) |
 | `low`, `high` | 0–127 (0, 127) | CC range (low > high inverts) |
 | `port` | a control bus by name ("Perturbed CTL 1") | which control bus |

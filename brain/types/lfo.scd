@@ -1,6 +1,8 @@
 // lfo — a low-frequency oscillator that moves settings of other generators (Map, then click them:
 // each target has its own from → to; another lfo's Hz or range can be a target), and/or is sent as
-// MIDI control changes on a control bus (config `control`, picked by name). Not to an output. In Live, map it with MIDI Map mode (⌘M, click a parameter, let the
+// MIDI control changes on a control bus (config `control`, picked by name). Not to an output.
+// `scale` and `add` shape everything it moves (wave × scale + add): settings like any other, so a
+// global can drive them. In Live, map it with MIDI Map mode (⌘M, click a parameter, let the
 // LFO move) or a plugin's MIDI learn. The card's Send button sends one value (from/to in turn),
 // for mapping without playing.
 //
@@ -21,6 +23,8 @@ params: [
 	[\den, 1, \range, 1, 32],
 	[\hz, 0.25, \range, 0.01, 20, 0.01],
 	[\phase, 0, \range, 0, 1, 0.01],
+	[\scale, 1, \range, 0, 1, 0.01],
+	[\add, 0, \range, -1, 1, 0.01],
 	[\sendCC, "on", \choice, "on", "off"],
 	[\port, ~controlNames.first ? "", \choice] ++ ~controlNames,
 	[\channel, "1", \choice] ++ (1..16).collect(_.asString),
@@ -31,11 +35,11 @@ params: [
 ],
 output: false,
 maps: true,
-sliders: (hz: \log, phase: \lin),
+sliders: (hz: \log, phase: \lin, scale: \lin, add: \lin),
 showWhen: (num: [\rate, "sync"], den: [\rate, "sync"], clock: [\rate, "sync"], hz: [\rate, "free"],
 	low: [\sendCC, "on"], high: [\sendCC, "on"], port: [\sendCC, "on"], channel: [\sendCC, "on"], cc: [\sendCC, "on"]),
 labels: (rate: "rate", num: "cycle", hz: "Hz", low: "from", high: "to", port: "bus", sendCC: "send CC"),
-sections: (shape: "Wave", sendCC: "MIDI CC", clock: "Clock"),
+sections: (shape: "Wave", scale: "Amount", sendCC: "MIDI CC", clock: "Clock"),
 restartOn: [\clock],
 actions: (
 	// one value now, alternating from/to so a mapped parameter visibly moves
@@ -66,6 +70,9 @@ run: { |g, p|
 			"random", { rnd.(c) },
 			"smooth random", { rnd.(c) + ((rnd.(c + 1) - rnd.(c)) * (0.5 - (0.5 * cos(pi * f)))) },
 			{ 0.5 + (0.5 * sin(2pi * f)) });
+		// how much of it gets through: the wave times `scale`, plus `add` (map a global to these to
+		// fade an lfo's whole effect in and out, or shift it)
+		u = ((u * p[\scale].asFloat) + p[\add].asFloat).clip(0, 1);
 		v = (p[\low].asFloat + ((p[\high].asFloat - p[\low].asFloat) * u)).round.asInteger;
 		if(~sounds.(g).not) { last = nil } {  // muted by its group: silent, and resends when back
 			~drive.(g, u);  // the settings mapped to it (each over its own range)

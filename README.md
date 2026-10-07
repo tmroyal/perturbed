@@ -77,7 +77,8 @@ later is found with **Rescan** in the sidebar's Keyboard section. The first run 
 - **LFOs:** *+ Lfo* is a slow wave (synced to the beat or free) that moves things. **Settings:**
   press **Map** on its card, click setting names on other cards, press **Done**; each target gets
   its own *from → to* under *Moves*, and is locked and tagged `← Lfo n` while driven (another LFO's
-  Hz or phase can be a target). **MIDI CC** to Live (*send CC*): ⌘M in Live, click the parameter,
+  Hz or phase can be a target). *scale* and *add* shape everything an LFO moves; map a global to
+  *scale* to fade its effect in and out. **MIDI CC** to Live (*send CC*): ⌘M in Live, click the parameter,
   press the card's **Send** (or let the LFO run) until Live learns it, ⌘M; the range of each
   mapping is set in Live's mapping browser.
 - **Tempo:** the dial (drag, shift for fine, scroll, double-click to type); *Modulate* multiplies

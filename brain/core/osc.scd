@@ -53,7 +53,7 @@
 //                                                MIDI tracks on the brain's buses (channel 0 = all)
 //   /live/tracks/clear                           the bridge is gone
 //   /new                                         a new, empty performance; brain sends a full snapshot
-//   /save             <path>                     write the performance as JSON
+//   /save             [<path>]                   write the performance as JSON (no path: to its file)
 //   /load             <path>                     replace everything; brain sends a full snapshot
 //
 // Brain → surfaces (on the sender's address):
@@ -61,6 +61,8 @@
 //   /pong             <bootId>                   bootId changes when the brain restarts: re-/hello
 //   /dirty            1|0                        the performance has changes since it was saved,
 //                                                opened or started new (surfaces ask before closing)
+//   /file             <path>                     the performance's file ("" for a new one): where a
+//                                                /save without a path goes
 //   /saved            <path>                     a /save was written
 //   /error            <message>                  an intent failed (e.g. /load of a bad file)
 //   /transport        <playing> <bpm>
@@ -114,6 +116,8 @@
 
 // Unsaved changes: set by any intent that changes what a performance file holds (from the app, a
 // tool or Claude alike); cleared by save, load and new. Surfaces ask before throwing them away.
+~file = "";  // the performance's file: set by save and load, forgotten by new
+~setFile = { |path| ~file = path.asString; ~send.('/file', ~file) };
 ~dirty = false;
 ~setDirty = { |on| if(on != ~dirty) { ~dirty = on; ~send.('/dirty', on.binaryValue) } };
 // the intents that change what a file holds (each gets a second listener that sets ~dirty)
@@ -129,6 +133,7 @@
 ~sendState = {
 	~send.('/state/begin');
 	~send.('/dirty', ~dirty.binaryValue);
+	~send.('/file', ~file);
 	~sendTransport.();
 	~send.('/ports', *~config[\ports].collect(_.join(" ")));
 	~sendInputs.();
@@ -223,8 +228,11 @@
 	OSCdef(\inputRescan, { ~rescanInputs.() }, '/inputs/rescan');
 	OSCdef(\new, { ~newPerformance.() }, '/new');
 	OSCdef(\save, { |msg|
-		try { ~savePerformance.(msg[1].asString); ~setDirty.(false); ~send.('/saved', msg[1].asString) } { |e|
-			~report.("save failed: " ++ e.errorString);
+		var path = (msg[1] ? ~file).asString;
+		if(path.isEmpty) { ~report.("save failed: this performance has no file yet (save it under a name first)") } {
+			try { ~savePerformance.(path); ~setFile.(path.standardizePath); ~setDirty.(false); ~send.('/saved', path) } { |e|
+				~report.("save failed: " ++ e.errorString);
+			};
 		};
 	}, '/save');
 	OSCdef(\load, { |msg| try { ~loadPerformance.(msg[1].asString) } { |e| ~report.("load failed: " ++ e.errorString) } }, '/load');

@@ -45,6 +45,7 @@
 	~armed = false;
 	~chord = [];
 	~dirty = false;
+	~file = "";
 	~sendState.();
 };
 
@@ -105,6 +106,7 @@
 	};
 	perf["generators"].do { |saved| ~gens[saved["id"].asInteger] !? { |g| g[\mappings] = readMappings.(saved) } };
 	~dirty = false;
+	~file = path.standardizePath;
 	~sendState.();
 	"loaded %".format(path).postln;
 };

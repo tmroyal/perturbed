@@ -58,7 +58,7 @@ const HELP = `perturbed — change the running performance
   inputs | inputs rescan             the keyboards and controllers the brain listens to
   inputs on|off <name>               listen to one, or ignore it (remembered)
   play | stop                        (the performer owns these: only when asked)
-  save <file> | load <file>          performance files (load replaces everything)
+  save [file] | load <file>          performance files (save alone: to its own file; load replaces everything)
   new                                a new, empty performance (everything goes: save first)
 
 Notes are MIDI numbers or names (C4 = 60). Values with spaces need quotes: set 2 phrase="1 2 1".`;
@@ -252,7 +252,7 @@ const COMMANDS = {
       return 'new, empty performance';
     },
   ],
-  save: [1, '<file>', async (b, [file]) => `saved ${await b.save(file)}`],
+  save: [0, '[file]', async (b, [file]) => `saved ${await b.save(file)}`],
   load: [1, '<file>', async (b, [file]) => `loaded ${await b.load(file)}`],
 };
 

@@ -254,11 +254,18 @@ try {
     'new: no outputs, generators, groups, globals, extra clocks or chord; tempo kept',
   );
   check(fresh.unsaved === false, 'a new performance has nothing to save');
+  check(fresh.file === null && !run('save').ok, 'a new performance has no file: save needs a name');
   check(json('add', 'basic').id === 1, 'ids start over in a new performance');
   check(json('state').unsaved === true, 'a change makes it unsaved');
   const kept = path.join(os.tmpdir(), `perturbed-cli-unsaved-${process.pid}.json`);
   run('save', kept);
   check(json('state').unsaved === false, 'saving clears that');
+  check(json('state').file === kept, 'the performance knows its file');
+  run('add', 'lfo');
+  check(
+    run('save').ok && json('state').unsaved === false && JSON.parse(fs.readFileSync(kept, 'utf8')).generators.length === 2,
+    'save with no name goes to that file',
+  );
   run('tempo', String(tempo));
   check(json('state').unsaved === true, 'a tempo change counts too');
   run('load', kept);

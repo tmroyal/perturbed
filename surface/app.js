@@ -49,6 +49,7 @@ setInterval(() => {
 
 function renderAll() {
   renderTransport();
+  renderFile();
   renderLibrary();
   renderPorts();
   renderInputs();
@@ -125,8 +126,11 @@ const handlers = {
   },
   '/dirty': (on) => {
     model.unsaved = !!on;
-    $('save').classList.toggle('unsaved', model.unsaved);
-    $('save').title = model.unsaved ? 'There are unsaved changes' : '';
+    return renderFile;
+  },
+  '/file': (file) => {
+    model.file = file;
+    return renderFile;
   },
   '/error': (message) => {
     showError(message);

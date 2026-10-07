@@ -43,17 +43,46 @@ function renderTransport() {
 }
 
 // New and Open replace the performance: asked first when it has unsaved changes (the brain knows).
-$('new').onclick = () => {
-  if (!model.unsaved || confirm('Start a new, empty performance?\n\nChanges since the last save are lost.')) osc.send('/new');
-};
-
-// The brain writes and reads the file; the surface only picks the path.
-$('save').onclick = async () => {
-  const p = await files.pick('save');
+// The brain writes and reads the file; the surface only picks the path. Save goes to the
+// performance's file (asking for one the first time); Save As always asks.
+const fileName = () =>
+  model.file
+    ? model.file
+        .split('/')
+        .pop()
+        .replace(/\.json$/, '')
+    : 'Untitled';
+const saveAs = async () => {
+  const p = await files.pick('save', model.file);
   if (p) osc.send('/save', p);
 };
-$('load').onclick = async () => {
+const save = () => (model.file ? osc.send('/save') : saveAs());
+const newPerformance = () => {
+  if (!model.unsaved || confirm('Start a new, empty performance?\n\nChanges since the last save are lost.')) osc.send('/new');
+};
+const open = async () => {
   if (model.unsaved && !confirm('Open another performance?\n\nChanges since the last save are lost.')) return;
   const p = await files.pick('load');
   if (p) osc.send('/load', p);
 };
+$('new').onclick = newPerformance;
+$('save').onclick = save;
+$('save-as').onclick = saveAs;
+$('load').onclick = open;
+
+// ⌘S save, ⌘⇧S save as, ⌘O open, ⌘N new (from anywhere, the Claude drawer included)
+document.addEventListener('keydown', (e) => {
+  if (!e.metaKey || e.altKey || e.ctrlKey) return;
+  const action = { s: e.shiftKey ? saveAs : save, o: open, n: newPerformance }[e.key.toLowerCase()];
+  if (!action) return;
+  e.preventDefault();
+  action();
+});
+
+// The file's name in the window title and on the Save button's tooltip; a dot while unsaved.
+function renderFile() {
+  document.title = `${model.unsaved ? '• ' : ''}${fileName()} — Perturbed`;
+  $('save').classList.toggle('unsaved', !!model.unsaved);
+  $('save').title =
+    `${model.file ? `Save to ${fileName()}.json` : 'Save (asks for a name)'} (⌘S)${model.unsaved ? ': there are unsaved changes' : ''}`;
+}

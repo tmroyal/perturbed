@@ -14,5 +14,5 @@ contextBridge.exposeInMainWorld('shell', {
 });
 
 contextBridge.exposeInMainWorld('files', {
-  pick: (mode) => ipcRenderer.invoke('pick-file', mode), // 'save' | 'load' → path or null
+  pick: (mode, current) => ipcRenderer.invoke('pick-file', mode, current), // 'save' | 'load' → path or null
 });

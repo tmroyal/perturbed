@@ -45,10 +45,10 @@ function createWindow() {
 // Save/load dialogs; the brain reads and writes the file, the surface only picks the path.
 const PERFORMANCES = path.join(__dirname, '..', 'performances');
 const FILTERS = [{ name: 'Performance', extensions: ['json'] }];
-ipcMain.handle('pick-file', async (_e, mode) => {
+ipcMain.handle('pick-file', async (_e, mode, current) => {
   const r =
     mode === 'save'
-      ? await dialog.showSaveDialog(win, { defaultPath: path.join(PERFORMANCES, 'untitled.json'), filters: FILTERS })
+      ? await dialog.showSaveDialog(win, { defaultPath: current || path.join(PERFORMANCES, 'untitled.json'), filters: FILTERS })
       : await dialog.showOpenDialog(win, { defaultPath: PERFORMANCES, filters: FILTERS, properties: ['openFile'] });
   return r.canceled ? null : (r.filePath ?? r.filePaths[0]);
 });
@@ -94,6 +94,7 @@ app.on('before-quit', () => term?.kill());
 // --- unsaved changes: the brain says when there are some (/dirty); closing the window (or
 // quitting) then asks to save first ---
 let unsaved = false;
+let currentFile = ''; // the performance's file, from the brain (/file)
 let closing = false; // the answer was given: let the window go
 let saveThenClose = null; // waiting for the brain's /saved (or /error) before closing
 
@@ -102,7 +103,7 @@ function askToSave(e) {
   e.preventDefault();
   const choice = dialog.showMessageBoxSync(win, {
     type: 'warning',
-    buttons: ['Save…', "Don't Save", 'Cancel'],
+    buttons: [currentFile ? 'Save' : 'Save…', "Don't Save", 'Cancel'],
     defaultId: 0,
     cancelId: 2,
     message: 'Save this performance before closing?',
@@ -110,7 +111,8 @@ function askToSave(e) {
   });
   if (choice === 2) return;
   if (choice === 0) {
-    const file = dialog.showSaveDialogSync(win, { defaultPath: path.join(PERFORMANCES, 'untitled.json'), filters: FILTERS });
+    // to its own file if it has one, else ask for a name
+    const file = currentFile || dialog.showSaveDialogSync(win, { defaultPath: path.join(PERFORMANCES, 'untitled.json'), filters: FILTERS });
     if (!file) return; // cancelled the file dialog: stay open
     sock.send(encode('/save', [file]), SC.port, SC.host);
     saveThenClose = setTimeout(() => saved(false, "The brain didn't answer."), 3000);
@@ -133,6 +135,7 @@ sock.on('message', (msg) => {
   try {
     const m = decode(msg);
     if (m.addr === '/dirty') unsaved = !!m.args[0];
+    if (m.addr === '/file') currentFile = m.args[0];
     if (m.addr === '/saved') saved(true);
     if (m.addr === '/error') saved(false, m.args[0]);
     toRenderer('osc', m);

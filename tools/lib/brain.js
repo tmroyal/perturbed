@@ -212,6 +212,9 @@ class Brain {
       case '/group/removed':
         m.groups.delete(a[0]);
         break;
+      case '/file':
+        m.file = a[0] || null;
+        break;
       case '/dirty':
         m.unsaved = !!a[0];
         break;
@@ -371,6 +374,7 @@ class Brain {
     const destName = (id) => m.dests.get(id)?.name ?? null;
     return {
       playing: m.playing,
+      file: m.file ?? null, // the performance's file (where save without a name goes)
       unsaved: !!m.unsaved, // changes since it was saved, opened or started new
       tempo: +m.tempo.toFixed(3),
       chord: { mode: m.chord.mode, armed: m.chord.armed, pitches: m.chord.pitches, names: m.chord.pitches.map(noteName) },
@@ -788,10 +792,10 @@ class Brain {
     await this.request('/new', [], '/state/end', () => true, 3000);
   }
 
+  // Without a file: to the performance's own file (fails if it has none yet).
   async save(file) {
-    const p = path.resolve(file);
-    await this.request('/save', [p], '/saved');
-    return p;
+    const args = file ? [path.resolve(file)] : [];
+    return (await this.request('/save', args, '/saved'))[0];
   }
   async load(file) {
     const p = path.resolve(file);

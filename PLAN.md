@@ -314,7 +314,10 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   (`~changing` in `core/osc.scd`: each of those addresses has a second listener; so the app,
   `perturbed` and Claude all count), cleared by save, load and new. Sent as `/dirty 1|0` (and in
   the snapshot). Chords played on the keyboard and knob turns don't count.
-- The app marks *Save…* with a dot, asks before New and Open…, and on closing the window or
+- The brain also knows the performance's file (`~file`, sent as `/file`; set by save and load,
+  empty after new): `/save` without a path writes there. The app's Save (⌘S) uses it, Save As…
+  (⌘⇧S) asks; ⌘O, ⌘N; the window title shows the name.
+- The app marks *Save* with a dot, asks before New and Open…, and on closing the window or
   quitting (`surface/main.js`): Save… (waits for `/saved`, stays open on `/error` or no answer),
   Don't Save, Cancel. `perturbed state` shows `unsaved`.
 

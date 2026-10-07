@@ -40,8 +40,8 @@ describe the piece and it sets up the performance ([AGENTS.md](AGENTS.md)).
 ./run.sh
 ```
 
-Starts the brain and opens Perturbed; quitting Perturbed stops the brain. Plug the keyboard in
-first (the brain lists the MIDI inputs it found in the terminal). The first run builds
+Starts the brain and opens Perturbed; quitting Perturbed stops the brain. A keyboard plugged in
+later is found with **Rescan** in the sidebar's Keyboard section. The first run builds
 `build/Perturbed.app` from Electron.
 
 ## Playing
@@ -50,6 +50,9 @@ first (the brain lists the MIDI inputs it found in the terminal). The first run 
   *Arm* (*Arm* mode). *Clear* empties it.
 - **Outputs:** Live's tracks on the IAC buses are listed under *In Live*; **+** (or *Add all*)
   makes them outputs. A **!** marks an output no Live track listens to.
+- **Keyboard:** the sidebar lists the keyboards and controllers Perturbed hears (keys and knobs).
+  Untick one to ignore it; **Rescan** finds one plugged in after starting. The choice is
+  remembered on this machine.
 - **Globals:** *+ Global* adds a global parameter (Meta 1, …; click the name to rename): one slider
   for many settings. Press its **Map**, click setting names on cards, press **Done**; ▸ shows the
   mappings: *from → to* in the setting's units (from > to inverts it) and a curve (linear, exp,

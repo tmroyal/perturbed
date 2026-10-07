@@ -46,6 +46,8 @@
 //                                                and /adhoc/deleted (or /error: built in, or in use)
 //   /library/rescan                              re-read the library (new files); full snapshot
 //   /favorite         <name> 1|0                 star a type (the add bar); full snapshot
+//   /inputs/set       <name> 1|0                 listen (or not) to a MIDI input (keys and knobs)
+//   /inputs/rescan                               look for MIDI inputs plugged in since
 //   /live/tracks      (<name> <port> <channel> <instrument>)...   from the Perturbed Bridge: Live's
 //                                                MIDI tracks on the brain's buses (channel 0 = all)
 //   /live/tracks/clear                           the bridge is gone
@@ -62,6 +64,7 @@
 //   /error            <message>                  an intent failed (e.g. /load of a bad file)
 //   /transport        <playing> <bpm>
 //   /ports            <name>...                  MIDI outputs; destination port n = nth name
+//   /inputs           (<name> <on>)...           the MIDI inputs that can be listened to
 //   /chord            <mode> <armed> <pitch>...
 //   /library/type     <name> <builtin> <favorite> <loaded> <onBar> <changed> <description> <mtime>
 //                                                every library type (changed: the file differs from
@@ -112,13 +115,12 @@
 // tool or Claude alike); cleared by save, load and new. Surfaces ask before throwing them away.
 ~dirty = false;
 ~setDirty = { |on| if(on != ~dirty) { ~dirty = on; ~send.('/dirty', on.binaryValue) } };
-~changesPerformance = { |addr|
-	var a = addr.asString;
-	["/gen/add", "/gen/remove", "/gen/set", "/gen/map", "/gen/unmap", "/group/", "/clock/", "/dest/",
-		"/chord/set", "/chord/clear", "/chord/mode", "/transport/tempo", "/transport/scale",
-		"/global/add", "/global/remove", "/global/set", "/global/map", "/global/unmap", "/global/knob"]
-	.any { |prefix| a.beginsWith(prefix) };
-};
+// the intents that change what a file holds (each gets a second listener that sets ~dirty)
+~changing = ['/gen/add', '/gen/remove', '/gen/set', '/gen/map', '/gen/unmap',
+	'/group/add', '/group/set', '/group/remove', '/group/pin', '/group/unpin',
+	'/clock/add', '/clock/set', '/clock/remove', '/dest/add', '/dest/remove',
+	'/chord/set', '/chord/clear', '/chord/mode', '/transport/tempo', '/transport/scale',
+	'/global/add', '/global/remove', '/global/set', '/global/map', '/global/unmap', '/global/knob'];
 
 // Where to answer: the sender, or the port named in msg[1].
 ~replyAddr = { |msg, addr| msg[1] !? { |port| NetAddr(addr.ip, port.asInteger) } ? addr };
@@ -128,6 +130,7 @@
 	~send.('/dirty', ~dirty.binaryValue);
 	~sendTransport.();
 	~send.('/ports', *~config[\ports].collect(_.join(" ")));
+	~sendInputs.();
 	~sendChord.();
 	~sendSchema.();
 	~sendLibrary.();
@@ -213,8 +216,9 @@
 	~onObject.('/global/learn', \globals, \learnKnob);
 	~onObject.('/global/knob', \globals, \setKnob);
 
-	// every incoming message, on any port (an OSCdef without a path misses the ones on $PERFORMED_PORT)
-	thisProcess.addOSCRecvFunc({ |msg| if(~changesPerformance.(msg[0])) { ~setDirty.(true) } });
+	~changing.do { |addr| OSCdef(("dirty" ++ addr).asSymbol, { ~setDirty.(true) }, addr) };
+	OSCdef(\inputSet, { |msg| ~setInput.(msg[1], msg[2]) }, '/inputs/set');
+	OSCdef(\inputRescan, { ~rescanInputs.() }, '/inputs/rescan');
 	OSCdef(\new, { ~newPerformance.() }, '/new');
 	OSCdef(\save, { |msg|
 		try { ~savePerformance.(msg[1].asString); ~setDirty.(false); ~send.('/saved', msg[1].asString) } { |e|

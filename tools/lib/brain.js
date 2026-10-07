@@ -222,6 +222,10 @@ class Brain {
       case '/ports':
         m.ports = a;
         break;
+      case '/inputs':
+        m.inputs = [];
+        for (let i = 0; i + 1 < a.length; i += 2) m.inputs.push({ name: a[i], on: !!a[i + 1] });
+        break;
       case '/chord':
         m.chord = { mode: a[0], armed: !!a[1], pitches: a.slice(2) };
         break;
@@ -742,6 +746,30 @@ class Brain {
   }
 
   // --- files: paths are made absolute (the brain runs elsewhere) ---
+  // --- MIDI inputs (keyboards, controllers): which ones the brain listens to ---
+  inputs() {
+    return this.model.inputs ?? [];
+  }
+
+  async rescanInputs() {
+    await this.request('/inputs/rescan', [], '/inputs');
+    return this.inputs();
+  }
+
+  async setInput(name, on) {
+    const i =
+      this.inputs().find((x) => x.name.toLowerCase() === String(name).toLowerCase()) ??
+      fail(
+        `no MIDI input "${name}" (inputs: ${
+          this.inputs()
+            .map((x) => x.name)
+            .join(', ') || 'none: try inputs rescan'
+        })`,
+      );
+    await this.request('/inputs/set', [i.name, on ? 1 : 0], '/inputs');
+    return this.inputs();
+  }
+
   // A new, empty performance (everything goes: save first).
   async newPerformance() {
     await this.request('/new', [], '/state/end', () => true, 3000);

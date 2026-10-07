@@ -51,6 +51,7 @@ function renderAll() {
   renderTransport();
   renderLibrary();
   renderPorts();
+  renderInputs();
   renderChord();
   renderClocks();
   renderGlobals();
@@ -97,6 +98,10 @@ const handlers = {
   '/ports': (...names) => {
     model.ports = names;
     return renderPorts;
+  },
+  '/inputs': (...a) => {
+    model.inputs = chunks(a, 2).map(([name, on]) => ({ name, on: !!on }));
+    return renderInputs;
   },
   '/chord': (mode, armed, ...pitches) => {
     model.chord = { mode, armed: !!armed, pitches };

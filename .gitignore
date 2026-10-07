@@ -8,3 +8,6 @@ build/
 
 # agent worktrees
 .claude/worktrees/
+
+# this machine's choices (which MIDI inputs are switched off)
+local/

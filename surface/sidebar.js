@@ -152,6 +152,25 @@ function renderLiveTracks() {
       : 'New sound: a Live MIDI track with MIDI From an IAC bus and a free channel, Monitor In.';
 }
 
+// --- keyboard: which MIDI inputs the brain listens to (keys and knobs); the choice is remembered ---
+function renderInputs() {
+  const inputs = model.inputs ?? [];
+  $('inputs').replaceChildren(
+    ...inputs.map((i) => {
+      const box = el('input', { type: 'checkbox', checked: i.on });
+      box.addEventListener('change', () => osc.send('/inputs/set', i.name, box.checked ? 1 : 0));
+      return el(
+        'label',
+        { className: `input${i.on ? '' : ' off'}`, title: i.on ? 'Listening: untick to ignore it' : 'Ignored: tick to listen' },
+        box,
+        i.name,
+      );
+    }),
+  );
+  $('inputs-hint').hidden = inputs.length > 0;
+}
+$('rescan-inputs').onclick = () => osc.send('/inputs/rescan');
+
 function renderPorts() {
   $('output-port').replaceChildren(...model.ports.map((name, i) => Object.assign(new Option(`port ${i + 1}`, i + 1), { title: name })));
 }

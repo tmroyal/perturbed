@@ -99,6 +99,15 @@ button.learn.on, #chord-arm.on, .lib-row .reload { background: var(--nord12); bo
 .lib-row .star.on { color: var(--nord13); }
 .lib-spacer { width: 26px; flex: none; }
 
+/* --- keyboard inputs --- */
+#inputs { display: flex; flex-direction: column; gap: 6px; margin-bottom: 28px; }
+#inputs:empty { margin-bottom: 0; }
+#inputs .input { display: flex; align-items: center; gap: 10px; background: var(--nord2); border-radius: 6px; padding: 8px 12px; color: var(--nord6); cursor: pointer; }
+#inputs .input.off { color: var(--nord4); opacity: .6; }
+#inputs input[type=checkbox] { accent-color: var(--nord8); width: 15px; height: 15px; margin: 0; }
+#inputs-hint { margin: 0 0 28px; }
+#rescan-inputs { padding: 3px 10px; font-size: 12px; }
+
 /* --- globals --- */
 #globals { display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px; }
 .global { background: var(--nord2); border-radius: 6px; padding: 6px 8px 8px 10px; display: flex; flex-direction: column; gap: 6px; }

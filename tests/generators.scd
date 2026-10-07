@@ -286,6 +286,24 @@ Routine {
 	brain.sendMsg('/global/remove', ~gid);
 	0.05.wait;
 
+	// --- inputs: an input switched off is ignored (keys), and listened to again when back on ---
+	OSCdef(\inputs, { |msg| ~inputsMsg = msg[1..] }, '/inputs');
+	brain.sendMsg('/inputs/rescan');
+	0.2.wait;
+	check.(~inputsMsg.size == 2 and: { ~inputsMsg[1] == 1 }, "inputs listed, on (%)".format(~inputsMsg));
+	brain.sendMsg('/chord/mode', "auto");
+	brain.sendMsg('/chord/clear');
+	brain.sendMsg('/inputs/set', ~inputsMsg[0], 0);
+	0.1.wait;
+	play.([60, 64], [60, 64]);
+	check.(~inputsMsg[1] == 0 and: { chord.size <= 2 }, "an input switched off is ignored (chord %)".format(chord));
+	brain.sendMsg('/inputs/set', ~inputsMsg[0], 1);
+	0.1.wait;
+	play.([62, 65], [62, 65]);
+	check.(chord.asArray.drop(2) == [62, 65], "switched back on, it plays (chord %)".format(chord));
+	brain.sendMsg('/chord/clear');
+	0.1.wait;
+
 	// --- control changes ---
 	~ccs.clear;
 	brain.sendMsg('/cc', 1, 3, 20, 99);

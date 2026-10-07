@@ -54,6 +54,8 @@ const HELP = `perturbed — change the running performance
   chord <note ...>                   set the chord (MIDI numbers or names: C4 E4 G4)
   chord clear | chord mode auto|arm
   cc <bus> <channel> <cc> <value>    one MIDI CC on a control bus (1 = Perturbed CTL 1)
+  inputs | inputs rescan             the keyboards and controllers the brain listens to
+  inputs on|off <name>               listen to one, or ignore it (remembered)
   play | stop                        (the performer owns these: only when asked)
   save <file> | load <file>          performance files (load replaces everything)
   new                                a new, empty performance (everything goes: save first)
@@ -212,6 +214,10 @@ const COMMANDS = {
       return `chord mode ${mode}`;
     },
   ],
+  inputs: [0, '', (b) => b.inputs()],
+  'inputs rescan': [0, '', (b) => b.rescanInputs()],
+  'inputs on': [1, '<name>', (b, [name]) => b.setInput(name, true)],
+  'inputs off': [1, '<name>', (b, [name]) => b.setInput(name, false)],
   cc: [
     4,
     '<bus> <channel> <cc> <value>',

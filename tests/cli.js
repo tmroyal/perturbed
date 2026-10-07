@@ -132,6 +132,17 @@ try {
 
   check(json('chord', 'C4', 'E4', 'G4').pitches.join() === '60,64,67', 'chord by note names');
 
+  // MIDI inputs (the test brain's keyboard is IAC Bus 2)
+  const bus2 = json('inputs').find((i) => /Bus 2/.test(i.name));
+  check(bus2?.on === true, 'inputs: listed, on');
+  check(json('inputs', 'off', bus2.name).find((i) => i.name === bus2.name).on === false, 'inputs off');
+  check(json('inputs', 'on', bus2.name).find((i) => i.name === bus2.name).on === true, 'inputs on');
+  check(
+    json('inputs', 'rescan').some((i) => i.name === bus2.name),
+    'inputs rescan keeps the list',
+  );
+  check(!run('inputs', 'off', 'no such keyboard').ok, 'an unknown input is refused');
+
   // the type library (the test brain's is a temp copy of tests/adhoc/)
   const lib = json('adhoc', 'list');
   check(lib.some((t) => t.name === 'basic' && t.builtin && t.favorite) && lib.some((t) => t.name === 'broken' && !t.loaded), 'adhoc list');

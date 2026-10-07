@@ -311,9 +311,20 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
 ### 5.12 Unsaved changes
 
 - The brain keeps `~dirty`: set by any incoming intent that changes what a performance file holds
-  (`~changesPerformance`, checked for every message with `thisProcess.addOSCRecvFunc`, so the app,
+  (`~changing` in `core/osc.scd`: each of those addresses has a second listener; so the app,
   `perturbed` and Claude all count), cleared by save, load and new. Sent as `/dirty 1|0` (and in
   the snapshot). Chords played on the keyboard and knob turns don't count.
 - The app marks *Save…* with a dot, asks before New and Open…, and on closing the window or
   quitting (`surface/main.js`): Save… (waits for `/saved`, stays open on `/error` or no answer),
   Don't Save, Cancel. `perturbed state` shows `unsaved`.
+
+### 5.13 MIDI inputs
+
+- The brain connects every MIDI source and keeps messages from the *chosen* ones (`core/keyboard.scd`):
+  candidates are config `inputs`, or every source but the brain's own output devices and Max's
+  ports; the performer switches candidates off and on (`/inputs/set <name> 1|0`), remembered in
+  `local/inputs.json` (git-ignored: it's this machine's rig; not written in test mode).
+  `/inputs/rescan` re-reads the system's sources and connects new ones. `/inputs (name on)...` is
+  in the snapshot. Keys and knobs (globals) share the same inputs.
+- Surface: *Keyboard* in the sidebar (a checkbox per input, Rescan). CLI: `inputs`,
+  `inputs rescan`, `inputs on|off <name>`.

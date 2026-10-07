@@ -95,7 +95,7 @@
 // from/to default to the current value and the far end of the setting's range. A setting mapped
 // elsewhere moves here. A generator can't drive its own settings.
 ~map = { |gl, genId, param, from, to, curve, amount|
-	var g = ~gens[genId.asInteger], spec, max, cur;
+	var g = ~gens[genId.asInteger], spec, max, cur, m, at;
 	param = param.asSymbol;
 	curve = (curve ? \linear).asSymbol;
 	spec = g !? { g[\type][\params].detect { |s| s[0] == param } };
@@ -107,11 +107,14 @@
 	} {
 		cur = ~settingNumber.(spec, g[\p][param]);
 		max = switch(spec[2], \range, { spec[4] }, \note, { 127 }, \choice, { spec.size - 4 });
-		~drivers.().do { |other| ~dropMapping.(other, g[\id], param) };
-		gl[\mappings] = gl[\mappings].add((gen: g[\id], param: param,
+		m = (gen: g[\id], param: param,
 			from: (from ? cur).asFloat, to: (to ?? { if(cur == max) { ~settingMin.(spec) } { max } }).asFloat,
 			curve: if(~curves.includes(curve)) { curve } { \linear },
-			amount: amount !? (_.asFloat)));
+			amount: amount !? (_.asFloat));
+		// an edit keeps the mapping's place in the list; a new one goes at the end
+		at = gl[\mappings].detectIndex { |x| x[\gen] == g[\id] and: { x[\param] == param } };
+		~drivers.().do { |other| if(other !== gl) { ~dropMapping.(other, g[\id], param) } };
+		gl[\mappings] = if(at.notNil) { gl[\mappings].copy.put(at, m) } { gl[\mappings].add(m) };
 		~sendMappings.(gl);
 		if(~isGlobal.(gl)) { ~applyGlobal.(gl) };
 	};

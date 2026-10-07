@@ -81,6 +81,10 @@ try {
   check(param(0, 'velocity') === 50 && param(1, 'velocity') === 30 && param(0.5, 'velocity') === 40, 'inverted mapping 0..1 -> 50..30');
   json('global', 'map', 'Meta 1', String(g.id), 'velocity', '20', '120', 'exp');
   check(param(0.5, 'velocity') < 70 && param(1, 'velocity') === 120, 'exp curve: below the midpoint at 0.5');
+  json('global', 'map', 'Meta 1', String(g.id), 'accent', '60', '120');
+  const order = json('global', 'map', 'Meta 1', String(g.id), 'velocity', '20', '120', 'exp').mappings.map((m) => m.setting);
+  check(order.join() === 'velocity,accent', `editing a mapping keeps its place in the list (${order.join(', ')})`);
+  json('global', 'unmap', 'Meta 1', String(g.id), 'accent');
   json('global', 'map', 'Meta 1', String(g.id), 'prob', '0', '100', 'threshold', '0.7');
   check(param(0.6, 'prob') === 0 && param(0.7, 'prob') === 100, 'threshold jumps at its point');
   json('global', 'map', 'Meta 1', String(g.id), 'rhythm', 'every', 'phrase');

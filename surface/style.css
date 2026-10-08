@@ -109,7 +109,8 @@ body.drawer-open { padding-bottom: var(--drawer-h); }
 .strip.active header { box-shadow: inset 3px 0 0 var(--gc, var(--nord8)); }
 .strip h2 { margin: 0; flex: 1 1 40px; min-width: 40px; font-size: 11px; font-weight: 700; color: var(--nord6); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .strip header select.output { width: 92px; field-sizing: fixed; text-overflow: ellipsis; }
-.strip.silenced .secs, .strip:not(.active) .secs { opacity: .5; }
+/* off or muted by a group, a strip's settings stay full strength (they can be edited): its header says it */
+.strip:not(.active) h2, .strip.silenced h2 { color: var(--dim); }
 .strip.silenced header { box-shadow: inset 3px 0 0 var(--nord3); }
 .secs { display: flex; flex-wrap: wrap; align-items: center; flex: 1; min-width: 0; padding: 1px 0; }
 /* a section: a bar in its colour, and its settings' names tinted to match */

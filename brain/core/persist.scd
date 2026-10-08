@@ -20,7 +20,7 @@
 			.collect { |name| [name, ~typeSource[name].split($\n)] }.flatten(1)),  // as lines: readable, diffable
 		generators: ~inOrder.(~gens).collect { |g|
 			(id: g[\id], type: g[\typeName], dest: g[\dest], group: g[\group] ? 0, active: g[\active],
-				collapsed: g[\collapsed] ? false, params: g[\p], mappings: g[\mappings] ? [])
+				collapsed: g[\collapsed] ? false, key: g[\key] ? -1, params: g[\p], mappings: g[\mappings] ? [])
 		},
 	));
 	"saved %".format(path).postln;
@@ -65,6 +65,7 @@
 	(perf["groups"] ? []).do { |saved|
 		var gr = ~addGroup.(saved["name"], saved["id"].asInteger);
 		[\on, \solo, \collapsed].do { |k| gr[k] = saved[k.asString] == "true" };
+		gr[\key] = saved["key"] !? (_.asInteger);
 		gr[\pins] = (saved["pins"] ? []).collect { |p| [p[0].asInteger, p[1].asSymbol] };  // checked against the generators below
 	};
 	// the types it uses: AdHoc from the piece's own copies, any other from the library
@@ -87,6 +88,7 @@
 			g[\dest] = saved["dest"].asInteger;
 			g[\active] = saved["active"] == "true";
 			g[\collapsed] = saved["collapsed"] == "true";
+			g[\key] = saved["key"] !? { |k| if(k.asInteger >= 0) { k.asInteger } };
 		};
 	};
 	~groups.do { |gr| gr[\pins] = gr[\pins].select { |p| ~gens[p[0]] !? { |g| g[\group] == gr[\id] } ? false } };

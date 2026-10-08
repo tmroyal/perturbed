@@ -99,6 +99,10 @@ button.learn.on, #chord-arm.on, .lib-row .reload { background: var(--nord12); bo
 .lib-row .star.on { color: var(--nord13); }
 .lib-spacer { width: 26px; flex: none; }
 
+/* a switch key's tag, next to the On/Off it controls */
+.key-tag { flex: none; font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--nord3); color: var(--nord8); font-variant-numeric: tabular-nums; }
+.key-tag.learning { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
+
 /* --- right-click menus --- */
 .context-menu {
   position: fixed; z-index: 30; display: flex; flex-direction: column; min-width: 150px; padding: 4px;
@@ -110,7 +114,9 @@ button.learn.on, #chord-arm.on, .lib-row .reload { background: var(--nord12); bo
 /* --- keyboard inputs --- */
 #inputs { display: flex; flex-direction: column; gap: 6px; margin-bottom: 28px; }
 #inputs:empty { margin-bottom: 0; }
-#inputs .input { display: flex; align-items: center; gap: 10px; background: var(--nord2); border-radius: 6px; padding: 8px 12px; color: var(--nord6); cursor: pointer; }
+#inputs .input { display: flex; align-items: center; gap: 8px; background: var(--nord2); border-radius: 6px; padding: 6px 8px 6px 12px; color: var(--nord6); }
+#inputs .input label { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#inputs .input select { flex: none; padding: 3px 4px; font-size: 12px; }
 #inputs .input.off { color: var(--nord4); opacity: .6; }
 #inputs input[type=checkbox] { accent-color: var(--nord8); width: 15px; height: 15px; margin: 0; }
 #inputs-hint { margin: 0 0 28px; }

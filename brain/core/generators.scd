@@ -162,7 +162,8 @@
 ~genDo = { |g, action| g[\type][\actions] !? { |acts| acts[action.asSymbol] !? { |fn| fn.(g, g[\p]) } } };
 
 ~sendGen = { |g|
-	~send.('/gen', g[\id], g[\typeName], g[\dest], g[\active].binaryValue, g[\group] ? 0, (g[\collapsed] ? false).binaryValue);
+	~send.('/gen', g[\id], g[\typeName], g[\dest], g[\active].binaryValue, g[\group] ? 0, (g[\collapsed] ? false).binaryValue,
+		g[\key] ? -1);
 };
 
 ~sendParams = { |g|

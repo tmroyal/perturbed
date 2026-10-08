@@ -79,5 +79,7 @@
 // A group id as given, if that group exists; else 0 (no group).
 ~groupOrNone = { |id| if(~groups.includesKey(id.asInteger)) { id.asInteger } { 0 } };
 
-~sendGroup = { |gr| ~send.('/group', gr[\id], gr[\name], gr[\on].binaryValue, gr[\solo].binaryValue, gr[\collapsed].binaryValue) };
+~sendGroup = { |gr|
+	~send.('/group', gr[\id], gr[\name], gr[\on].binaryValue, gr[\solo].binaryValue, gr[\collapsed].binaryValue, gr[\key] ? -1);
+};
 )

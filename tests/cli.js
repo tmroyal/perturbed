@@ -185,6 +185,15 @@ try {
     'inputs rescan keeps the list',
   );
   check(!run('inputs', 'off', 'no such keyboard').ok, 'an unknown input is refused');
+  check(
+    json('inputs', 'role', bus2.name, 'control').find((i) => i.name === bus2.name).role === 'control',
+    'inputs role: a control surface',
+  );
+  json('inputs', 'role', bus2.name, 'all');
+  check(
+    json('key', 'gen', String(g.id), 'C2').key === 36 && json('key', 'gen', String(g.id), 'none').key === undefined,
+    'key: set and forget a switch key',
+  );
 
   // the type library (the test brain's is a temp copy of tests/adhoc/)
   const lib = json('adhoc', 'list');

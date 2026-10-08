@@ -159,11 +159,22 @@ function renderInputs() {
     ...inputs.map((i) => {
       const box = el('input', { type: 'checkbox', checked: i.on });
       box.addEventListener('change', () => osc.send('/inputs/set', i.name, box.checked ? 1 : 0));
+      // what its keys do: play (chord, passthrough), or only control (switch keys; never the chord)
+      const role = selectInput(
+        [
+          ['keys', 'all'],
+          ['control', 'control'],
+        ],
+        (v) => osc.send('/inputs/role', i.name, v),
+      );
+      role.value = i.role;
+      role.title =
+        'keys: its notes play the chord. control: a control surface, its notes only switch things (on/off keys) and its knobs drive globals.';
       return el(
-        'label',
-        { className: `input${i.on ? '' : ' off'}`, title: i.on ? 'Listening: untick to ignore it' : 'Ignored: tick to listen' },
-        box,
-        i.name,
+        'div',
+        { className: `input${i.on ? '' : ' off'}` },
+        el('label', { title: i.on ? 'Listening: untick to ignore it' : 'Ignored: tick to listen' }, box, i.name),
+        role,
       );
     }),
   );

@@ -47,7 +47,10 @@
 //                                                and /adhoc/deleted (or /error: built in, or in use)
 //   /library/rescan                              re-read the library (new files); full snapshot
 //   /favorite         <name> 1|0                 star a type (the add bar); full snapshot
+//   /key/learn        gen|group <id> 1|0         the next key played becomes its on/off switch key
+//   /key/set          gen|group <id> <note>      set its switch key (note < 0: none)
 //   /inputs/set       <name> 1|0                 listen (or not) to a MIDI input (keys and knobs)
+//   /inputs/role      <name> all|control         control: a control surface (its keys never reach the chord)
 //   /inputs/rescan                               look for MIDI inputs plugged in since
 //   /live/tracks      (<name> <port> <channel> <instrument>)...   from the Perturbed Bridge: Live's
 //                                                MIDI tracks on the brain's buses (channel 0 = all)
@@ -67,7 +70,8 @@
 //   /error            <message>                  an intent failed (e.g. /load of a bad file)
 //   /transport        <playing> <bpm>
 //   /ports            <name>...                  MIDI outputs; destination port n = nth name
-//   /inputs           (<name> <on>)...           the MIDI inputs that can be listened to
+//   /inputs           (<name> <on> <role>)...    the MIDI inputs that can be listened to
+//   /key/learn        gen|group <id> 1|0         learning a switch key started / ended
 //   /chord            <mode> <armed> <pitch>...
 //   /library/type     <name> <builtin> <favorite> <loaded> <onBar> <changed> <description> <mtime>
 //                                                every library type (changed: the file differs from
@@ -90,8 +94,8 @@
 //   /dest/removed     <id>
 //   /live/tracks      (<name> <port> <channel> <instrument>)...   as received from the bridge
 //   /live/tracks/clear                           no bridge (Live's tracks unknown)
-//   /gen              <id> <type> <dest> <active> <group> <collapsed>
-//   /group            <id> <name> <on> <solo> <collapsed>
+//   /gen              <id> <type> <dest> <active> <group> <collapsed> <key>    key: switch key, -1 none
+//   /group            <id> <name> <on> <solo> <collapsed> <key>
 //   /group/removed    <id>
 //   /global           <id> <name> <value> <knobChannel> <knobCC>    knob channel 0 = none
 //   /global/learn     <id> 1|0                   learning a knob started / ended
@@ -225,6 +229,9 @@
 
 	~changing.do { |addr| OSCdef(("dirty" ++ addr).asSymbol, { ~setDirty.(true) }, addr) };
 	OSCdef(\inputSet, { |msg| ~setInput.(msg[1], msg[2]) }, '/inputs/set');
+	OSCdef(\inputRole, { |msg| ~setInputRole.(msg[1], msg[2]) }, '/inputs/role');
+	OSCdef(\keyLearn, { |msg| ~learnKey.(msg[1], msg[2], msg[3]) }, '/key/learn');
+	OSCdef(\keySet, { |msg| ~setSwitchKey.(msg[1], msg[2], msg[3]) }, '/key/set');
 	OSCdef(\inputRescan, { ~rescanInputs.() }, '/inputs/rescan');
 	OSCdef(\new, { ~newPerformance.() }, '/new');
 	OSCdef(\save, { |msg|

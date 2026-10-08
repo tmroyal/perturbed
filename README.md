@@ -51,8 +51,11 @@ later is found with **Rescan** in the sidebar's Keyboard section. The first run 
 - **Outputs:** Live's tracks on the IAC buses are listed under *In Live*; **+** (or *Add all*)
   makes them outputs. A **!** marks an output no Live track listens to.
 - **Keyboard:** the sidebar lists the keyboards and controllers Perturbed hears (keys and knobs).
-  Untick one to ignore it; **Rescan** finds one plugged in after starting. The choice is
+  Untick one to ignore it; **Rescan** finds one plugged in after starting. Set a pad controller
+  to **control**: its notes then never reach the chord, only switch things. The choices are
   remembered on this machine.
+- **On/off keys:** right-click a card or a group's header → *Learn on/off key…*, then play a key
+  or hit a pad: that note now switches it on and off, and the chord ignores it (on any keyboard).
 - **Globals:** *+ Global* adds a global parameter (Meta 1, …; click the name to rename): one slider
   for many settings. Press its **Map**, click setting names on cards, press **Done**; ▸ shows the
   mappings: *from → to* in the setting's units (from > to inverts it) and a curve (linear, exp,

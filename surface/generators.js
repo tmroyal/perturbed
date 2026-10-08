@@ -175,6 +175,7 @@ function buildCard(gen) {
   const toggleFold = () => set('collapsed', gen.collapsed ? 0 : 1);
   const fold = el('button', { className: 'fold', onclick: toggleFold });
   const where = el('span', { className: 'hint where' });
+  let keyTag = switchKeyTag('gen', gen); // its on/off key, if it has one
   // a type that drives settings (lfo): Map (then click setting names on other cards) and its targets
   const map = specs.maps
     ? el('button', {
@@ -199,6 +200,7 @@ function buildCard(gen) {
         el('button', { className: 'power', textContent: a, onclick: () => osc.send('/gen/do', gen.id, a) }),
       ),
       map,
+      keyTag,
       power,
       closeButton('Remove', () => osc.send('/gen/remove', gen.id)),
     ),
@@ -210,6 +212,7 @@ function buildCard(gen) {
     if (e.target.closest('input, select')) return;
     contextMenu(e, [
       ['Duplicate', () => osc.send('/gen/duplicate', gen.id)],
+      switchKeyItem('gen', gen),
       [gen.collapsed ? 'Unfold' : 'Fold', toggleFold],
       [gen.active ? 'Turn off' : 'Turn on', () => set('active', gen.active ? 0 : 1)],
       ['Remove', () => osc.send('/gen/remove', gen.id)],
@@ -221,6 +224,9 @@ function buildCard(gen) {
     render() {
       // state, pins and menus (outputs, groups, clocks) from the model
       setOn(power, gen.active, gen.active ? 'On' : 'Off');
+      const tag = switchKeyTag('gen', gen);
+      keyTag.replaceWith(tag);
+      keyTag = tag;
       root.classList.toggle('active', gen.active);
       root.classList.toggle('silenced', gen.active && !sounds(gen)); // on, but muted by a group
       root.classList.toggle('grouped', !!gen.group);

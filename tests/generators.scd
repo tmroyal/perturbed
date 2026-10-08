@@ -290,7 +290,7 @@ Routine {
 	OSCdef(\inputs, { |msg| ~inputsMsg = msg[1..] }, '/inputs');
 	brain.sendMsg('/inputs/rescan');
 	0.2.wait;
-	check.(~inputsMsg.size == 2 and: { ~inputsMsg[1] == 1 }, "inputs listed, on (%)".format(~inputsMsg));
+	check.(~inputsMsg.size == 3 and: { ~inputsMsg[1] == 1 }, "inputs listed, on (%)".format(~inputsMsg));
 	brain.sendMsg('/chord/mode', "auto");
 	brain.sendMsg('/chord/clear');
 	brain.sendMsg('/inputs/set', ~inputsMsg[0], 0);
@@ -302,6 +302,37 @@ Routine {
 	play.([62, 65], [62, 65]);
 	check.(chord.asArray.drop(2) == [62, 65], "switched back on, it plays (chord %)".format(chord));
 	brain.sendMsg('/chord/clear');
+	0.1.wait;
+
+	// --- switch keys and control surfaces: a key switches a generator or group and never reaches the chord ---
+	OSCdef(\genFull, { |msg| ~genMsg = msg[1..] }, '/gen');
+	OSCdef(\groupFull, { |msg| ~groupMsg = msg[1..] }, '/group');
+	brain.sendMsg('/gen/add', "basic");
+	0.1.wait;
+	brain.sendMsg('/key/set', \gen, genId, 36);
+	0.05.wait;
+	play.([36], [36]);
+	check.(~genMsg[0] == genId and: { ~genMsg[3] == 1 } and: { ~genMsg[6] == 36 } and: { chord.size <= 2 },
+		"a switch key turns its generator on and leaves the chord alone (gen %, chord %)".format(~genMsg, chord));
+	play.([36], [36]);
+	check.(~genMsg[3] == 0, "and off again");
+	brain.sendMsg('/group/add', "keyed");
+	0.1.wait;
+	~kg = ~groupMsg[0];
+	brain.sendMsg('/key/learn', \group, ~kg, 1);
+	0.05.wait;
+	play.([38], [38]);
+	check.(~groupMsg[5] == 38 and: { ~groupMsg[2] == 1 }, "a switch key is learned by playing it (group %)".format(~groupMsg));
+	play.([38], [38]);
+	check.(~groupMsg[2] == 0, "then it switches the group");
+	brain.sendMsg('/inputs/role', ~inputsMsg[0], \control);
+	0.1.wait;
+	play.([60, 64], [60, 64]);
+	play.([36], [36]);
+	check.(chord.size <= 2 and: { ~genMsg[3] == 1 }, "a control surface's keys don't reach the chord, its switch keys work (chord %)".format(chord));
+	brain.sendMsg('/inputs/role', ~inputsMsg[0], \all);
+	brain.sendMsg('/group/remove', ~kg);
+	brain.sendMsg('/gen/remove', genId);
 	0.1.wait;
 
 	// --- control changes ---

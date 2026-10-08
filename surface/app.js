@@ -101,7 +101,7 @@ const handlers = {
     return renderPorts;
   },
   '/inputs': (...a) => {
-    model.inputs = chunks(a, 2).map(([name, on]) => ({ name, on: !!on }));
+    model.inputs = chunks(a, 3).map(([name, on, role]) => ({ name, on: !!on, role }));
     return renderInputs;
   },
   '/chord': (mode, armed, ...pitches) => {
@@ -196,18 +196,26 @@ const handlers = {
     return renderOutputs;
   },
 
-  '/gen': (id, type, dest, active, group = 0, collapsed = 0) => {
+  '/gen': (id, type, dest, active, group = 0, collapsed = 0, key = -1) => {
     let gen = model.gens.get(id);
     if (!gen) {
       gen = { id, type, params: {}, card: null };
       model.gens.set(id, gen);
     }
     const moved = gen.group !== group;
-    Object.assign(gen, { dest, active: !!active, group, collapsed: !!collapsed });
+    Object.assign(gen, { dest, active: !!active, group, collapsed: !!collapsed, key: key < 0 ? null : key });
     return () => updateGen(gen, moved);
   },
-  '/group': (id, name, on, solo, collapsed) => {
-    model.groups.set(id, { id, name, on: !!on, solo: !!solo, collapsed: !!collapsed, pins: model.groups.get(id)?.pins ?? [] });
+  '/group': (id, name, on, solo, collapsed, key = -1) => {
+    model.groups.set(id, {
+      id,
+      name,
+      on: !!on,
+      solo: !!solo,
+      collapsed: !!collapsed,
+      key: key < 0 ? null : key,
+      pins: model.groups.get(id)?.pins ?? [],
+    });
     return renderGroups;
   },
   '/group/pins': (id, ...flat) => {
@@ -236,6 +244,13 @@ const handlers = {
     return () => {
       renderGlobals();
       renderCards();
+    };
+  },
+  '/key/learn': (kind, id, on) => {
+    model.keyLearning = on ? { kind, id } : null; // a generator or group waiting for its switch key
+    return () => {
+      renderCards();
+      renderGroups();
     };
   },
   '/global/learn': (id, on) => {

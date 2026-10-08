@@ -74,6 +74,7 @@ function groupSection(g) {
           name.select();
         },
       ],
+      switchKeyItem('group', g),
       [g.collapsed ? 'Unfold' : 'Fold', () => set('collapsed', g.collapsed ? 0 : 1)],
       [g.on ? 'Turn off' : 'Turn on', () => set('on', g.on ? 0 : 1)],
       [g.solo ? 'Unsolo' : 'Solo', () => set('solo', g.solo ? 0 : 1)],
@@ -90,6 +91,7 @@ function groupSection(g) {
     name,
     summary,
     addInto(g),
+    switchKeyTag('group', g),
     setOn(
       el('button', { className: 'power', title: 'Switch the group (a mute: it keeps time)', onclick: flip('on') }),
       g.on,

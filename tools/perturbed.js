@@ -57,6 +57,8 @@ const HELP = `perturbed — change the running performance
   cc <bus> <channel> <cc> <value>    one MIDI CC on a control bus (1 = Perturbed CTL 1)
   inputs | inputs rescan             the keyboards and controllers the brain listens to
   inputs on|off <name>               listen to one, or ignore it (remembered)
+  inputs role <name> all|control     control: a control surface (its keys never reach the chord)
+  key gen|group <id|name> <note|none>   a MIDI note that switches it on and off (the chord ignores it)
   play | stop                        (the performer owns these: only when asked)
   save [file] | load <file>          performance files (save alone: to its own file; load replaces everything)
   new                                a new, empty performance (everything goes: save first)
@@ -217,6 +219,8 @@ const COMMANDS = {
     },
   ],
   inputs: [0, '', (b) => b.inputs()],
+  'inputs role': [2, '<name> all|control', (b, [name, role]) => b.setInputRole(name, role)],
+  key: [2, 'gen|group <id|name> <note|none>', (b, [kind, ref, note]) => b.switchKey(kind, ref, note)],
   'inputs rescan': [0, '', (b) => b.rescanInputs()],
   'inputs on': [1, '<name>', (b, [name]) => b.setInput(name, true)],
   'inputs off': [1, '<name>', (b, [name]) => b.setInput(name, false)],

@@ -44,6 +44,25 @@ function drag(target, e, move, done) {
   );
 }
 
+// Switch keys (a MIDI note that switches a generator or group on and off): the menu item to learn or
+// forget one, and the small tag that shows it.
+const isLearningKey = (kind, id) => model.keyLearning?.kind === kind && model.keyLearning.id === id;
+const switchKeyItem = (kind, o) =>
+  isLearningKey(kind, o.id)
+    ? ['Cancel: waiting for a key…', () => osc.send('/key/learn', kind, o.id, 0)]
+    : o.key == null
+      ? ['Learn on/off key…', () => osc.send('/key/learn', kind, o.id, 1)]
+      : [`Forget on/off key (${noteName(o.key)})`, () => osc.send('/key/set', kind, o.id, -1)];
+function switchKeyTag(kind, o) {
+  const learning = isLearningKey(kind, o.id);
+  return el('span', {
+    className: `key-tag${learning ? ' learning' : ''}`,
+    textContent: learning ? 'play a key…' : o.key == null ? '' : noteName(o.key),
+    title: learning ? 'The next key you play will switch it on and off' : 'Its on/off key (right-click to change)',
+    hidden: !learning && o.key == null,
+  });
+}
+
 // A right-click menu at the pointer: items are [label, action] (falsy ones are skipped). It closes
 // on a choice, a click elsewhere or Escape.
 function contextMenu(e, items) {

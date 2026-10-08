@@ -169,7 +169,15 @@ class Brain {
         });
         break;
       case '/group':
-        m.groups.set(a[0], { id: a[0], name: a[1], on: !!a[2], solo: !!a[3], collapsed: !!a[4], pins: m.groups.get(a[0])?.pins ?? [] });
+        m.groups.set(a[0], {
+          id: a[0],
+          name: a[1],
+          on: !!a[2],
+          solo: !!a[3],
+          collapsed: !!a[4],
+          key: a[5] >= 0 ? a[5] : null, // its on/off switch key (a MIDI note)
+          pins: m.groups.get(a[0])?.pins ?? [],
+        });
         break;
       case '/group/pins': {
         const g = m.groups.get(a[0]);
@@ -227,7 +235,7 @@ class Brain {
         break;
       case '/inputs':
         m.inputs = [];
-        for (let i = 0; i + 1 < a.length; i += 2) m.inputs.push({ name: a[i], on: !!a[i + 1] });
+        for (let i = 0; i + 2 < a.length; i += 3) m.inputs.push({ name: a[i], on: !!a[i + 1], role: a[i + 2] });
         break;
       case '/chord':
         m.chord = { mode: a[0], armed: !!a[1], pitches: a.slice(2) };
@@ -280,7 +288,7 @@ class Brain {
         break;
       case '/gen': {
         const g = m.gens.get(a[0]) ?? { id: a[0], params: {} };
-        Object.assign(g, { type: a[1], dest: a[2], active: !!a[3], group: a[4] ?? 0, collapsed: !!a[5] });
+        Object.assign(g, { type: a[1], dest: a[2], active: !!a[3], group: a[4] ?? 0, collapsed: !!a[5], key: a[6] >= 0 ? a[6] : null });
         m.gens.set(a[0], g);
         break;
       }
@@ -392,6 +400,7 @@ class Brain {
         active: g.active,
         sounding: this.sounds(g),
         collapsed: !!g.collapsed,
+        ...(g.key == null ? {} : { key: g.key }), // its on/off switch key (a MIDI note)
         ...(this.model.types.get(g.type)?.maps ? { targets: g.mappings ?? [] } : {}), // what it drives
         group: g.group ? { id: g.group, name: m.groups.get(g.group)?.name ?? null } : null,
         ...(this.model.types.get(g.type)?.output === false ? {} : { output: g.dest ? { id: g.dest, name: destName(g.dest) } : null }),
@@ -771,6 +780,23 @@ class Brain {
   async rescanInputs() {
     await this.request('/inputs/rescan', [], '/inputs');
     return this.inputs();
+  }
+
+  // all: its keys play (chord, passthrough); control: a control surface (switch keys and knobs only)
+  async setInputRole(name, role) {
+    const i = this.inputs().find((x) => x.name.toLowerCase() === String(name).toLowerCase()) ?? fail(`no MIDI input "${name}"`);
+    if (!['all', 'control'].includes(role)) fail('a role is all or control');
+    await this.request('/inputs/role', [i.name, role], '/inputs');
+    return this.inputs();
+  }
+
+  // The MIDI note that switches a generator or a group on and off (the chord ignores it); 'none' forgets it.
+  async switchKey(kind, ref, note) {
+    if (!['gen', 'group'].includes(kind)) fail('usage: key gen|group <id|name> <note|none>');
+    const id = kind === 'group' ? this.group(ref) || fail('which group?') : this.gen(ref).id;
+    const n = note === undefined || note === 'none' ? -1 : parseNote(note);
+    await this.request('/key/set', [kind, id, n], kind === 'group' ? '/group' : '/gen', (x) => x === id);
+    return kind === 'group' ? this.model.groups.get(id) : this.state().generators.find((x) => x.id === id);
   }
 
   async setInput(name, on) {

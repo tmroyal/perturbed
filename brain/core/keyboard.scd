@@ -7,8 +7,15 @@
 // when Live runs a Max for Live device). The performer switches candidates off and on from the
 // surface (/inputs/set); what's off is remembered in local/inputs.json (this machine's rig, not in
 // git; not in test mode). /inputs/rescan finds devices plugged in since.
+//
+// An input's role: `all` (its keys play: chord, key-driven generators) or `control` (a control
+// surface: its knobs drive globals and its keys can be switch keys, but never reach the chord).
+// Switch keys: a note that switches a generator or a group on and off (their `key`), learned by
+// playing it (/key/learn) or set (/key/set). A switch key is used up: the chord never sees it.
 (
 ~inputsOff = Set[];  // "device name" of the candidates switched off
+~inputsControl = Set[];  // ... of those that are control surfaces
+~controlUids = [];
 ~inputsPath = { ~root.dirname +/+ "local" +/+ "inputs.json" };
 ~inputKey = { |e| if(e.device == e.name) { e.name } { e.device + e.name } };  // "MiniLab", or "IAC Driver Bus 2"
 
@@ -23,17 +30,33 @@
 // Which sources are listened to now, and the list for surfaces.
 ~applyInputs = {
 	~inputUids = ~inputCandidates.().reject { |e| ~inputsOff.includes(~inputKey.(e)) }.collect(_.uid);
+	~controlUids = ~inputCandidates.().select { |e| ~inputsControl.includes(~inputKey.(e)) }.collect(_.uid);
 	~sendInputs.();
 };
 
 ~sendInputs = {
-	~send.('/inputs', *~inputCandidates.().collect { |e| [~inputKey.(e), ~inputsOff.includes(~inputKey.(e)).not.binaryValue] }.flatten);
+	~send.('/inputs', *~inputCandidates.().collect { |e|
+		var name = ~inputKey.(e);
+		[name, ~inputsOff.includes(name).not.binaryValue, if(~inputsControl.includes(name)) { \control } { \all }];
+	}.flatten);
+};
+
+~rememberInputs = {
+	if(~testMode.not) {
+		File.mkdir(~inputsPath.().dirname);
+		~writeJSON.(~inputsPath.(), (off: ~inputsOff.asArray.sort, control: ~inputsControl.asArray.sort));
+	};
+	~applyInputs.();
+};
+
+~setInputRole = { |name, role|
+	if(role.asSymbol == \control) { ~inputsControl.add(name.asString) } { ~inputsControl.remove(name.asString) };
+	~rememberInputs.();
 };
 
 ~setInput = { |name, on|
 	if(on.asInteger == 1) { ~inputsOff.remove(name.asString) } { ~inputsOff.add(name.asString) };
-	if(~testMode.not) { File.mkdir(~inputsPath.().dirname); ~writeJSON.(~inputsPath.(), (off: ~inputsOff.asArray.sort)) };
-	~applyInputs.();
+	~rememberInputs.();
 };
 
 // Devices plugged in since the brain started: refresh the list and connect them.
@@ -46,11 +69,13 @@
 // Call after ~midiInit.
 ~keyboardInit = {
 	if(~testMode.not and: { File.exists(~inputsPath.()) }) {
-		~inputsOff = ((File.readAllString(~inputsPath.()).parseJSON ? ())["off"] ? []).asSet;
+		var saved = File.readAllString(~inputsPath.()).parseJSON ? ();
+		~inputsOff = (saved["off"] ? []).asSet;
+		~inputsControl = (saved["control"] ? []).asSet;
 	};
 	MIDIIn.connectAll;
-	MIDIdef.noteOn(\keyOn, { |vel, note, ch, src| if(~inputUids.includes(src)) { ~key.(note, vel) } });
-	MIDIdef.noteOff(\keyOff, { |vel, note, ch, src| if(~inputUids.includes(src)) { ~key.(note, 0) } });
+	MIDIdef.noteOn(\keyOn, { |vel, note, ch, src| if(~inputUids.includes(src)) { ~key.(note, vel, ~controlUids.includes(src)) } });
+	MIDIdef.noteOff(\keyOff, { |vel, note, ch, src| if(~inputUids.includes(src)) { ~key.(note, 0, ~controlUids.includes(src)) } });
 	// knobs and faders: control changes from the same inputs drive globals (core/globals.scd)
 	MIDIdef.cc(\knob, { |val, num, ch, src| if(~inputUids.includes(src)) { ~knob.(ch + 1, num, val) } });
 	~applyInputs.();
@@ -58,12 +83,53 @@
 };
 
 // Keyboard input (vel 0 = key up). A key pressed while a param is learning only sets that param;
-// otherwise keys go to the chord (core/chord.scd) and to key-driven generators (passthrough).
-~key = { |note, vel|
+// a switch key (or one being learned) only switches; a control surface's other keys do nothing;
+// the rest go to the chord (core/chord.scd) and to key-driven generators (passthrough).
+~key = { |note, vel, controlOnly = false|
 	case
 	{ vel > 0 and: { ~learning.notNil } } { ~learnNote.(note) }
+	{ ~switchKey.(note, vel) } { nil }
+	{ controlOnly } { nil }
 	{ vel > 0 } { ~keyDown.(note); ~genKey.(note, vel) }
 	{ ~keyUp.(note); ~genKey.(note, 0) };
+};
+
+// --- switch keys ---
+~keyLearning = nil;  // [\gen | \group, id]: the next key played becomes its switch key
+
+~keyOwner = { |kind, id| if(kind.asSymbol == \group) { ~groups[id.asInteger] } { ~gens[id.asInteger] } };
+
+~learnKey = { |kind, id, on|
+	~keyLearning !? { |l| ~send.('/key/learn', l[0], l[1], 0) };
+	~keyLearning = if(on.asInteger == 1 and: { ~keyOwner.(kind, id).notNil }) { [kind.asSymbol, id.asInteger] };
+	~keyLearning !? { |l| ~send.('/key/learn', l[0], l[1], 1) };
+};
+
+// note < 0 forgets it
+~setSwitchKey = { |kind, id, note|
+	~keyOwner.(kind, id) !? { |o|
+		o[\key] = if(note.asInteger >= 0) { note.asInteger };
+		if(kind.asSymbol == \group) { ~sendGroup.(o) } { ~sendGen.(o) };
+		~setDirty.(true);
+	};
+};
+
+// Learns the key, or switches what it belongs to (on key down). True if the note was used up.
+~switchKey = { |note, vel|
+	var used = false;
+	if(~keyLearning.notNil) {
+		if(vel > 0) {
+			var l = ~keyLearning;
+			~keyLearning = nil;
+			~send.('/key/learn', l[0], l[1], 0);
+			~setSwitchKey.(l[0], l[1], note);
+		};
+		true;
+	} {
+		~gens.do { |g| if(g[\key] == note) { used = true; if(vel > 0) { ~setGen.(g, \active, g[\active].not.binaryValue); ~setDirty.(true) } } };
+		~groups.do { |gr| if(gr[\key] == note) { used = true; if(vel > 0) { ~setGroup.(gr, \on, gr[\on].not.binaryValue); ~setDirty.(true) } } };
+		used;
+	};
 };
 
 // Learn: the next key played sets a generator's (note) param.

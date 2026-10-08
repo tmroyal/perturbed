@@ -329,5 +329,13 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   `local/inputs.json` (git-ignored: it's this machine's rig; not written in test mode).
   `/inputs/rescan` re-reads the system's sources and connects new ones. `/inputs (name on)...` is
   in the snapshot. Keys and knobs (globals) share the same inputs.
-- Surface: *Keyboard* in the sidebar (a checkbox per input, Rescan). CLI: `inputs`,
-  `inputs rescan`, `inputs on|off <name>`.
+- **Roles:** an input is `all` (its keys play) or `control` (a control surface: knobs and switch
+  keys only; its notes never reach the chord or key-driven generators); `/inputs/role`, remembered
+  with the rest.
+- **Switch keys:** a generator or group can have a `key` (a MIDI note) that switches it on and off,
+  learned by playing it (`/key/learn gen|group <id> 1|0`) or set (`/key/set … <note>`, < 0 forgets);
+  `~key` in `core/keyboard.scd` uses such a note up before the chord sees it, on any input. Saved
+  with the performance; carried in `/gen` and `/group`.
+- Surface: *Keyboard* in the sidebar (a checkbox and a role per input, Rescan); *Learn on/off key…*
+  in the right-click menus, the key shown next to On/Off. CLI: `inputs`, `inputs rescan`,
+  `inputs on|off|role`, `key gen|group <ref> <note|none>`.

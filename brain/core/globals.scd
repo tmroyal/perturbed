@@ -192,14 +192,17 @@
 		\choice, { spec[3..].at(v.round.asInteger.clip(0, spec.size - 4)).asString });
 };
 
-// Moves every setting mapped to a driver to where x (0–1) puts it; only real changes are sent.
+// Moves every setting mapped to a driver to where x (0–1) puts it; only real changes are sent. A
+// generator muted by its group (or switched off) moves nothing.
 ~drive = { |driver, x|
-	driver[\mappings].do { |m|
-		var g = ~gens[m[\gen]], spec, v;
-		spec = g !? { g[\type][\params].detect { |s| s[0] == m[\param] } };
-		if(spec.notNil) {
-			v = ~mappedValue.(m, spec, x);
-			if(g[\p][m[\param]] != v) { ~setGen.(g, m[\param], v) };
+	if(~isGlobal.(driver) or: { ~sounds.(driver) }) {
+		driver[\mappings].do { |m|
+			var g = ~gens[m[\gen]], spec, v;
+			spec = g !? { g[\type][\params].detect { |s| s[0] == m[\param] } };
+			if(spec.notNil) {
+				v = ~mappedValue.(m, spec, x.clip(0, 1));
+				if(g[\p][m[\param]] != v) { ~setGen.(g, m[\param], v) };
+			};
 		};
 	};
 };

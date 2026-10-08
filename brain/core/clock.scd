@@ -35,6 +35,14 @@
 // Beats since the grid origin, for routines on any clock (extra clocks start at the origin).
 ~beats = { var b = thisThread.beats; if(thisThread.clock === ~clock) { b - ~origin } { b } };
 
+// For a generator's run: calls fn.(seconds, beats) about `rate` times a second, forever: for things
+// that move continuously (an lfo-like type calling ~drive), where ~grid is for things on the beat.
+// seconds count from when it started; beats are ~beats (from the grid origin).
+~tick = { |fn, rate = 50|
+	var t0 = thisThread.seconds;
+	loop { fn.(thisThread.seconds - t0, ~beats.()); (thisThread.clock.tempo / rate).wait };
+};
+
 // For a generator's run: calls fn.(k) on every grid point k · dur beats from the origin (the first
 // at or after now), forever. Keeps generators in step with each other however they started.
 // `dur` is a number, or a function read before every point (e.g. { p[\num] / p[\den] }): when its

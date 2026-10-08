@@ -146,6 +146,38 @@ sock.bind(0, async () => {
       `~grid with a function follows the step live (${slow} then ${fast} notes a second)`,
     );
 
+    // an AdHoc type that drives settings (maps: true, ~tick, ~drive): its target moves while it plays
+    loaded = next('/adhoc/loaded');
+    send('/adhoc/load', 'wander');
+    await loaded;
+    check(
+      inbox.some((m) => m.addr === '/gen/maps' && m.args[0] === 'wander'),
+      'an AdHoc type can declare that it drives settings (maps)',
+    );
+    const tg = next('/gen', (_id, t) => t === 'basic');
+    send('/gen/add', 'basic');
+    const [target] = await tg;
+    const wg = next('/gen', (_id, t) => t === 'wander');
+    send('/gen/add', 'wander');
+    const [wander] = await wg;
+    const mapped = next('/gen/targets', (id, ...flat) => id === wander && flat.length === 6);
+    send('/gen/map', wander, target, 'velocity', 1, 127);
+    await mapped;
+    send('/gen/set', wander, 'active', 1);
+    const from = inbox.length;
+    send('/transport/play', 1);
+    await new Promise((r) => setTimeout(r, 900));
+    send('/transport/play', 0);
+    const walked = new Set(
+      inbox
+        .slice(from)
+        .filter((m) => m.addr === '/gen/param' && m.args[0] === target && m.args[1] === 'velocity')
+        .map((m) => m.args[2]),
+    );
+    check(walked.size >= 5, `it moves its target while it plays (${walked.size} different values)`);
+    send('/gen/remove', wander);
+    send('/gen/remove', target);
+
     // onChange: called with old and new values when a setting changes; a failing one is reported, the change stands
     loaded = next('/adhoc/loaded');
     send('/adhoc/load', 'on-change');

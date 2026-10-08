@@ -258,6 +258,32 @@ onChange: (
   keeps playing.
 - Keep it quick: a global sweeping across a mapped setting calls it many times a second.
 
+### Moving other generators' settings: your own LFOs
+
+The built-in `lfo` isn't special: any type can drive settings. Say so with `maps: true`, and its
+card gets the **Map** button and the list of what it moves (each target with its own *from → to*,
+set by the performer). Your job is one number: call `~drive.(g, x)` with `x` between 0 and 1, as
+often as you like, and every target follows over its own range.
+
+```supercollider
+maps: true,
+output: false,            // usually: it plays no notes, so it needs no output
+run: { |g, p|
+	~tick.({ |seconds, beats|      // about 50 times a second
+		~drive.(g, 0.5 + (0.5 * sin(2pi * seconds * p[\hz])));
+	});
+},
+```
+
+- **`~tick.(fn)`** calls `fn` about 50 times a second with the seconds since it started and the
+  beats since the bar: use it for anything that moves continuously. Use `~grid` instead when it
+  should change on the beat (a new value every bar, a stepped sequence).
+- **`~drive.(g, x)`** does nothing while the generator is off or muted by its group, and only
+  sends real changes, so call it freely.
+- Targets are locked on their cards and tagged with your generator's name. A setting follows one
+  driver at a time.
+- `x` is all you decide. The performer decides what it moves and how far.
+
 ### Reusing the built-in building blocks
 
 The `basic` type is assembled from three modules you can use too. Each gives you a block of
@@ -407,6 +433,58 @@ run: { |g, p|
 )
 ```
 
+### Wander (an LFO of your own)
+
+A random walk for settings: drifts instead of cycling. Map it like an LFO.
+
+```supercollider
+// wander — moves the settings mapped to it in a slow random walk, `speed` setting how restless.
+(
+params: [
+	[\speed, 2, \range, 0.1, 20, 0.1],
+	[\center, 0.5, \range, 0, 1, 0.01],     // where it tends to return to
+	[\pull, 0.2, \range, 0, 1, 0.01],       // how strongly
+],
+labels: (pull: "pull to center"),
+sliders: (speed: \log, center: \lin, pull: \lin),
+output: false,
+maps: true,
+run: { |g, p|
+	var x = p[\center];
+	~tick.({ |seconds, beats|
+		x = x + (p[\speed] * 0.02).rand2 + ((p[\center] - x) * p[\pull] * 0.02);
+		x = x.fold(0, 1);
+		~drive.(g, x);
+	});
+},
+)
+```
+
+### Stepper (changes on the beat)
+
+A new random value on every grid step: sample and hold, in time.
+
+```supercollider
+// stepper — gives the settings mapped to it a new random value on every grid step.
+(
+params: [
+	[\num, 1, \range, 1, 32], [\den, 1, \range, 1, 32],
+	[\levels, 0, \range, 0, 16],            // 0: any value; n: one of n evenly spaced levels
+	~clockParam,
+],
+restartOn: [\clock],
+output: false,
+maps: true,
+run: { |g, p|
+	~grid.({ p[\num] / p[\den] }, { |k|
+		var x = 1.0.rand, n = p[\levels].asInteger;
+		if(n > 1) { x = (x * n).floor / (n - 1) };
+		~drive.(g, x);
+	});
+},
+)
+```
+
 ### Keyboard harmonizer
 
 Adds the next chord tone above every key you play (keyboard-driven, no transport needed).
@@ -445,6 +523,7 @@ key: { |g, p, note, vel|
 | **later** | `thisThread.clock.sched(beats, { ...; nil })` |
 | **read** | `p[\x]`, `~chord`, `~global.(\x)`, `~gens[id][\sounding]`, `~beats.()` |
 | **CC** | `~cc.(bus, channel, cc, value)` |
+| **move settings** | `maps: true`, then `~drive.(g, x)` with x in 0–1; `~tick.(fn)` for ~50 calls a second |
 | **react** | `onChange: (x: { \|g, p, old, new\| ... })`, `~restart.(g)` |
 | **card** | `labels`, `sections`, `showWhen`, `sliders`, `actions`, `restartOn`, `globals`, `output: false` |
 | **tools** | `tools/perturbed adhoc check \| load \| show \| list`, `add <name> ...`, `state` |

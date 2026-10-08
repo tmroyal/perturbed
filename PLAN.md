@@ -301,6 +301,9 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   (`~drivers`, `~mappedBy`, `~driverName` in `core/globals.scd`), and a setting follows at most one,
   whichever kind. `/gen/map <id> <gen> <param> [from to curve amount]`, `/gen/unmap`, echoed as
   `/gen/targets` (the layout of `/global/mappings`); `/gen/maps <type>` in the schema.
+- **AdHoc drivers:** any type can declare `maps: true` and call `~drive.(g, x)` (the guide has
+  recipes: a random walk, a stepped sample-and-hold). `~drive` ignores a generator that's off or
+  muted; `~tick.(fn)` (core/clock.scd) calls fn about 50 times a second.
 - The lfo calls `~drive.(g, u)` from its run with its wave in 0–1, so it moves its targets only
   while it's on, sounding (not muted by its group) and the transport runs. A generator can't drive
   its own settings; another lfo's can be driven (LFO-to-LFO). MIDI CC is optional (`sendCC`).

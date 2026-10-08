@@ -275,6 +275,9 @@ run: { |g, p|
   mutes) and `~release.(g)`. Several at once: `~noteOn.(dest, note, vel)` / `~noteOff.(dest, note)`
   with `dest = ~dests[g[\dest]]`, check `~sounds.(g)` first, and keep what you hold in
   `g[\held][key] = [dest, note]` so stopping or muting releases it.
+- **Types that move settings (your own LFOs):** `maps: true` gives the card a Map button and
+  targets, like the built-in lfo; the type calls `~drive.(g, x)` with x in 0–1 (it does nothing
+  while muted), from `~tick.({ |seconds, beats| ... })` (about 50 times a second) or from `~grid`.
 - **Global parameters:** declare the ones the type reads (`globals: [\\density]`: created if
   missing when the type loads) and read them live with `~global.(\\density)` (0–1). This lets a
   type give a global a meaning no single setting has (denser = more notes in the strum *and* a

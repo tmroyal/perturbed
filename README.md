@@ -61,6 +61,8 @@ later is found with **Rescan** in the sidebar's Keyboard section. The first run 
   mappings: *from → to* in the setting's units (from > to inverts it) and a curve (linear, exp,
   steps, threshold). A mapped setting is locked on its card and tagged with the global's name.
   **Knob**: press it, turn a knob or fader on your controller, and the global follows it (× forgets it).
+  Several globals can follow the same knob, each with its own *knob response* (under ▸): linear,
+  invert, exp, log, or a formula in x such as `x * x` or `(x * 2 - 1).abs`.
 - **Library:** the add bar holds your favorite generator types; *Library ▾* lists every type,
   built-in and AdHoc (written by Claude for a piece, kept in `adhoc/`), with ☆ to star one for the
   bar, *+ Add*, and × to delete an AdHoc type (its file moves to `adhoc/old/`). Errors from a type show at the top right.

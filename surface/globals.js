@@ -98,6 +98,31 @@ function mappingRow(gl, m, kind = 'global') {
   );
 }
 
+// How the global answers its knob (x, 0–1): several globals can share a knob and answer differently.
+const RESPONSES = ['linear', 'invert', 'exp', 'log', 'formula'];
+function responseRow(gl) {
+  const response = selectInput(
+    RESPONSES.map((r) => [r, r]),
+    (v) => osc.send('/global/set', gl.id, 'response', v),
+  );
+  response.value = gl.response;
+  response.title = 'linear: follows the knob. invert: knob up, global down. exp: slow start. log: fast start. formula: your own, in x.';
+  const formula = el('input', {
+    type: 'text',
+    value: gl.formula,
+    title: 'A formula in x (0–1), e.g. x * x, 1 - x, (x * 2 - 1).abs',
+    hidden: gl.response !== 'formula',
+  });
+  formula.addEventListener('change', () => osc.send('/global/set', gl.id, 'formula', formula.value.trim() || 'x'));
+  blurOnEnter(formula);
+  return el(
+    'div',
+    { className: 'mapping response' },
+    el('span', { className: 'what', textContent: 'knob response' }),
+    el('div', { className: 'row' }, response, formula),
+  );
+}
+
 function globalRow(gl) {
   const name = el('input', { type: 'text', className: 'global-name', value: gl.name, title: 'Rename' });
   name.addEventListener('change', () => osc.send('/global/set', gl.id, 'name', name.value.trim() || gl.name));
@@ -149,7 +174,7 @@ function globalRow(gl) {
       closeButton('Remove (its settings are unmapped)', () => osc.send('/global/remove', gl.id)),
     ),
     value.root,
-    ...(open ? gl.mappings.map((m) => mappingRow(gl, m)) : []),
+    ...(open ? [responseRow(gl), ...gl.mappings.map((m) => mappingRow(gl, m))] : []),
   );
   value.set(gl.value);
   return {

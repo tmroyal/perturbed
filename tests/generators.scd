@@ -280,6 +280,32 @@ Routine {
 	out.control(0, 75, 0);
 	0.1.wait;
 	check.((~globalMsg[2] - 1).abs < 0.001, "other knobs don't");
+	// one knob, several globals, each with its own response
+	~byId = ();
+	OSCdef(\globalAll, { |msg| ~byId[msg[1]] = msg[1..] }, '/global');
+	brain.sendMsg('/global/add', "inverted");
+	0.1.wait;
+	~inv = ~globalMsg[0];
+	brain.sendMsg('/global/add', "squared");
+	0.1.wait;
+	~sq = ~globalMsg[0];
+	brain.sendMsg('/global/knob', ~inv, 1, 74);
+	brain.sendMsg('/global/knob', ~sq, 1, 74);
+	brain.sendMsg('/global/set', ~inv, \response, \invert);
+	brain.sendMsg('/global/set', ~sq, \response, \formula);
+	brain.sendMsg('/global/set', ~sq, \formula, "x * x");
+	0.1.wait;
+	out.control(0, 74, 64);
+	0.15.wait;
+	check.((~byId[~gid][2] - 0.504).abs < 0.01 and: { (~byId[~inv][2] - 0.496).abs < 0.01 } and: { (~byId[~sq][2] - 0.254).abs < 0.01 },
+		"one knob drives three globals: linear %, inverted %, x*x %".format(~byId[~gid][2].round(0.001), ~byId[~inv][2].round(0.001), ~byId[~sq][2].round(0.001)));
+	brain.sendMsg('/global/set', ~sq, \formula, "x +* nonsense(");
+	0.1.wait;
+	out.control(0, 74, 127);
+	0.15.wait;
+	check.((~byId[~sq][2] - 1).abs < 0.01, "a formula that doesn't parse is reported and treated as x (%)".format(~byId[~sq][2]));
+	brain.sendMsg('/global/remove', ~inv);
+	brain.sendMsg('/global/remove', ~sq);
 	brain.sendMsg('/global/knob', ~gid, 0, 0);
 	0.05.wait;
 	check.(~globalMsg[3] == 0, "knob cleared");

@@ -144,6 +144,7 @@ button.learn.on, #chord-arm.on, .lib-row .reload { background: var(--nord12); bo
 .mapping .row { display: flex; align-items: center; gap: 4px; }
 .mapping input[type=number] { width: 52px; }
 .mapping select { min-width: 0; max-width: 88px; }
+.mapping.response input[type=text] { flex: 1; min-width: 0; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
 /* a generator that drives settings (lfo): its Map button and targets, under the card's fields */
 .card .targets { display: flex; flex-direction: column; gap: 6px; }
 .card .targets:not(:empty) { margin-top: 12px; }

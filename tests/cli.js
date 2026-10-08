@@ -111,6 +111,10 @@ try {
   json('global', 'unmap', 'Meta 1', String(g.id), 'velocity');
   check(run('set', String(g.id), 'velocity=99').ok, 'unmapped: settable again');
   check(json('global', 'knob', 'Meta 1', '1', '74').knob?.cc === 74, 'global knob');
+  const shaped = json('global', 'set', 'Meta 1', 'response=formula', 'formula=x * x');
+  check(shaped.response === 'formula' && shaped.formula === 'x * x', 'global response: a formula for its knob');
+  check(!run('global', 'set', 'Meta 1', 'response=wobbly').ok, 'an unknown response is refused');
+  json('global', 'set', 'Meta 1', 'response=linear');
 
   // an lfo drives settings: its own range per target, locked, taken over from a global, moving while it plays
   const lfo = json('add', 'lfo', 'shape=square', 'num=1', 'den=4', 'sendCC=off', 'active=on');

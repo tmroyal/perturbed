@@ -193,6 +193,8 @@ class Brain {
           name: a[1],
           value: +a[2].toFixed(4),
           knob: a[3] ? { channel: a[3], cc: a[4] } : null,
+          response: a[5] ?? 'linear', // how it answers its knob; `formula` (in x) when response is formula
+          ...(a[5] === 'formula' ? { formula: a[6] } : {}),
           mappings: m.globals.get(a[0])?.mappings ?? [],
         });
         break;
@@ -561,13 +563,15 @@ class Brain {
     return Object.keys(settings).length ? this.setGlobal(id, settings) : this.model.globals.get(id);
   }
 
-  // settings: name, value (0–1)
+  // settings: name, value (0–1), response (to its knob: linear|invert|exp|log|formula), formula (in x)
   async setGlobal(v, settings) {
     const id = this.global(v) || fail('which global?');
     for (const [k, val] of Object.entries(settings)) {
       if (k === 'value' && !(+val >= 0 && +val <= 1)) fail("a global's value is 0 to 1");
-      if (!['name', 'value'].includes(k)) fail(`globals have name and value, not "${k}"`);
-      await this.request('/global/set', [id, k, k === 'name' ? String(val) : +val], '/global', (gid) => gid === id);
+      if (!['name', 'value', 'response', 'formula'].includes(k)) fail(`globals have name, value, response and formula, not "${k}"`);
+      if (k === 'response' && !['linear', 'invert', 'exp', 'log', 'formula'].includes(val))
+        fail('response is linear, invert, exp, log or formula');
+      await this.request('/global/set', [id, k, k === 'value' ? +val : String(val)], '/global', (gid) => gid === id);
     }
     return this.model.globals.get(id);
   }

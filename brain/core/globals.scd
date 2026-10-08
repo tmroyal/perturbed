@@ -17,8 +17,11 @@
 // "drivers"; a setting follows at most one of them, whichever kind.
 //
 // Knobs: a global can follow a knob or fader on the performer's controller ([channel, cc], channel
-// 1-based): learned by turning it (/global/learn) or set (/global/knob); 0–127 → 0–1. A knob drives
-// one global; learning it for another moves it there.
+// 1-based): learned by turning it (/global/learn) or set (/global/knob); 0–127 → 0–1. One knob can
+// drive several globals, each through its own `response` to the knob's x (0–1):
+//   linear  x          invert  1 - x          exp  slow start          log  fast start
+//   formula            a sclang expression in x (`formula`), e.g. "x * x", "(x * 2 - 1).abs"
+// so a single gesture fans out into differently shaped movements.
 (
 ~globals = ();
 ~curves = [\linear, \exp, \steps, \threshold];
@@ -26,7 +29,8 @@
 ~addGlobal = { |name, id|
 	var gl;
 	id = ~newId.(\global, id);
-	gl = (id: id, name: (name ?? { "Meta %".format(id) }).asString, value: 0.0, mappings: [], knob: nil);
+	gl = (id: id, name: (name ?? { "Meta %".format(id) }).asString, value: 0.0, mappings: [], knob: nil,
+		response: \linear, formula: "x");
 	~globals[id] = gl;
 	~sendGlobal.(gl);
 	~sendMappings.(gl);
@@ -36,12 +40,15 @@
 ~setGlobal = { |gl, key, val|
 	switch(key.asSymbol,
 		\name, { gl[\name] = val.asString },
-		\value, { gl[\value] = val.asFloat.clip(0, 1); ~applyGlobal.(gl) });
+		\value, { gl[\value] = val.asFloat.clip(0, 1); ~applyGlobal.(gl) },
+		\response, { if(~responses.includes(val.asSymbol)) { gl[\response] = val.asSymbol } },
+		\formula, { gl[\formula] = val.asString; ~formulaFns.removeAt(gl[\id]) });
 	~sendGlobal.(gl);
 };
 
 ~removeGlobal = { |id|
 	if(~knobLearning == id) { ~knobLearning = nil };
+	~formulaFns.removeAt(id);
 	~globals.removeAt(id) !? { ~send.('/global/removed', id) };
 };
 
@@ -54,12 +61,33 @@
 	~knobLearning !? { |id| ~send.('/global/learn', id, 1) };
 };
 
-// Assigns a knob ([channel, cc]) to a global, taking it from any other; channel 0 clears.
+// Assigns a knob ([channel, cc]) to a global (other globals may follow the same knob); channel 0 clears.
 ~setKnob = { |gl, channel, cc|
-	var knob = if(channel.asInteger > 0) { [channel.asInteger, cc.asInteger] };
-	knob !? { ~globals.do { |o| if(o !== gl and: { o[\knob] == knob }) { o[\knob] = nil; ~sendGlobal.(o) } } };
-	gl[\knob] = knob;
+	gl[\knob] = if(channel.asInteger > 0) { [channel.asInteger, cc.asInteger] };
 	~sendGlobal.(gl);
+};
+
+// A global's response to its knob: x in 0–1 → its value.
+~responses = [\linear, \invert, \exp, \log, \formula];
+~formulaFns = ();  // global id -> its compiled formula (not kept in the global: globals are saved as they are)
+~respond = { |gl, x|
+	var fn, y;
+	y = switch(gl[\response] ? \linear,
+		\invert, { 1 - x },
+		\exp, { (exp(3 * x) - 1) / (exp(3) - 1) },
+		\log, { log(1 + (x * (exp(3) - 1))) / 3 },
+		\formula, {
+			fn = ~formulaFns[gl[\id]] ?? {
+				// compiled once; a formula that doesn't compile or fails is reported and treated as x
+				var f = ("{ |x| " ++ gl[\formula] ++ " }").compile !? (_.value);
+				if(f.isNil) { ~report.("%: the formula \"%\" doesn't parse".format(gl[\name], gl[\formula])); f = { |x| x } };
+				~formulaFns[gl[\id]] = f;
+				f;
+			};
+			try { fn.(x) } { |e| ~report.("%: the formula failed: %".format(gl[\name], e.errorString)); ~formulaFns[gl[\id]] = { |x| x }; x };
+		},
+		{ x });
+	if(y.isNumber) { y.asFloat.clip(0, 1) } { x };
 };
 
 // A control change from the performer's inputs: learn it, and move the globals that follow it.
@@ -69,7 +97,7 @@
 		~send.('/global/learn', id, 0);
 		~globals[id] !? { |gl| ~setKnob.(gl, channel, cc) };
 	};
-	~globals.do { |gl| if(gl[\knob] == [channel, cc]) { ~setGlobal.(gl, \value, val / 127) } };
+	~globals.do { |gl| if(gl[\knob] == [channel, cc]) { ~setGlobal.(gl, \value, ~respond.(gl, val / 127)) } };
 };
 
 // For AdHoc types: a global's value by name (0 if there's none).
@@ -177,7 +205,9 @@
 };
 ~applyGlobal = { |gl| ~drive.(gl, gl[\value]) };
 
-~sendGlobal = { |gl| ~send.('/global', gl[\id], gl[\name], gl[\value], *(gl[\knob] ? [0, 0])) };
+~sendGlobal = { |gl|
+	~send.('/global', gl[\id], gl[\name], gl[\value], *((gl[\knob] ? [0, 0]) ++ [gl[\response] ? \linear, gl[\formula] ? "x"]));
+};
 // A driver's mappings: /global/mappings for a global, /gen/targets for a generator (same layout).
 ~sendMappings = { |gl|
 	~send.(if(~isGlobal.(gl)) { '/global/mappings' } { '/gen/targets' }, gl[\id],

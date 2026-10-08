@@ -104,6 +104,8 @@
 		var gl = ~addGlobal.(saved["name"], saved["id"].asInteger);
 		gl[\value] = saved["value"].asFloat;
 		gl[\knob] = saved["knob"] !? { |k| k.collect(_.asInteger) };
+		gl[\response] = (saved["response"] ? \linear).asSymbol;
+		gl[\formula] = (saved["formula"] ? "x").asString;
 		gl[\mappings] = readMappings.(saved);
 	};
 	perf["generators"].do { |saved| ~gens[saved["id"].asInteger] !? { |g| g[\mappings] = readMappings.(saved) } };

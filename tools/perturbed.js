@@ -26,7 +26,8 @@ const HELP = `perturbed — change the running performance
   set <id> group=<name|id|none>      put a generator in a group (also: add basic group=...)
 
   global add [name] [value=]          a global parameter (Meta 1, ...): one control, 0–1, for many settings
-  global set <name|id> value=0.7 name=...
+  global set <name|id> value=0.7 name=... response=linear|invert|exp|log|formula formula="x * x"
+                                     response: how it answers its knob (several globals can share one)
   global remove <name|id>
   global map <global> <gen id> <setting> [from to [curve [amount]]]
                                      the setting follows the global (and is locked): from..to in its units

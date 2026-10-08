@@ -73,7 +73,9 @@ tools/perturbed global set density value=0.3
 
 A mapped setting is locked (setting it says so); `global unmap` frees it. A global can follow a
 knob on the performer's controller (they learn it in the app with **Knob**; or `global knob density
-1 74` for channel 1, CC 74), which puts everything it moves under one hand. Settings that restart a
+1 74` for channel 1, CC 74), which puts everything it moves under one hand. Several globals can
+share a knob and answer it differently: `global set density response=invert` (linear, invert, exp,
+log, or `response=formula formula="x * x"`, an expression in x from 0 to 1). Settings that restart a
 generator (num, den, clock) can't be mapped.
 
 A generator or group can have an on/off key, a MIDI note the performer hits to switch it (the

@@ -34,7 +34,8 @@
 //                                                drives that setting; like /global/map
 //   /gen/unmap        <id> <genId> <param>
 //   /global/add       [<name>]                   a global parameter ("Meta n" by default); core/globals.scd
-//   /global/set       <id> name|value <v>        value 0–1 moves every mapped setting
+//   /global/set       <id> name|value|response|formula <v>   value 0–1 moves every mapped setting;
+//                                                response (linear|invert|exp|log|formula) shapes its knob
 //   /global/remove    <id>
 //   /global/map       <id> <genId> <param> [<from> <to> <curve> <amount>]   add or update a mapping
 //   /global/unmap     <id> <genId> <param>
@@ -97,7 +98,7 @@
 //   /gen              <id> <type> <dest> <active> <group> <collapsed> <key>    key: switch key, -1 none
 //   /group            <id> <name> <on> <solo> <collapsed> <key>
 //   /group/removed    <id>
-//   /global           <id> <name> <value> <knobChannel> <knobCC>    knob channel 0 = none
+//   /global           <id> <name> <value> <knobChannel> <knobCC> <response> <formula>   knob channel 0 = none
 //   /global/learn     <id> 1|0                   learning a knob started / ended
 //   /global/mappings  <id> (<genId> <param> <from> <to> <curve> <amount>)...   amount -1 = default
 //   /global/removed   <id>

@@ -59,7 +59,7 @@ so the Live API can create audio clips from files).
 - **Controllers:** generator-to-generator modulation. (Knobs drive globals: §5.10.)
 - **LFOs:** depth as a setting (scaling every target's range at once), so one LFO can fade another in.
 - **Globals:** a global driven by an LFO; soft takeover for knobs (no jump when a knob and its
-  global disagree); a global on a group's
+  global disagree); the response curve applied to the on-screen slider too; a global on a group's
   header; offset mode (editing a mapped setting shifts its range instead of being refused).
 - **Groups:** drag and drop cards between groups; renamable pins; shared group settings (output, clock, velocity for all
   members); fades for On/Off.
@@ -287,7 +287,9 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   `/global/mappings <id> (gen param from to curve amount)...`, `/global/removed`.
 - **Knobs:** a global can follow a knob or fader on the performer's inputs ([channel, cc], 0–127 →
   0–1): learned by turning it (`/global/learn <id> 1|0`) or set (`/global/knob <id> <ch> <cc>`,
-  channel 0 = none); one knob drives one global; saved with it. `/global` carries the knob.
+  channel 0 = none); saved with it. Several globals can share a knob; each answers through its
+  `response` (linear, invert, exp, log, or `formula`: a sclang expression in x, compiled once,
+  reported and treated as x if it fails). `/global` carries knob, response and formula.
 - Surface (`surface/globals.js`): a sidebar row per global (name, slider, Knob, Map, ▸ mappings, ×);
   Map mode makes setting names on cards clickable targets. CLI: `global add|set|remove|map|unmap`;
   `state` lists globals and each generator's `follows`.

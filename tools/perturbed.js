@@ -12,6 +12,7 @@ const HELP = `perturbed — change the running performance
   set <id> setting=value ...         change settings; also active=on|off, output=<name|id|none>
   on <id> | off <id>                 switch a generator
   duplicate <id>                     a copy of a generator (settings, output, group), off
+  move <id> [before=<id>] [group=<name|id|none>]   reorder the cards (no before: to the end), and/or regroup
   remove <id>
   do <id> <action>                   press a card button (lfo: Send)
   map <lfo id> <gen id> <setting> [from to]   the lfo moves that setting over from..to (and locks it);
@@ -104,6 +105,7 @@ const COMMANDS = {
   ],
 
   duplicate: [1, '<id>', (b, [id]) => b.duplicateGen(id)],
+  move: [1, '<id> [before=<id>] [group=<name|id|none>]', (b, [id, ...r]) => b.moveGen(id, settings(r))],
   map: [3, '<lfo id> <gen id> <setting> [from to [curve [amount]]]', (b, [d, id, st, ...r]) => b.mapFrom(d, id, st, ...r)],
   unmap: [3, '<lfo id> <gen id> <setting>', (b, [d, id, st]) => b.unmapFrom(d, id, st)],
 

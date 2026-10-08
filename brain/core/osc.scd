@@ -16,6 +16,8 @@
 //   /chord/clear
 //   /gen/add          <type> [<group>]           brain assigns the id; optionally into a group
 //   /gen/duplicate    <id>                       a copy (settings, output, group), off
+//   /gen/move         <id> <beforeId> <group>    before another generator (0: last); group -1: keep,
+//                                                0: out of any group
 //   /gen/remove       <id>
 //   /gen/set          <id> <param> <value>       param = active | dest | group | collapsed | a type param
 //   /gen/learn        <id> <param> 1|0           the next key played sets param
@@ -95,7 +97,8 @@
 //   /dest/removed     <id>
 //   /live/tracks      (<name> <port> <channel> <instrument>)...   as received from the bridge
 //   /live/tracks/clear                           no bridge (Live's tracks unknown)
-//   /gen              <id> <type> <dest> <active> <group> <collapsed> <key>    key: switch key, -1 none
+//   /gen              <id> <type> <dest> <active> <group> <collapsed> <key> <order>   key: switch key, -1
+//                                                none; order: its place among the generators
 //   /group            <id> <name> <on> <solo> <collapsed> <key>
 //   /group/removed    <id>
 //   /global           <id> <name> <value> <knobChannel> <knobCC> <response> <formula>   knob channel 0 = none
@@ -126,7 +129,7 @@
 ~dirty = false;
 ~setDirty = { |on| if(on != ~dirty) { ~dirty = on; ~send.('/dirty', on.binaryValue) } };
 // the intents that change what a file holds (each gets a second listener that sets ~dirty)
-~changing = ['/gen/add', '/gen/duplicate', '/gen/remove', '/gen/set', '/gen/map', '/gen/unmap',
+~changing = ['/gen/add', '/gen/duplicate', '/gen/move', '/gen/remove', '/gen/set', '/gen/map', '/gen/unmap',
 	'/group/add', '/group/set', '/group/remove', '/group/pin', '/group/unpin',
 	'/clock/add', '/clock/set', '/clock/remove', '/dest/add', '/dest/remove',
 	'/chord/set', '/chord/clear', '/chord/mode', '/transport/tempo', '/transport/scale',
@@ -149,7 +152,7 @@
 	~inOrder.(~groups).do(~sendGroup);
 	~inOrder.(~dests).do(~sendDest);
 	~sendLiveTracks.();
-	~inOrder.(~gens).do { |g| ~sendGen.(g); ~sendParams.(g) };
+	~gensInOrder.().do { |g| ~sendGen.(g); ~sendParams.(g) };
 	~inOrder.(~groups).do(~sendPins);  // after the generators they point at
 	~inOrder.(~globals).do { |gl| ~sendGlobal.(gl); ~sendMappings.(gl) };
 	~inOrder.(~gens).do { |g| if(g[\type][\maps] == true) { ~sendMappings.(g) } };
@@ -196,6 +199,7 @@
 	~onObject.('/gen/set', \gens, \setGenByHand);  // refused for settings that follow a global
 	~onObject.('/gen/do', \gens, \genDo);
 	~onObject.('/gen/duplicate', \gens, \duplicateGen);
+	~onObject.('/gen/move', \gens, \moveGen);
 	~onObject.('/gen/map', \gens, \mapFromGen);
 	~onObject.('/gen/unmap', \gens, \unmap);
 

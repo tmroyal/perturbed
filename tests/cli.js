@@ -266,7 +266,36 @@ try {
       fresh.tempo === tempo,
     'new: no outputs, generators, groups, globals, extra clocks or chord; tempo kept',
   );
-  check(fresh.unsaved === false, 'a new performance has nothing to save');
+  // the order of the cards: move before another, to the end, into a group; saved
+  const [m1, m2, m3] = ['basic', 'lfo', 'passthrough'].map((t) => json('add', t).id);
+  check(json('move', String(m3), `before=${m1}`).join() === [m3, m1, m2].join(), 'move a generator before another');
+  check(json('move', String(m3)).join() === [m1, m2, m3].join(), 'move it to the end');
+  run('group', 'add', 'Shelf');
+  json('move', String(m2), 'group=Shelf');
+  check(json('state').generators.find((x) => x.id === m2).group?.name === 'Shelf', 'move into a group');
+  const copyId = json('duplicate', String(m1)).id;
+  check(
+    json('state')
+      .generators.map((x) => x.id)
+      .indexOf(copyId) === 1,
+    'a duplicate sits right after its original',
+  );
+  const orderFile = path.join(os.tmpdir(), `perturbed-cli-order-${process.pid}.json`);
+  json('move', String(m3), `before=${m1}`);
+  const wanted = json('state')
+    .generators.map((x) => x.id)
+    .join();
+  run('save', orderFile);
+  run('load', orderFile);
+  check(
+    json('state')
+      .generators.map((x) => x.id)
+      .join() === wanted,
+    `the order survives save and open (${wanted})`,
+  );
+  fs.unlinkSync(orderFile);
+  run('new');
+  check(json('state').unsaved === false, 'a new performance has nothing to save');
   check(fresh.file === null && !run('save').ok, 'a new performance has no file: save needs a name');
   check(json('add', 'basic').id === 1, 'ids start over in a new performance');
   check(json('state').unsaved === true, 'a change makes it unsaved');

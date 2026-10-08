@@ -196,14 +196,14 @@ const handlers = {
     return renderOutputs;
   },
 
-  '/gen': (id, type, dest, active, group = 0, collapsed = 0, key = -1) => {
+  '/gen': (id, type, dest, active, group = 0, collapsed = 0, key = -1, order = 0) => {
     let gen = model.gens.get(id);
     if (!gen) {
       gen = { id, type, params: {}, card: null };
       model.gens.set(id, gen);
     }
-    const moved = gen.group !== group;
-    Object.assign(gen, { dest, active: !!active, group, collapsed: !!collapsed, key: key < 0 ? null : key });
+    const moved = gen.group !== group || gen.order !== order;
+    Object.assign(gen, { dest, active: !!active, group, collapsed: !!collapsed, key: key < 0 ? null : key, order });
     return () => updateGen(gen, moved);
   },
   '/group': (id, name, on, solo, collapsed, key = -1) => {

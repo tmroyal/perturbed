@@ -93,6 +93,53 @@ function paramControl(spec, genId) {
   }
 }
 
+// Dragging a card by its header: onto another card puts it before or after that one (and into its
+// group); onto a group's area or header, at the end of that group (groups.js).
+let draggingGen = null; // the id of the generator being dragged
+
+function makeDraggable(gen, root, header) {
+  header.draggable = true;
+  root.dataset.gen = gen.id;
+  header.addEventListener('dragstart', (e) => {
+    if (e.target.closest('button, input, select')) return e.preventDefault();
+    draggingGen = gen.id;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', genName(gen));
+    root.classList.add('dragging');
+    document.body.classList.add('dragging-card');
+  });
+  header.addEventListener('dragend', () => {
+    draggingGen = null;
+    root.classList.remove('dragging');
+    document.body.classList.remove('dragging-card');
+    for (const x of document.querySelectorAll('.drop-before, .drop-after, .drop-here'))
+      x.classList.remove('drop-before', 'drop-after', 'drop-here');
+  });
+  // after this card if the pointer is past its middle (across in a row of cards, down in a column)
+  const after = (e) => {
+    const r = root.getBoundingClientRect();
+    const inRow = [root.previousElementSibling, root.nextElementSibling].some((s) => s && s.offsetTop === root.offsetTop);
+    return inRow ? e.clientX > r.left + r.width / 2 : e.clientY > r.top + r.height / 2;
+  };
+  root.addEventListener('dragover', (e) => {
+    if (draggingGen === null || draggingGen === gen.id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    root.classList.toggle('drop-after', after(e));
+    root.classList.toggle('drop-before', !after(e));
+  });
+  root.addEventListener('dragleave', () => root.classList.remove('drop-before', 'drop-after'));
+  root.addEventListener('drop', (e) => {
+    if (draggingGen === null || draggingGen === gen.id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    // "after this one" = before the next card that isn't the one being dragged (0: last)
+    let next = root.nextElementSibling;
+    while (next && +next.dataset.gen === draggingGen) next = next.nextElementSibling;
+    osc.send('/gen/move', draggingGen, after(e) ? +(next?.dataset.gen ?? 0) : gen.id, gen.group);
+  });
+}
+
 function buildCard(gen) {
   const set = (param, value) => osc.send('/gen/set', gen.id, param, value);
   const led = el('span', { className: 'led', title: 'Flashes on each note' });
@@ -207,6 +254,7 @@ function buildCard(gen) {
     body,
     targets,
   );
+  makeDraggable(gen, root, root.querySelector('header'));
   // right-click (on the card, not inside its controls): duplicate, fold, remove
   root.addEventListener('contextmenu', (e) => {
     if (e.target.closest('input, select')) return;

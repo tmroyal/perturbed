@@ -81,6 +81,9 @@ generator (num, den, clock) can't be mapped.
 A generator or group can have an on/off key, a MIDI note the performer hits to switch it (the
 chord ignores it): `tools/perturbed key gen 3 C1`, `key group "Phasing pianos" D1`, `none` to forget.
 
+Cards show in the order of `state`'s generators; arrange them so related ones sit together
+(`tools/perturbed move 5 before=2`, `move 5 group="Phasing pianos"`, `move 5` for the end).
+
 Fold generators the performer won't touch (`set 3 collapsed=on`): a folded card is one line.
 
 Notes are MIDI numbers or names (C4 = 60); outputs and clocks can be named (`output="Piano 1"`,

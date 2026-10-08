@@ -290,7 +290,15 @@ class Brain {
         break;
       case '/gen': {
         const g = m.gens.get(a[0]) ?? { id: a[0], params: {} };
-        Object.assign(g, { type: a[1], dest: a[2], active: !!a[3], group: a[4] ?? 0, collapsed: !!a[5], key: a[6] >= 0 ? a[6] : null });
+        Object.assign(g, {
+          type: a[1],
+          dest: a[2],
+          active: !!a[3],
+          group: a[4] ?? 0,
+          collapsed: !!a[5],
+          key: a[6] >= 0 ? a[6] : null,
+          order: a[7] ?? 0,
+        });
         m.gens.set(a[0], g);
         break;
       }
@@ -396,19 +404,21 @@ class Brain {
       live_tracks: m.live, // Live's tracks on the brain's buses (null: no bridge)
       groups: [...m.groups.values()],
       globals: [...m.globals.values()],
-      generators: [...m.gens.values()].map((g) => ({
-        id: g.id,
-        type: g.type,
-        active: g.active,
-        sounding: this.sounds(g),
-        collapsed: !!g.collapsed,
-        ...(g.key == null ? {} : { key: g.key }), // its on/off switch key (a MIDI note)
-        ...(this.model.types.get(g.type)?.maps ? { targets: g.mappings ?? [] } : {}), // what it drives
-        group: g.group ? { id: g.group, name: m.groups.get(g.group)?.name ?? null } : null,
-        ...(this.model.types.get(g.type)?.output === false ? {} : { output: g.dest ? { id: g.dest, name: destName(g.dest) } : null }),
-        params: g.params,
-        ...(this.mappedSettings(g.id) ? { follows: this.mappedSettings(g.id) } : {}), // setting -> global (locked)
-      })),
+      generators: [...m.gens.values()]
+        .sort((x, y) => x.order - y.order || x.id - y.id) // the performer's order (cards can be moved)
+        .map((g) => ({
+          id: g.id,
+          type: g.type,
+          active: g.active,
+          sounding: this.sounds(g),
+          collapsed: !!g.collapsed,
+          ...(g.key == null ? {} : { key: g.key }), // its on/off switch key (a MIDI note)
+          ...(this.model.types.get(g.type)?.maps ? { targets: g.mappings ?? [] } : {}), // what it drives
+          group: g.group ? { id: g.group, name: m.groups.get(g.group)?.name ?? null } : null,
+          ...(this.model.types.get(g.type)?.output === false ? {} : { output: g.dest ? { id: g.dest, name: destName(g.dest) } : null }),
+          params: g.params,
+          ...(this.mappedSettings(g.id) ? { follows: this.mappedSettings(g.id) } : {}), // setting -> global (locked)
+        })),
     };
   }
 
@@ -478,6 +488,17 @@ class Brain {
       else await this.request('/gen/set', [g.id, p, v], '/gen/param', (gid, name) => gid === g.id && name === p);
     }
     return this.state().generators.find((x) => x.id === g.id);
+  }
+
+  // Moves a generator before another (`before`: an id; omitted: to the end) and, if `group` is given,
+  // into that group ('none': out of any). Returns the generator ids in their new order.
+  async moveGen(id, { before, group } = {}) {
+    const g = this.gen(id);
+    const b = before === undefined ? 0 : this.gen(before).id;
+    const gr = group === undefined ? -1 : this.group(group);
+    await this.request('/gen/move', [g.id, b, gr], '/gen', (gid) => gid === g.id);
+    await new Promise((r) => setTimeout(r, 60)); // the others' new places follow
+    return this.state().generators.map((x) => x.id);
   }
 
   // A copy: same type, settings, output and group, switched off.

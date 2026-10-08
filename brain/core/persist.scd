@@ -18,7 +18,7 @@
 		adhoc: ().putPairs(~gens.values.collect(_[\typeName]).asSet.asArray
 			.reject { |name| ~library[name] !? (_[\builtin]) ? false }
 			.collect { |name| [name, ~typeSource[name].split($\n)] }.flatten(1)),  // as lines: readable, diffable
-		generators: ~inOrder.(~gens).collect { |g|
+		generators: ~gensInOrder.().collect { |g|  // in the performer's order, which loading keeps
 			(id: g[\id], type: g[\typeName], dest: g[\dest], group: g[\group] ? 0, active: g[\active],
 				collapsed: g[\collapsed] ? false, key: g[\key] ? -1, params: g[\p], mappings: g[\mappings] ? [])
 		},

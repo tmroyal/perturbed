@@ -66,6 +66,9 @@ later is found with **Rescan** in the sidebar's Keyboard section. The first run 
 - **Library:** the add bar holds your favorite generator types; *Library ▾* lists every type,
   built-in and AdHoc (written by Claude for a piece, kept in `adhoc/`), with ☆ to star one for the
   bar, *+ Add*, and × to delete an AdHoc type (its file moves to `adhoc/old/`). Errors from a type show at the top right.
+- **Moving cards:** drag a card by its header onto another card to put it before or after that
+  one; onto a group (its area, or its header when folded) to put it in the group; onto the top
+  area to take it out. The order is saved with the performance.
 - **Right-click** a generator card for *Duplicate* (a copy with the same settings, output and
   group, switched off), Fold and Remove; right-click a group's header for *Rename*, Fold, Solo
   and Remove.

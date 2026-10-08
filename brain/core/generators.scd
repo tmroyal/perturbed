@@ -89,6 +89,21 @@
 	~release.(g);
 };
 
+// The generators in the performer's order (g[\order]; new ones go last): how they're sent, saved
+// and shown.
+~gensInOrder = { ~gens.values.sort { |a, b| if(a[\order] == b[\order]) { a[\id] < b[\id] } { a[\order] < b[\order] } } };
+
+// Moves a generator before another (beforeId 0: to the end) and, if group >= 0, into that group
+// (0: out of any group). Orders are renumbered 1..n; everyone is told.
+~moveGen = { |g, beforeId = 0, group = -1|
+	var list = ~gensInOrder.().reject { |x| x === g };
+	var at = list.detectIndex { |x| x[\id] == beforeId.asInteger } ? list.size;
+	if(group.asInteger >= 0 and: { group.asInteger != g[\group] }) { ~setGen.(g, \group, group) };
+	list = list.insert(at, g);
+	list.do { |x, i| x[\order] = i + 1 };
+	list.do(~sendGen);
+};
+
 // `like`: a generator to copy the settings, output and folding from (~duplicateGen).
 ~addGen = { |typeName, group = 0, id, like|
 	var type = ~types[typeName.asSymbol], g;
@@ -96,7 +111,8 @@
 		id = ~newId.(\gen, id);
 		g = (id: id, typeName: typeName.asSymbol, type: type, p: ~paramsFor.(type, like !? (_[\p])), active: false,
 			dest: like !? (_[\dest]) ? 0, held: (), group: ~groupOrNone.(group),
-			collapsed: like !? (_[\collapsed]) ? false, mappings: []);
+			collapsed: like !? (_[\collapsed]) ? false, mappings: [],
+			order: (~gens.values.collect(_[\order]).maxItem ? 0) + 1);
 		~gens[id] = g;
 		~sendGen.(g);
 		~sendParams.(g);
@@ -106,7 +122,12 @@
 
 // A copy of a generator: same type, settings, output, group and folding; off, so it doesn't double
 // the original. What drives the original's settings (globals, lfos) isn't copied: a setting has one driver.
-~duplicateGen = { |g| ~addGen.(g[\typeName], g[\group], nil, g) };
+~duplicateGen = { |g|
+	var id = ~addGen.(g[\typeName], g[\group], nil, g);
+	var after = ~gensInOrder.().detect { |x| x[\order] > g[\order] and: { x[\id] != id } };  // right after the original
+	~moveGen.(~gens[id], after !? (_[\id]) ? 0);
+	id;
+};
 
 ~removeGen = { |id|
 	~gens.removeAt(id) !? { |g| ~stopGen.(g); ~releaseHeld.(g); ~dropPins.(id); ~dropGenMappings.(id); ~send.('/gen/removed', id) };
@@ -163,7 +184,7 @@
 
 ~sendGen = { |g|
 	~send.('/gen', g[\id], g[\typeName], g[\dest], g[\active].binaryValue, g[\group] ? 0, (g[\collapsed] ? false).binaryValue,
-		g[\key] ? -1);
+		g[\key] ? -1, g[\order] ? 0);
 };
 
 ~sendParams = { |g|

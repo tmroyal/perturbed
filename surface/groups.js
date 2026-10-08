@@ -48,7 +48,29 @@ function pinRow(g) {
 
 // Puts a card in its group's grid (or the ungrouped one).
 function placeCard(gen) {
-  if (gen.card) (groupBodies.get(gen.group) ?? $('ungrouped')).append(gen.card.root);
+  if (!gen.card) return;
+  const grid = groupBodies.get(gen.group) ?? $('ungrouped');
+  gen.card.root.dataset.order = gen.order;
+  grid.append(gen.card.root);
+  // the brain's order (the performer's: cards can be dragged)
+  for (const card of [...grid.children].sort((a, b) => a.dataset.order - b.dataset.order)) grid.append(card);
+}
+
+// Dropping a dragged card on a group's area or header (or the ungrouped area) moves it to the end
+// of that group; dropping on a card (generators.js) puts it next to that card.
+function dropZone(target, groupId) {
+  target.addEventListener('dragover', (e) => {
+    if (draggingGen === null) return;
+    e.preventDefault();
+    target.classList.add('drop-here');
+  });
+  target.addEventListener('dragleave', () => target.classList.remove('drop-here'));
+  target.addEventListener('drop', (e) => {
+    if (draggingGen === null) return;
+    e.preventDefault();
+    target.classList.remove('drop-here');
+    osc.send('/gen/move', draggingGen, 0, groupId);
+  });
 }
 
 function groupSection(g) {
@@ -62,8 +84,10 @@ function groupSection(g) {
   const body = el('div', { className: 'gen-grid' });
   groupBodies.set(g.id, body);
   body.hidden = g.collapsed;
+  dropZone(body, g.id);
   // right-click on the header: rename, fold, add into, remove
   const head = el('header', { className: 'group-head' });
+  dropZone(head, g.id); // a folded group takes cards on its header
   head.addEventListener('contextmenu', (e) => {
     if (e.target.closest('input, select')) return;
     contextMenu(e, [
@@ -121,7 +145,9 @@ function renderGroups() {
   groupBodies.clear();
   summaries.clear();
   pinUpdaters.clear();
-  $('grid').replaceChildren(el('div', { className: 'gen-grid', id: 'ungrouped' }), ...[...model.groups.values()].map(groupSection));
+  const ungrouped = el('div', { className: 'gen-grid', id: 'ungrouped' });
+  dropZone(ungrouped, 0);
+  $('grid').replaceChildren(ungrouped, ...[...model.groups.values()].map(groupSection));
   model.gens.forEach((gen) => {
     placeCard(gen);
     gen.card?.render();

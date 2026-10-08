@@ -4,7 +4,7 @@ Perturbed is an algorithmic performance toolbox: generators on shared clocks rea
 play and send MIDI to instruments in Ableton Live, played from the Perturbed app (§5 describes
 the system). Claude runs in a drawer in the app (§5.6) and sets up the running performance with the `perturbed`
 command (§5.7). Claude can also write its own generator types into a library (§5.9); global parameters reshape
-many settings at once (§5.10). **Next: to be chosen.**
+many settings at once (§5.10). **Next: a redesign of the surface (tighter, more DAW-like; options to choose from).**
 
 **The idea.** A performer describes the piece they want to play ("two pianos phasing on an
 arpeggio of whatever I play, a slow bass on the lowest note, echo my right hand an octave up")
@@ -61,7 +61,7 @@ so the Live API can create audio clips from files).
 - **Globals:** a global driven by an LFO; soft takeover for knobs (no jump when a knob and its
   global disagree); the response curve applied to the on-screen slider too; a global on a group's
   header; offset mode (editing a mapped setting shifts its range instead of being refused).
-- **Groups:** drag and drop cards between groups; renamable pins; shared group settings (output, clock, velocity for all
+- **Groups:** renamable pins; dragging whole groups to reorder them; shared group settings (output, clock, velocity for all
   members); fades for On/Off.
 - **Live:** Link start/stop sync (Live's transport follows Play, for recording a performance);
   outputs that *are* Live's tracks (auto-sync, instead of one click each; needs a rule for
@@ -310,6 +310,11 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
 - Surface: Map on the lfo's card (Map mode is shared with globals, `surface/globals.js`), targets
   under *Moves*; driven settings are locked, tagged `← Lfo n` and show their moving value.
   CLI: `map`/`unmap <lfo id> <gen id> <setting>`; `state` shows `targets` and `follows`.
+- **Order:** generators have an `order` (the performer's; new ones last, a duplicate right after
+  its original): `/gen/move <id> <beforeId> <group>`, carried in `/gen`, and it's the order of the
+  file. Cards are dragged by their header (`makeDraggable` in `surface/generators.js`, drop zones
+  in `groups.js`); `perturbed move`. Right-click menus (`contextMenu` in `ui.js`): Duplicate
+  (`/gen/duplicate`), on/off keys, Rename for groups.
 - Also here: generator cards fold (`collapsed`, saved); basic has `chance`, and `length`/`duration`
   (`~strikeFor`, `~rhythmChance`, `~noteBeats`).
 

@@ -59,11 +59,17 @@ later is found with **Rescan** in the sidebar's Keyboard section. The first run 
 - **Globals:** *+ Global* adds a global parameter (Meta 1, …; click the name to rename): one slider
   for many settings. Press its **Map**, click setting names on cards, press **Done**; ▸ shows the
   mappings: *from → to* in the setting's units (from > to inverts it) and a curve (linear, exp,
-  steps, threshold). A mapped setting is locked on its card and tagged with the global's name.
+  steps, threshold). A mapped setting is locked and outlined in purple (hover it to see what it follows).
   **Knob**: press it, turn a knob or fader on your controller, and the global follows it (× forgets it).
   Several globals can follow the same knob, each with its own *knob response* (under ▸): linear,
   invert, exp, log, or a formula in x such as `x * x` or `(x * 2 - 1).abs`.
-- **Library:** the add bar holds your favorite generator types; *Library ▾* lists every type,
+- **Setup and Library:** the tabs on the window's right edge open the Setup panel (clocks, globals,
+  keyboard, outputs) or the Library in the same place; click the open tab to hide it and give the
+  generators the whole width.
+- **Values:** drag across a value with a line under it to change it (shift for fine steps; it moves
+  from where it is), or double-click it to type.
+- **Library:** the add bar holds your favorite generator types; the **Library** tab lists every type
+  (with a search box),
   built-in and AdHoc (written by Claude for a piece, kept in `adhoc/`), with ☆ to star one for the
   bar, *+ Add*, and × to delete an AdHoc type (its file moves to `adhoc/old/`). Errors from a type show at the top right.
 - **Moving cards:** drag a card by its header onto another card to put it before or after that
@@ -79,15 +85,16 @@ later is found with **Rescan** in the sidebar's Keyboard section. The first run 
   permute), its rhythm (every, euclid, random, phrase on a num/den grid, with a *chance* per note
   and a note length: hold, or a percentage of the step) and velocity (set,
   accent, random, drift, ramp, pattern, humanize).
-- **Groups:** *+ Group* makes a section; put generators in it with their *group* menu. **On/Off**
+- **Groups:** *+ Group* makes a section; put generators in it by dragging them, or right-click one →
+  *Move to …*. **On/Off**
   and **Solo** mute without losing time (a group comes back on the beat); ▸ folds it away to a
   header with a light per generator. Click the name to rename; **+** in the header adds a
-  generator straight into the group. **◇** by a card's setting pins it to the group's header, so it
+  generator straight into the group. Right-click a setting's name → *Pin* puts it on the group's header (◆ marks it), so it
   stays at hand when the group is folded.
 - **Passthrough:** *+ Passthrough* plays the keyboard into an output: transposed, zoned, delayed.
 - **LFOs:** *+ Lfo* is a slow wave (synced to the beat or free) that moves things. **Settings:**
   press **Map** on its card, click setting names on other cards, press **Done**; each target gets
-  its own *from → to* under *Moves*, and is locked and tagged `← Lfo n` while driven (another LFO's
+  its own *from → to* at the end of the LFO's strip, and is locked and outlined while driven (another LFO's
   Hz or phase can be a target). *scale* and *add* shape everything an LFO moves; map a global to
   *scale* to fade its effect in and out. **MIDI CC** to Live (*send CC*): ⌘M in Live, click the parameter,
   press the card's **Send** (or let the LFO run) until Live learns it, ⌘M; the range of each

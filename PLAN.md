@@ -4,7 +4,7 @@ Perturbed is an algorithmic performance toolbox: generators on shared clocks rea
 play and send MIDI to instruments in Ableton Live, played from the Perturbed app (§5 describes
 the system). Claude runs in a drawer in the app (§5.6) and sets up the running performance with the `perturbed`
 command (§5.7). Claude can also write its own generator types into a library (§5.9); global parameters reshape
-many settings at once (§5.10). **Next: a redesign of the surface (tighter, more DAW-like; options to choose from).**
+many settings at once (§5.10). The surface is a rack: a strip per generator with its settings in a row, and a dock (Setup or Library) that hides.
 
 **The idea.** A performer describes the piece they want to play ("two pianos phasing on an
 arpeggio of whatever I play, a slow bass on the lowest note, echo my right hand an octave up")
@@ -233,7 +233,7 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
 - **Pins:** member settings (range, choice, note) shown under the group's header, folded or not,
   as the same controls as on the card: `/group/pin|unpin <id> <genId> <param>`, echoed as
   `/group/pins <id> (<genId> <param>)...` (sent after the generators in a snapshot). A generator
-  leaving the group or removed takes its pins along. Pinned from the card's ◇.
+  leaving the group or removed takes its pins along. Pinned by right-clicking a setting's name on its strip.
 - Surface (`surface/groups.js`): a section per group with header (fold, name, summary of member
   lights and outputs when folded, + to add a generator into it, On, Solo, ×) and its pins; a
   *group* menu on each card; cards that are on but muted are dimmed. CLI: `group add|set|remove|
@@ -257,7 +257,7 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   those copies, so a piece never changes with the library.
 - **Deleting** (`/adhoc/delete`): an AdHoc type's file moves to `adhoc/old/<name>-deleted-<stamp>`
   and it's unloaded and unstarred; refused for built-ins and for types generators still use.
-- **Surface:** the add bar (favorites), *Library ▾* (star, + Add, Reload when changed, × to delete),
+- **Surface:** the add bar (favorites), the **Library** tab of the dock (search, star, + Add, Reload when changed, × to delete),
   brain errors in the status area. **CLI:** `adhoc list|show|load|check|delete`,
   `favorite`/`unfavorite`; `add` loads a library type first. `adhoc check` runs sclang's parser on a file to show the syntax error.
 - [docs/writing-generator-types.md](docs/writing-generator-types.md) is the guide for writing types by

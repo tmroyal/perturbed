@@ -47,7 +47,7 @@ run: { |g, p|
 )
 ```
 
-Then, in Perturbed, open **Library ▾**: *Pulse* is listed, with the sentence from its first line.
+Then, in Perturbed, open the **Library** tab (right edge): *Pulse* is listed, with the sentence from its first line.
 Press **+ Add**, pick an output on the new card, turn it **On** and press **Play**.
 
 That's a complete generator. Line by line:
@@ -69,7 +69,7 @@ That's a complete generator. Line by line:
 |---|---|
 | **Your types** | `adhoc/<name>.scd` at the repo root, one per file. Lowercase, hyphens: `rolling-strum.scd`. The file name is the type's name. |
 | **Built-in types** | `brain/types/` (`basic`, `passthrough`, `lfo`). Read them: they're the best examples. Don't edit them; copy one into `adhoc/` under a new name instead. |
-| **Loading** | **Library ▾ → + Add** loads a type and adds a generator. Or from a terminal: `tools/perturbed adhoc load <name>`. |
+| **Loading** | **Library → + Add** loads a type and adds a generator. Or from a terminal: `tools/perturbed adhoc load <name>`. |
 | **Editing** | Save the file, then press **Reload** next to it in the Library (it appears when the file changed), or run `adhoc load` again. Running generators switch to the new version and keep their settings. |
 | **Old versions** | Each reload keeps the replaced version in `adhoc/old/`. Deleting a type (× in the Library) moves it there too. |
 | **Favorites** | ☆ in the Library puts a type on the add bar for good. |

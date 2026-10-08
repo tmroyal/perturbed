@@ -1,4 +1,5 @@
-// sidebar.js — the chord bar, clocks and outputs (the brain calls outputs "destinations").
+// sidebar.js — the chord (in the top bar), the Setup panel (clocks, keyboard, outputs: the brain calls
+// outputs "destinations") and the dock that holds it.
 
 // A sidebar row: a name, then its controls.
 const namedRow = (className, name, ...rest) => el('div', { className }, el('span', { className: 'name', textContent: name }), ...rest);
@@ -42,11 +43,11 @@ function clockRow(c) {
       if (!editing(den)) den.value = c.den;
     };
   } else if (c.mode === 'factor') {
-    const dial = rotary({ min: 0.25, max: 4, step: 0.0001, log: true, onChange: (v) => set('factor', v) });
+    const dial = rotary({ size: 20, min: 0.25, max: 4, step: 0.0001, log: true, onChange: (v) => set('factor', v) });
     controls = ['×', dial.root];
     show = (c) => dial.set(c.factor);
   } else {
-    const dial = rotary({ min: 20, max: 400, step: 0.1, onChange: (v) => set('bpm', v) });
+    const dial = rotary({ size: 20, min: 20, max: 400, step: 0.1, onChange: (v) => set('bpm', v) });
     controls = [dial.root];
     show = (c) => dial.set(c.bpm);
   }
@@ -193,3 +194,20 @@ $('output-form').addEventListener('submit', (e) => {
   osc.send('/dest/add', name, parseInt($('output-port').value, 10), parseInt($('output-channel').value, 10), $('output-inst').value.trim());
   $('output-name').value = '';
 });
+
+// --- the dock: Setup or the Library (library.js) in the same place, picked on the rail at the
+// window's edge; the open one's tab hides the dock. Which is open belongs to this window, not to the
+// performance, so it's remembered here and not by the brain. ---
+function setDock(which) {
+  $('sidebar').hidden = which !== 'setup';
+  $('library').hidden = which !== 'library';
+  for (const b of $('rail').children) setOn(b, b.dataset.dock === which);
+  localStorage.setItem('dock', which);
+}
+for (const b of $('rail').children) {
+  b.onclick = () => {
+    setDock(b.classList.contains('on') ? '' : b.dataset.dock);
+    if (!$('library').hidden) osc.send('/library/rescan'); // pick up files Claude just wrote
+  };
+}
+setDock(localStorage.getItem('dock') ?? 'setup');

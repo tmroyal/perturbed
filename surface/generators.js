@@ -1,4 +1,4 @@
-// generators.js — generator cards, built entirely from the type schema the brain sends
+// generators.js — generator strips (one per generator, in a rack), built entirely from the type schema the brain sends
 // (params, labels, sections, showWhen), so new types need no surface code.
 
 // One param of generator genId as a control: { control, update(value), learning?(on), refresh?() }.
@@ -115,7 +115,7 @@ function makeDraggable(gen, root, header) {
     for (const x of document.querySelectorAll('.drop-before, .drop-after, .drop-here'))
       x.classList.remove('drop-before', 'drop-after', 'drop-here');
   });
-  // after this card if the pointer is past its middle (across in a row of cards, down in a column)
+  // after this strip if the pointer is past its middle (down the rack; across, if strips ever share a row)
   const after = (e) => {
     const r = root.getBoundingClientRect();
     const inRow = [root.previousElementSibling, root.nextElementSibling].some((s) => s && s.offsetTop === root.offsetTop);
@@ -140,46 +140,59 @@ function makeDraggable(gen, root, header) {
   });
 }
 
+// The palette a strip's sections take their stripe from, by the section's first word (anything
+// else, a type's own settings, gets the default in style.css).
+const sectionKey = (title) => (title ?? '').toLowerCase().split(' ')[0];
+
+// A generator's strip: a header (fold, On/Off, name, output) and its settings in sections, each
+// setting a cell with its name and control.
 function buildCard(gen) {
   const set = (param, value) => osc.send('/gen/set', gen.id, param, value);
   const led = el('span', { className: 'led', title: 'Flashes on each note' });
   const power = el('button', { className: 'power', onclick: () => set('active', gen.active ? 0 : 1) });
-  const output = itemSelect('—', model.dests, (v) => set('dest', v));
-  const group = itemSelect('—', model.groups, (v) => set('group', v));
+  const output = itemSelect('no output', model.dests, (v) => set('dest', v));
+  output.sel.classList.add('output');
+  output.sel.title = 'Output';
 
   const specs = model.types.get(gen.type) ?? [];
-  const fields = [
-    ...(specs.noOutput ? [] : [el('label', { textContent: 'output' }), output.sel]),
-    el('label', { textContent: 'group' }),
-    group.sel,
-  ];
   const updaters = {},
     learners = {},
-    refreshers = [],
-    pins = {}, // refreshers: menus of clocks
-    mappable = {}; // param -> { label, control, tag }: locked and tagged while it follows a global
-  const conditional = []; // rows shown only for some values of another param
-  const applyShow = () =>
-    conditional.forEach(({ show, els }) => {
-      const visible = show.values.includes(String(gen.params[show.param]));
-      els.forEach((e) => {
-        e.hidden = !visible;
-      });
-    });
+    refreshers = [], // menus of clocks
+    mappable = {}; // param -> { label, control, cell, mark }: locked and outlined while it follows a driver
+  const conditional = []; // cells shown only for some values of another param
+  const secs = el('div', { className: 'secs' });
+  let sec = null;
+  const section = (title) => {
+    sec = el('div', { className: 'sec', title: title ?? '' });
+    sec.dataset.sec = sectionKey(title);
+    secs.append(sec);
+  };
+  const addCell = (label, control, show) => {
+    if (!sec) section();
+    const cell = el('div', { className: 'cell' }, label, control);
+    sec.append(cell);
+    if (show) conditional.push({ show, cell });
+    return cell;
+  };
+  const applyShow = () => {
+    for (const { show, cell } of conditional) cell.hidden = !show.values.includes(String(gen.params[show.param]));
+    for (const s of secs.children) if (s !== targets) s.hidden = [...s.children].every((c) => c.hidden);
+  };
 
   const named = Object.fromEntries(specs.map((s) => [s.name, s]));
   for (const spec of specs) {
-    if (spec.section) fields.push(el('div', { className: 'section', textContent: spec.section }));
+    if (spec.section) section(spec.section);
     if (spec.name === 'den' && named.num) continue;
     if (spec.name === 'num' && named.den) {
-      // the grid step as num / den beats, with the result shown
-      const beats = el('span', { className: 'hint' });
-      const showBeats = () => {
-        beats.textContent = `= ${+(gen.params.num / gen.params.den).toFixed(3)} beat`;
-      };
-      const asField = (s) => ({ ...s, field: true }); // num/den are always number fields (a slider doesn't fit the row)
+      // the grid step as num / den beats (the result is the cell's tooltip)
+      const asField = (s) => ({ ...s, field: true }); // num/den are always number fields
       const num = paramControl(asField(spec), gen.id),
         den = paramControl(asField(named.den), gen.id);
+      const row = el('div', { className: 'row' }, num.control, el('span', { className: 'unit', textContent: '/' }), den.control);
+      const cell = addCell(el('label', { textContent: spec.label ?? 'step' }), row, spec.show);
+      const showBeats = () => {
+        cell.title = `${+(gen.params.num / gen.params.den).toFixed(3)} beat`;
+      };
       updaters.num = (v) => {
         num.update(v);
         showBeats();
@@ -188,79 +201,73 @@ function buildCard(gen) {
         den.update(v);
         showBeats();
       };
-      const row = el('div', { className: 'row' }, num.control, '/', den.control, beats);
-      fields.push(el('label', { textContent: spec.label ?? 'step' }), row);
-      if (spec.show) conditional.push({ show: spec.show, els: [fields[fields.length - 2], row] });
       continue;
     }
     const c = paramControl(spec, gen.id);
     const label = el('label', { textContent: spec.label ?? spec.name });
+    const cell = addCell(label, c.control, spec.show);
     if (['range', 'choice', 'note'].includes(spec.kind)) {
-      // its name is what Map mode clicks (globals.js); the tag shows the global it follows
+      // its name is what Map mode clicks (globals.js); right-click pins it to the group's header
       Object.assign(label.dataset, { gen: gen.id, param: spec.name });
-      const tag = el('span', { className: 'follows' });
-      label.append(tag);
-      mappable[spec.name] = { label, control: c.control, tag };
-      // ◇ pins the setting to the group's header (shown only while the card is in a group)
-      const pin = el('button', {
-        className: 'pin-toggle',
-        textContent: '◇',
-        title: "Pin to the group's header",
-        onclick: () => togglePin(gen, spec.name),
+      const mark = el('span', {
+        className: 'pin-mark',
+        textContent: '◆',
+        title: "Pinned to the group's header: click to unpin",
+        hidden: true,
       });
-      pins[spec.name] = pin;
-      label.prepend(pin);
+      mark.onclick = (e) => {
+        e.stopPropagation();
+        togglePin(gen, spec.name);
+      };
+      label.prepend(mark);
+      mappable[spec.name] = { label, control: c.control, cell, mark };
     }
     updaters[spec.name] = c.update;
     if (c.learning) learners[spec.name] = c.learning;
     if (c.refresh) refreshers.push(c.refresh);
-    if (spec.show) conditional.push({ show: spec.show, els: [label, c.control] });
-    fields.push(label, c.control);
   }
 
-  // folded, a card is its header: light, name, output, On/Off, remove (saved with the performance)
+  // folded, a strip is its header (saved with the performance)
   const toggleFold = () => set('collapsed', gen.collapsed ? 0 : 1);
   const fold = el('button', { className: 'fold', onclick: toggleFold });
-  const where = el('span', { className: 'hint where' });
   let keyTag = switchKeyTag('gen', gen); // its on/off key, if it has one
-  // a type that drives settings (lfo): Map (then click setting names on other cards) and its targets
+  // a type that drives settings (lfo): Map (then click setting names on other strips) and its targets
   const map = specs.maps
     ? el('button', {
-        className: 'power map',
-        title: 'Map: then click setting names on other cards (Esc or Map again to finish)',
+        className: 'map',
+        title: 'Map: then click setting names on other strips (Esc or Map again to finish)',
         onclick: () => toggleMapMode('gen', gen.id),
       })
     : '';
-  const targets = el('div', { className: 'targets' });
-  const body = el('div', { className: 'fields' }, ...fields);
-  const root = el(
-    'section',
-    { className: 'card gen' },
-    el(
-      'header',
-      {},
-      fold,
-      led,
-      el('h2', { textContent: genName(gen), title: 'Fold / unfold', onclick: toggleFold }),
-      where,
-      ...(specs.actions ?? []).map((a) =>
-        el('button', { className: 'power', textContent: a, onclick: () => osc.send('/gen/do', gen.id, a) }),
-      ),
-      map,
-      keyTag,
-      power,
-      closeButton('Remove', () => osc.send('/gen/remove', gen.id)),
-    ),
-    body,
-    targets,
+  const targets = el('div', { className: 'sec targets', title: 'What it moves' });
+  targets.dataset.sec = 'moves';
+  secs.append(targets);
+  const header = el(
+    'header',
+    {},
+    fold,
+    power,
+    led,
+    el('h2', { textContent: genName(gen), title: `${genName(gen)}: fold / unfold`, onclick: toggleFold }),
+    keyTag,
+    closeButton('Remove', () => osc.send('/gen/remove', gen.id)),
+    specs.noOutput ? '' : output.sel,
+    ...(specs.actions ?? []).map((a) => el('button', { textContent: a, onclick: () => osc.send('/gen/do', gen.id, a) })),
+    map,
   );
-  makeDraggable(gen, root, root.querySelector('header'));
-  // right-click (on the card, not inside its controls): duplicate, fold, remove
+  const root = el('section', { className: 'strip gen' }, header, secs);
+  makeDraggable(gen, root, header);
+  // right-click (on the strip, not inside its controls): pin a setting, duplicate, key, move, fold, remove
   root.addEventListener('contextmenu', (e) => {
     if (e.target.closest('input, select')) return;
+    const param = e.target.closest('label[data-param]')?.dataset.param;
+    const others = [...model.groups.values()].filter((g) => g.id !== gen.group);
     contextMenu(e, [
+      param && gen.group && [isPinned(gen, param) ? `Unpin ${param}` : `Pin ${param} to the group's header`, () => togglePin(gen, param)],
       ['Duplicate', () => osc.send('/gen/duplicate', gen.id)],
       switchKeyItem('gen', gen),
+      ...others.map((g) => [`Move to ${g.name}`, () => osc.send('/gen/move', gen.id, 0, g.id)]),
+      gen.group && ['Move out of its group', () => osc.send('/gen/move', gen.id, 0, 0)],
       [gen.collapsed ? 'Unfold' : 'Fold', toggleFold],
       [gen.active ? 'Turn off' : 'Turn on', () => set('active', gen.active ? 0 : 1)],
       ['Remove', () => osc.send('/gen/remove', gen.id)],
@@ -270,38 +277,30 @@ function buildCard(gen) {
   return {
     root,
     render() {
-      // state, pins and menus (outputs, groups, clocks) from the model
+      // state, pins and menus (outputs, clocks) from the model
       setOn(power, gen.active, gen.active ? 'On' : 'Off');
       const tag = switchKeyTag('gen', gen);
       keyTag.replaceWith(tag);
       keyTag = tag;
       root.classList.toggle('active', gen.active);
       root.classList.toggle('silenced', gen.active && !sounds(gen)); // on, but muted by a group
-      root.classList.toggle('grouped', !!gen.group);
       root.classList.toggle('collapsed', !!gen.collapsed);
-      body.hidden = !!gen.collapsed;
-      targets.hidden = !!gen.collapsed;
+      secs.hidden = !!gen.collapsed;
       if (map) setOn(map, isMapping('gen', gen.id), isMapping('gen', gen.id) ? 'Done' : 'Map');
-      targets.replaceChildren(
-        ...(gen.mappings?.length ? [el('div', { className: 'section', textContent: 'Moves' })] : []),
-        ...(gen.mappings ?? []).map((m) => mappingRow(gen, m, 'gen')),
-      );
+      targets.replaceChildren(...(gen.mappings ?? []).map((m) => mappingRow(gen, m, 'gen')));
+      targets.hidden = !gen.mappings?.length;
       fold.textContent = gen.collapsed ? '▸' : '▾';
       fold.title = gen.collapsed ? 'Unfold' : 'Fold away';
-      where.textContent = gen.collapsed ? (model.dests.get(gen.dest)?.name ?? '') : '';
-      for (const [param, pin] of Object.entries(pins)) {
-        const on = isPinned(gen, param);
-        setOn(pin, on, on ? '◆' : '◇');
-      }
-      for (const [param, { label, control, tag }] of Object.entries(mappable)) {
-        const gl = followedBy(gen.id, param);
-        label.classList.toggle('mapped', !!gl);
-        control.classList.toggle('locked', !!gl);
-        tag.textContent = gl ? `← ${gl.name}` : '';
-        control.title = gl ? `follows ${gl.name}: unmap it there to set it here` : '';
+      for (const [param, { label, control, cell, mark }] of Object.entries(mappable)) {
+        const driver = followedBy(gen.id, param);
+        mark.hidden = !isPinned(gen, param);
+        label.classList.toggle('mapped', !!driver);
+        control.classList.toggle('locked', !!driver);
+        cell.classList.toggle('driven', !!driver);
+        if (cell.dataset.tip === undefined) cell.dataset.tip = cell.title;
+        cell.title = driver ? `follows ${driver.name}: unmap it there to set it here` : cell.dataset.tip;
       }
       output.refresh(gen.dest);
-      group.refresh(gen.group);
       for (const f of refreshers) f();
     },
     param: (name, value) => {

@@ -34,7 +34,7 @@ function toggleMapMode(kind, id) {
 document.addEventListener(
   'click',
   (e) => {
-    const label = mapping !== null && e.target.closest('.card label[data-param]');
+    const label = mapping !== null && e.target.closest('.strip label[data-param]');
     if (!label) return;
     e.preventDefault();
     e.stopPropagation();

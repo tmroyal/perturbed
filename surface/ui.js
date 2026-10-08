@@ -10,8 +10,8 @@ const blurOnEnter = (input) =>
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') input.blur();
   });
-// True while the user is typing in or dragging a control, so echoes from the brain don't fight them.
-const editing = (input) => document.activeElement === input || input.dataset.dragging;
+// True while the user is typing in a control, so echoes from the brain don't fight them.
+const editing = (input) => document.activeElement === input;
 
 const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 const OCTAVES = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; // MIDI 60 = C4
@@ -129,42 +129,64 @@ function numberInput(min, max, onChange, step = 1) {
   return input;
 }
 
-// Slider with a typed field beside it; set(v) shows a value unless the user is dragging or typing.
-// log: logarithmic travel (for frequencies). The slider runs 0..1000 and maps to min..max.
+// A value bar: a number with a fill that shows where it sits in its range. Drag across it to change
+// it (shift = fine; it moves from where it is, it never jumps to the pointer), double-click to type.
+// set(v) shows a value unless the user is dragging or typing. log: logarithmic travel (frequencies).
 function slider(min, max, onChange, { step = 1, log = false } = {}) {
-  const toPos = (v) => 1000 * (log ? Math.log(v / min) / Math.log(max / min) : (v - min) / (max - min));
-  const fromPos = (p) => {
-    const t = p / 1000;
-    return log ? min * (max / min) ** t : min + (max - min) * t;
-  };
+  const TRAVEL = 160; // pixels of drag for the whole range
+  const toPos = (v) => (log ? Math.log(v / min) / Math.log(max / min) : (v - min) / (max - min));
+  const fromPos = (t) => (log ? min * (max / min) ** t : min + (max - min) * t);
   const round = (v) => Math.min(max, Math.max(min, +(Math.round(v / step) * step).toFixed(4)));
-  const input = el('input', { type: 'range', min: 0, max: 1000, step: 1 });
+  let value = min,
+    dragging = false;
+  const show = (v) => {
+    value = v;
+    root.style.setProperty('--fill', `${100 * Math.min(1, Math.max(0, toPos(v)))}%`);
+  };
   const field = numberInput(
     min,
     max,
     (v) => {
-      input.value = toPos(v);
+      show(v);
       onChange(v);
     },
     step,
   );
   field.classList.add('value');
-  input.addEventListener('pointerdown', () => {
-    input.dataset.dragging = '1';
+  const root = el('div', { className: 'row valuebar', title: 'Drag to change (shift: fine), double-click to type' }, field);
+  root.addEventListener('pointerdown', (e) => {
+    if (document.activeElement === field) return; // typing
+    e.preventDefault();
+    dragging = true;
+    let pos = toPos(value),
+      lastX = e.clientX;
+    drag(
+      root,
+      e,
+      (m) => {
+        pos = Math.min(1, Math.max(0, pos + (m.clientX - lastX) / (m.shiftKey ? TRAVEL * 10 : TRAVEL)));
+        lastX = m.clientX;
+        const v = round(fromPos(pos));
+        if (v === round(value)) return;
+        field.value = v;
+        show(v);
+        onChange(v);
+      },
+      () => {
+        dragging = false;
+      },
+    );
   });
-  input.addEventListener('pointerup', () => {
-    delete input.dataset.dragging;
-  });
-  input.addEventListener('input', () => {
-    const v = round(fromPos(+input.value));
-    field.value = v;
-    onChange(v);
+  root.addEventListener('dblclick', () => {
+    field.focus();
+    field.select();
   });
   const set = (v) => {
-    if (!editing(input)) input.value = toPos(v);
+    if (dragging) return;
     if (!editing(field)) field.value = round(v); // values from the brain can carry float noise (0.7874015…)
+    show(v);
   };
-  return { root: el('div', { className: 'row' }, input, field), set };
+  return { root, set };
 }
 
 // Rotary dial with a typed field: drag vertically (shift = fine), scroll, or double-click to type.

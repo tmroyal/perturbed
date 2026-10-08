@@ -1,7 +1,7 @@
 // groups.js — generator groups on the surface: a section per group, with a header to rename it,
 // switch it (On/Off), solo it, add to it, fold it away and remove it. Folded, a group shows only its
 // header, a summary (one light per member, flashing on its notes, and its outputs) and its pins:
-// member settings pinned from the cards (the ◇ by a setting), the controls played live. The brain
+// member settings pinned from the strips (right-click a setting's name), the controls played live. The brain
 // owns all of it, folding included (it's saved with the performance).
 
 // Whether a generator sounds (mirrors the brain's ~sounds in core/groups.scd).
@@ -35,8 +35,8 @@ function pinRow(g) {
     row.append(
       el(
         'div',
-        { className: 'pin' },
-        // the setting's own name: card labels ("value", "from") rely on the card's sections for context
+        { className: 'pin cell' },
+        // the setting's own name: a strip's labels ("value", "from") rely on its sections for context
         el('label', { textContent: `${genName(gen)} · ${param}` }),
         c.control,
         closeButton('Unpin', () => osc.send('/group/unpin', g.id, genId, param)),
@@ -73,7 +73,10 @@ function dropZone(target, groupId) {
   });
 }
 
-function groupSection(g) {
+// A colour per group (its name and rail), in the order the groups come.
+const GROUP_COLORS = ['#88C0D0', '#EBCB8B', '#B48EAD', '#8FBCBB', '#D08770', '#81A1C1'];
+
+function groupSection(g, i) {
   const set = (key, value) => osc.send('/group/set', g.id, key, value);
   const flip = (key) => () => set(key, g[key] ? 0 : 1);
   const name = el('input', { type: 'text', className: 'group-name', value: g.name, title: 'Rename' });
@@ -113,9 +116,10 @@ function groupSection(g) {
       onclick: flip('collapsed'),
     }),
     name,
-    summary,
-    addInto(g),
     switchKeyTag('group', g),
+    summary,
+    pinRow(g),
+    addInto(g),
     setOn(
       el('button', { className: 'power', title: 'Switch the group (a mute: it keeps time)', onclick: flip('on') }),
       g.on,
@@ -124,7 +128,9 @@ function groupSection(g) {
     setOn(el('button', { className: 'solo', textContent: 'Solo', title: 'Only soloed groups sound', onclick: flip('solo') }), g.solo),
     closeButton('Remove the group (its generators stay)', () => osc.send('/group/remove', g.id)),
   );
-  return el('section', { className: `group${g.collapsed ? ' collapsed' : ''}${g.on ? '' : ' off'}` }, head, pinRow(g), body);
+  const root = el('section', { className: `group${g.collapsed ? ' collapsed' : ''}${g.on ? '' : ' off'}` }, head, body);
+  root.style.setProperty('--gc', GROUP_COLORS[i % GROUP_COLORS.length]);
+  return root;
 }
 
 // "+": a menu of generator types; picking one adds it straight into the group.
@@ -147,7 +153,7 @@ function renderGroups() {
   pinUpdaters.clear();
   const ungrouped = el('div', { className: 'gen-grid', id: 'ungrouped' });
   dropZone(ungrouped, 0);
-  $('grid').replaceChildren(ungrouped, ...[...model.groups.values()].map(groupSection));
+  $('grid').replaceChildren(ungrouped, ...[...model.groups.values()].map((g, i) => groupSection(g, i)));
   model.gens.forEach((gen) => {
     placeCard(gen);
     gen.card?.render();

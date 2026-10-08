@@ -1,8 +1,9 @@
-// library.js — the add bar and the Library menu. The menu lists every generator type, built-in and
-// AdHoc (written by Claude for a piece), with ☆/★ for favorites (the add bar), + Add (loading the
-// type first if needed), Reload when a type's file changed since it was loaded, and Delete for AdHoc
-// types (the file moves to adhoc/old/, so it can come back). Favorites first, then built-ins, then
-// AdHoc types newest first. The brain owns the library (brain/core/library.scd).
+// library.js — the add bar and the Library, a panel in the dock (sidebar.js). The Library lists
+// every generator type, built-in and AdHoc (written by Claude for a piece), with ☆/★ for favorites
+// (the add bar), + Add (loading the type first if needed), Reload when a type's file changed since it
+// was loaded, and × to delete an AdHoc type (the file moves to adhoc/old/, so it can come back).
+// Favorites first, then built-ins, then AdHoc types newest first; the search box narrows them by
+// name or description. The brain owns the library (brain/core/library.scd).
 let pendingAdd = null; // a type being loaded, to add once it's in (/adhoc/loaded)
 
 function addFromLibrary(t) {
@@ -11,7 +12,6 @@ function addFromLibrary(t) {
     pendingAdd = t.name;
     osc.send('/adhoc/load', t.name);
   }
-  setLibrary(false);
 }
 function typeLoaded(name) {
   if (pendingAdd === name) {
@@ -33,12 +33,7 @@ function libraryRow(t) {
       t.favorite,
       t.favorite ? '★' : '☆',
     ),
-    el(
-      'div',
-      { className: 'lib-text' },
-      el('span', { className: 'lib-name', textContent: typeLabel(t.name) }),
-      el('span', { className: 'hint', textContent: t.description || (t.builtin ? 'built-in' : '') }),
-    ),
+    el('span', { className: 'lib-name', textContent: typeLabel(t.name) }),
     t.changed
       ? el('button', {
           className: 'reload',
@@ -49,17 +44,18 @@ function libraryRow(t) {
       : '',
     el('button', { className: 'add', textContent: '+ Add', onclick: () => addFromLibrary(t) }),
     t.builtin
-      ? el('span', { className: 'lib-spacer' })
+      ? ''
       : closeButton('Delete from the library (kept in adhoc/old/)', () => {
           if (confirm(`Delete ${typeLabel(t.name)} from the library?\n\nIts file moves to adhoc/old/, so it can be brought back.`))
             osc.send('/adhoc/delete', t.name);
         }),
+    el('span', { className: 'hint', textContent: t.description || (t.builtin ? 'built-in' : ''), title: t.description }),
   );
 }
 
 function renderLibrary() {
   const all = [...model.library.values()];
-  // the add bar: a button per favorite (and per type loaded this session), + Group, and the Library
+  // the add bar: a button per favorite (and per type loaded this session), and + Group
   const bar = all.filter((t) => t.bar).sort((a, b) => b.builtin - a.builtin || byName(a, b));
   $('add-gen').replaceChildren(
     ...bar.map((t) =>
@@ -70,37 +66,21 @@ function renderLibrary() {
       title: 'A group: switch, solo and fold away several generators at once',
       onclick: () => osc.send('/group/add'),
     }),
-    el('button', {
-      id: 'library-button',
-      className: $('library').hidden ? '' : 'on',
-      textContent: 'Library ▾',
-      title: 'Every generator type: star favorites for the add bar, bring back old ones',
-      onclick: toggleLibrary,
-    }),
   );
 
+  const query = $('library-search').value.trim().toLowerCase();
+  const found = all.filter((t) => `${t.name} ${t.description}`.toLowerCase().includes(query));
   const section = (title, list) =>
     list.length ? [el('div', { className: 'lib-section', textContent: title }), ...list.map(libraryRow)] : [];
-  $('library').replaceChildren(
-    ...section('Favorites', all.filter((t) => t.favorite).sort(byName)),
-    ...section('Built-in', all.filter((t) => !t.favorite && t.builtin).sort(byName)),
+  $('library-list').replaceChildren(
+    ...section('Favorites', found.filter((t) => t.favorite).sort(byName)),
+    ...section('Built-in', found.filter((t) => !t.favorite && t.builtin).sort(byName)),
     ...section(
       'AdHoc',
-      all.filter((t) => !t.favorite && !t.builtin).sort((a, b) => b.mtime - a.mtime),
+      found.filter((t) => !t.favorite && !t.builtin).sort((a, b) => b.mtime - a.mtime),
     ),
+    ...(found.length ? [] : [el('p', { className: 'hint', textContent: 'Nothing matches.' })]),
     ...(all.some((t) => !t.builtin) ? [] : [el('p', { className: 'hint', textContent: 'No AdHoc types yet: ask Claude for one.' })]),
   );
 }
-
-function setLibrary(open) {
-  $('library').hidden = !open;
-  $('library-button')?.classList.toggle('on', open);
-  if (open) osc.send('/library/rescan'); // pick up files Claude just wrote
-}
-const toggleLibrary = () => setLibrary($('library').hidden);
-document.addEventListener('pointerdown', (e) => {
-  if (!$('library').hidden && !$('library').contains(e.target) && e.target.id !== 'library-button') setLibrary(false);
-});
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') setLibrary(false);
-});
+$('library-search').addEventListener('input', renderLibrary);

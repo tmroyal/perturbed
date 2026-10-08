@@ -26,6 +26,15 @@
       <span id="pulse"></span>
       <span id="beat"></span>
     </div>
+    <div class="group" id="chord" title="The chord the generators play from">
+      <span class="unit">Chord</span>
+      <div class="segmented" id="chord-mode" title="Auto: every chord you play replaces the current one. Arm: only the next chord after pressing Arm.">
+        <button data-mode="auto">Auto</button><button data-mode="arm">Arm</button>
+      </div>
+      <button id="chord-arm">Arm</button>
+      <div id="chord-notes"></div>
+      <button id="chord-clear">Clear</button>
+    </div>
     <div class="spacer"></div>
     <span id="status">waiting for the brain…</span>
     <button id="new" title="A new, empty performance (⌘N)">New</button>
@@ -37,17 +46,7 @@
 
   <div id="main">
     <section id="gens-pane">
-      <div class="pane-head"><h1>Chord</h1></div>
-      <div id="chord" class="card">
-        <div class="segmented" id="chord-mode" title="Auto: every chord you play replaces the current one. Arm: only the next chord after pressing Arm.">
-          <button data-mode="auto">Auto</button><button data-mode="arm">Arm</button>
-        </div>
-        <button id="chord-arm">Arm</button>
-        <div id="chord-notes"></div>
-        <button id="chord-clear">Clear</button>
-      </div>
-      <div class="pane-head"><h1>Generators</h1><div id="add-gen"></div></div>
-      <div id="library" hidden></div>
+      <div class="pane-head"><span class="unit">Add</span><div id="add-gen"></div></div>
       <div id="grid"></div>
     </section>
 
@@ -79,6 +78,17 @@
       </form>
       </details>
     </aside>
+
+    <aside id="library" hidden>
+      <input id="library-search" type="text" placeholder="search types…">
+      <div id="library-list"></div>
+    </aside>
+
+    <!-- the dock's tabs: Setup or the Library in the same place; the open one's tab hides it -->
+    <nav id="rail">
+      <button data-dock="setup" title="Clocks, globals, keyboard and outputs">Setup</button>
+      <button data-dock="library" title="Every generator type: star favorites for the add bar, bring back old ones">Library</button>
+    </nav>
   </div>
 
   <div id="drawer" hidden><div id="drawer-handle"></div><div id="term"></div></div>

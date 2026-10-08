@@ -10,7 +10,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-const tempoDial = rotary({ min: 20, max: 400, step: 0.1, size: 44, onChange: (bpm) => osc.send('/transport/tempo', bpm) });
+const tempoDial = rotary({ min: 20, max: 400, step: 0.1, size: 22, onChange: (bpm) => osc.send('/transport/tempo', bpm) });
 $('tempo').append(tempoDial.root);
 
 // Metric modulation: tempo × num/den; swap gives the reciprocal, so two clicks go there and back.

@@ -79,7 +79,16 @@ function paramControl(spec, genId) {
       };
     }
     case 'range': {
-      if (!spec.slider && (max - min <= 32 || spec.field)) return plain(numberInput(min, max, send, step));
+      if (!spec.slider && (max - min <= 32 || spec.field)) {
+        // values from the brain are 32-bit floats (0.1 arrives as 0.10000000149…): shown to the setting's step
+        const input = numberInput(min, max, send, step);
+        return {
+          control: input,
+          update: (v) => {
+            if (!editing(input)) input.value = +(Math.round(v / step) * step).toFixed(4);
+          },
+        };
+      }
       const s = slider(min, max, send, { step, log: spec.slider === 'log' });
       return { control: s.root, update: s.set };
     }

@@ -22,15 +22,20 @@
 //   linear  x          invert  1 - x          exp  slow start          log  fast start
 //   formula            a sclang expression in x (`formula`), e.g. "x * x", "(x * 2 - 1).abs"
 // so a single gesture fans out into differently shaped movements.
+//
+// A global can belong to a group (`group`, 0 = none): the same thing in every way, but shown on that
+// group's header, where it stays at hand when the group is folded: a control for the layer. If the
+// group is removed it becomes performance-wide again.
 (
 ~globals = ();
 ~curves = [\linear, \exp, \steps, \threshold];
 
-~addGlobal = { |name, id|
+~addGlobal = { |name, id, group = 0|
 	var gl;
 	id = ~newId.(\global, id);
-	gl = (id: id, name: (name ?? { "Meta %".format(id) }).asString, value: 0.0, mappings: [], knob: nil,
-		response: \linear, formula: "x");
+	if(name.isNil or: { name.asString.isEmpty }) { name = "Meta %".format(id) };
+	gl = (id: id, name: name.asString, value: 0.0, mappings: [], knob: nil,
+		response: \linear, formula: "x", group: ~groupOrNone.(group));
 	~globals[id] = gl;
 	~sendGlobal.(gl);
 	~sendMappings.(gl);
@@ -40,6 +45,7 @@
 ~setGlobal = { |gl, key, val|
 	switch(key.asSymbol,
 		\name, { gl[\name] = val.asString },
+		\group, { gl[\group] = ~groupOrNone.(val) },
 		\value, { gl[\value] = val.asFloat.clip(0, 1); ~applyGlobal.(gl) },
 		\response, { if(~responses.includes(val.asSymbol)) { gl[\response] = val.asSymbol } },
 		\formula, { gl[\formula] = val.asString; ~formulaFns.removeAt(gl[\id]) });
@@ -209,7 +215,7 @@
 ~applyGlobal = { |gl| ~drive.(gl, gl[\value]) };
 
 ~sendGlobal = { |gl|
-	~send.('/global', gl[\id], gl[\name], gl[\value], *((gl[\knob] ? [0, 0]) ++ [gl[\response] ? \linear, gl[\formula] ? "x"]));
+	~send.('/global', gl[\id], gl[\name], gl[\value], *((gl[\knob] ? [0, 0]) ++ [gl[\response] ? \linear, gl[\formula] ? "x", gl[\group] ? 0]));
 };
 // A driver's mappings: /global/mappings for a global, /gen/targets for a generator (same layout).
 ~sendMappings = { |gl|

@@ -150,22 +150,29 @@ body.dragging-card .group .gen-grid:empty { min-height: 26px; outline: 1px dashe
 /* --- groups: a rail and a name in the group's colour (--gc, set in groups.js) --- */
 .group { margin-bottom: 6px; border-left: 3px solid var(--gc); }
 .group.off { --gc: var(--dim) !important; }
-.group-head { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 6px; min-height: 24px; padding: 2px 6px; background: var(--head); }
+.group-head { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 3px 6px; min-height: 24px; padding: 2px 6px; background: var(--head); }
 .group-head .group-name {
   width: auto; field-sizing: content; min-width: 4ch; max-width: 30ch; background: none; border-color: transparent; padding: 0 2px;
   font-weight: 700; color: var(--gc); text-transform: uppercase; letter-spacing: .06em;
 }
 .group-head .group-name:hover { border-color: var(--nord3); }
-.group-summary { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.group-summary { display: flex; align-items: center; gap: 5px; min-width: 0; min-height: var(--h); }
 .group-summary:empty { display: none; }
 .group-summary .led.on { background: var(--nord3); }
-.group-head select.add-into { width: 22px; field-sizing: fixed; padding: 0; text-align: center; text-align-last: center; background: var(--nord2); margin-left: auto; }
+.group-head select.add-into { width: 22px; field-sizing: fixed; padding: 0; text-align: center; text-align-last: center; background: var(--nord2); }
+.group-tools { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 /* pins: members' settings on the group's header, there when the group is folded */
-.group-pins { display: flex; flex-wrap: wrap; gap: 3px; flex: 1; min-width: 0; margin-left: 6px; }
+.group-pins { display: flex; flex-wrap: wrap; gap: 3px; margin-left: 6px; }
 .group-pins:empty { display: none; }
-.group-pins + select.add-into { margin-left: 0; }
-.group-pins:empty + select.add-into { margin-left: auto; }
 .pin .valuebar { min-width: 72px; }
+/* a group's own globals, on its header: name, buttons and a bar in one line; unfolded, its mappings sit under it */
+.group-globals { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 3px 8px; }
+.group-globals:empty { display: none; }
+.group-globals .global { display: grid; grid-template-columns: auto 120px; align-items: center; gap: 2px 4px; padding: 0 0 0 6px; border: 1px solid var(--gc); }
+.group-globals .global-head .global-name { flex: none; width: auto; field-sizing: content; min-width: 4ch; }
+.group-globals .global > .valuebar { height: var(--h); border-width: 0 0 0 1px; }
+.group-globals .global .mapping { grid-column: 1 / -1; flex-wrap: nowrap; padding-right: 2px; }
+.group-globals .global .mapping .what { flex: 1 1 auto; }
 
 /* --- right-click menus --- */
 .context-menu { position: fixed; z-index: 30; display: flex; flex-direction: column; min-width: 150px; padding: 3px;

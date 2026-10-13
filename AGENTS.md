@@ -71,6 +71,10 @@ tools/perturbed global map density 2 velocity 100 60 exp   # from > to inverts i
 tools/perturbed global set density value=0.3
 ```
 
+A global can belong to a group (`global add intensity group="Phasing pianos"`, or `global set intensity
+group=...`; `group=none` takes it back): it's the same thing, shown on the group's header, where it stays at
+hand when the group is folded. Give each layer one or two of these for what the performer will play.
+
 A mapped setting is locked (setting it says so); `global unmap` frees it. A global can follow a
 knob on the performer's controller (they learn it in the app with **Knob**; or `global knob density
 1 74` for channel 1, CC 74), which puts everything it moves under one hand. Several globals can
@@ -109,7 +113,7 @@ stops the transport; generators keep their on/off state, so Play starts the piec
     {"id": 1, "name": "Piano 1", "port": 1, "channel": 1, "instrument": "Pianoteq 9"}
   ],
   "globals": [                        // optional: global parameters and what they move
-    {"id": 1, "name": "density", "value": 0.3,
+    {"id": 1, "name": "density", "value": 0.3,       // "group": 1 puts it on that group's header
      "mappings": [{"gen": 1, "param": "prob", "from": 20, "to": 90, "curve": "linear"}]}
   ],
   "groups": [                         // optional: layers the performer switches, solos and folds

@@ -35,6 +35,7 @@
 ~removeGroup = { |id|
 	~groups.removeAt(id) !? {
 		~gens.do { |g| if(g[\group] == id) { g[\group] = 0; ~sendGen.(g) } };
+		~globals.do { |gl| if(gl[\group] == id) { gl[\group] = 0; ~sendGlobal.(gl) } };  // its globals become performance-wide
 		~applyGates.();
 		~send.('/group/removed', id);
 	};

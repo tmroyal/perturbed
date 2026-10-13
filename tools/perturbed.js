@@ -26,7 +26,8 @@ const HELP = `perturbed — change the running performance
   group unpin <name|id> <gen id> <setting>
   set <id> group=<name|id|none>      put a generator in a group (also: add basic group=...)
 
-  global add [name] [value=]          a global parameter (Meta 1, ...): one control, 0–1, for many settings
+  global add [name] [value=] [group=] a global parameter (Meta 1, ...): one control, 0–1, for many settings;
+                                     group=<name|id> puts it on that group's header (set group=none to take it off)
   global set <name|id> value=0.7 name=... response=linear|invert|exp|log|formula formula="x * x"
                                      response: how it answers its knob (several globals can share one)
   global remove <name|id>
@@ -131,7 +132,7 @@ const COMMANDS = {
 
   'global add': [
     0,
-    '[name] [value=0..1]',
+    '[name] [value=0..1] [group=<name|id>]',
     (b, r) => {
       const named = r[0] && !r[0].includes('=');
       return b.addGlobal(named ? r[0] : undefined, settings(named ? r.slice(1) : r));

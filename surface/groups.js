@@ -1,5 +1,6 @@
 // groups.js — generator groups on the surface: a section per group, with a header to rename it,
-// switch it (On/Off), solo it, add to it, fold it away and remove it. Folded, a group shows only its
+// switch it (On/Off), solo it, add to it, fold it away and remove it. A group can have globals of its
+// own on its header (globals.js): one control for many of its generators' settings. Folded, a group shows only its
 // header, a summary (one light per member, flashing on its notes, and its outputs) and its pins:
 // member settings pinned from the strips (right-click a setting's name), the controls played live. The brain
 // owns all of it, folding included (it's saved with the performance).
@@ -14,6 +15,7 @@ function sounds(gen) {
 const groupBodies = new Map(); // group id -> the grid its cards go in
 const summaryLeds = new Map(); // gen id -> its light in a folded group's summary
 const summaries = new Map(); // group id -> summary element
+const groupGlobals = new Map(); // group id -> where its own globals go on its header (globals.js fills it)
 const pinUpdaters = new Map(); // "genId:param" -> update(value) of its pinned control
 const updatePin = (genId, param, value) => pinUpdaters.get(`${genId}:${param}`)?.(value);
 
@@ -86,6 +88,9 @@ function groupSection(g, i) {
   summaries.set(g.id, summary);
   const body = el('div', { className: 'gen-grid' });
   groupBodies.set(g.id, body);
+  const globals = el('div', { className: 'group-globals' });
+  groupGlobals.set(g.id, globals);
+  const addGlobal = () => osc.send('/global/add', '', g.id);
   body.hidden = g.collapsed;
   dropZone(body, g.id);
   // right-click on the header: rename, fold, add into, remove
@@ -102,6 +107,7 @@ function groupSection(g, i) {
         },
       ],
       switchKeyItem('group', g),
+      ['Add a global for this group', addGlobal],
       [g.collapsed ? 'Unfold' : 'Fold', () => set('collapsed', g.collapsed ? 0 : 1)],
       [g.on ? 'Turn off' : 'Turn on', () => set('on', g.on ? 0 : 1)],
       [g.solo ? 'Unsolo' : 'Solo', () => set('solo', g.solo ? 0 : 1)],
@@ -119,14 +125,20 @@ function groupSection(g, i) {
     switchKeyTag('group', g),
     summary,
     pinRow(g),
-    addInto(g),
-    setOn(
-      el('button', { className: 'power', title: 'Switch the group (a mute: it keeps time)', onclick: flip('on') }),
-      g.on,
-      g.on ? 'On' : 'Off',
+    globals,
+    // kept together at the right, however the pins and globals wrap
+    el(
+      'div',
+      { className: 'group-tools' },
+      addInto(g),
+      setOn(
+        el('button', { className: 'power', title: 'Switch the group (a mute: it keeps time)', onclick: flip('on') }),
+        g.on,
+        g.on ? 'On' : 'Off',
+      ),
+      setOn(el('button', { className: 'solo', textContent: 'Solo', title: 'Only soloed groups sound', onclick: flip('solo') }), g.solo),
+      closeButton('Remove the group (its generators stay)', () => osc.send('/group/remove', g.id)),
     ),
-    setOn(el('button', { className: 'solo', textContent: 'Solo', title: 'Only soloed groups sound', onclick: flip('solo') }), g.solo),
-    closeButton('Remove the group (its generators stay)', () => osc.send('/group/remove', g.id)),
   );
   const root = el('section', { className: `group${g.collapsed ? ' collapsed' : ''}${g.on ? '' : ' off'}` }, head, body);
   root.style.setProperty('--gc', GROUP_COLORS[i % GROUP_COLORS.length]);
@@ -138,8 +150,11 @@ function addInto(g) {
   const sel = el('select', { className: 'add-into', title: 'Add a generator to this group' });
   sel.add(new Option('+', ''));
   for (const type of model.types.keys()) sel.add(new Option(typeLabel(type), type));
+  // and a global of its own: one control on the header for many of its generators' settings
+  sel.add(new Option('Global (a control for this group)', '+global'));
   sel.addEventListener('change', () => {
-    if (sel.value) osc.send('/gen/add', sel.value, g.id);
+    if (sel.value === '+global') osc.send('/global/add', '', g.id);
+    else if (sel.value) osc.send('/gen/add', sel.value, g.id);
     sel.value = '';
     if (g.collapsed) osc.send('/group/set', g.id, 'collapsed', 0); // show what was added
   });
@@ -149,6 +164,7 @@ function addInto(g) {
 // Rebuilds the sections; cards are moved, not rebuilt.
 function renderGroups() {
   groupBodies.clear();
+  groupGlobals.clear();
   summaries.clear();
   pinUpdaters.clear();
   const ungrouped = el('div', { className: 'gen-grid', id: 'ungrouped' });
@@ -159,6 +175,7 @@ function renderGroups() {
     gen.card?.render();
   });
   renderGroupSummaries();
+  renderGlobals(); // the groups' own globals go back on the new headers
 }
 
 function renderGroupSummaries() {

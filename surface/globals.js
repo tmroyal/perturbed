@@ -1,6 +1,6 @@
 // globals.js — global parameters in the sidebar: Meta 1, Meta 2, ... (named by the performer), each a
 // 0–1 slider that moves every setting mapped to it (brain/core/globals.scd). Map mode: press a
-// global's Map, then click setting names on cards; each becomes a mapping, tuned in the list under
+// global's Map, then click setting names on strips; each becomes a mapping, tuned in the list under
 // the global (from → to in the setting's units, from > to inverts; curve). Mapped settings are
 // locked on their cards and tagged with the global's name. Knob: press it and turn a knob or fader on
 // the controller; the global follows it from then on.
@@ -187,15 +187,16 @@ function globalRow(gl) {
   };
 }
 
+// Globals go in the Setup panel; a group's own (gl.group) go on that group's header (groups.js).
 function renderGlobals() {
   globalRows.clear();
-  $('globals').replaceChildren(
-    ...[...model.globals.values()].map((gl) => {
-      const row = globalRow(gl);
-      globalRows.set(gl.id, row);
-      return row.root;
-    }),
-  );
+  const places = new Map([[$('globals'), []], ...[...groupGlobals.values()].map((box) => [box, []])]);
+  for (const gl of model.globals.values()) {
+    const row = globalRow(gl);
+    globalRows.set(gl.id, row);
+    places.get(groupGlobals.get(gl.group) ?? $('globals')).push(row.root);
+  }
+  for (const [box, rows] of places) box.replaceChildren(...rows);
 }
 
 const updateGlobal = (gl) => (globalRows.has(gl.id) ? globalRows.get(gl.id).update(gl) : renderGlobals());

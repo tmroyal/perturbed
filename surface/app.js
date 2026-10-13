@@ -224,12 +224,13 @@ const handlers = {
     g.pins = chunks(flat, 2);
     return renderGroups;
   },
-  '/global': (id, name, value, channel = 0, cc = 0, response = 'linear', formula = 'x') => {
+  '/global': (id, name, value, channel = 0, cc = 0, response = 'linear', formula = 'x', group = 0) => {
     const known = model.globals.get(id);
-    const gl = { id, name, value, knob: channel ? { channel, cc } : null, response, formula, mappings: known?.mappings ?? [] };
+    const gl = { id, name, value, knob: channel ? { channel, cc } : null, response, formula, group, mappings: known?.mappings ?? [] };
     model.globals.set(id, gl);
-    // a new response or formula changes the row's controls; a value or name only updates them
-    return known && known.response === response && known.formula === formula ? () => updateGlobal(gl) : renderGlobals;
+    // a new response, formula or group changes the row's controls or place; a value or name only updates them
+    const same = known && known.response === response && known.formula === formula && known.group === group;
+    return same ? () => updateGlobal(gl) : renderGlobals;
   },
   '/global/mappings': (id, ...flat) => {
     const gl = model.globals.get(id);

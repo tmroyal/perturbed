@@ -57,10 +57,8 @@ so the Live API can create audio clips from files).
   row, cloud, drone. Some of these may start life as AdHoc types and graduate to `brain/types/`.
 - **Other note sources:** sequence, transforms (transpose, invert, subset) of the chord.
 - **Controllers:** generator-to-generator modulation. (Knobs drive globals: §5.10.)
-- **LFOs:** depth as a setting (scaling every target's range at once), so one LFO can fade another in.
 - **Globals:** a global driven by an LFO; soft takeover for knobs (no jump when a knob and its
-  global disagree); the response curve applied to the on-screen slider too; a global on a group's
-  header; offset mode (editing a mapped setting shifts its range instead of being refused).
+  global disagree); the response curve applied to the on-screen slider too; offset mode (editing a mapped setting shifts its range instead of being refused).
 - **Groups:** renamable pins; dragging whole groups to reorder them; shared group settings (output, clock, velocity for all
   members); fades for On/Off.
 - **Live:** Link start/stop sync (Live's transport follows Play, for recording a performance);
@@ -290,6 +288,8 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   channel 0 = none); saved with it. Several globals can share a knob; each answers through its
   `response` (linear, invert, exp, log, or `formula`: a sclang expression in x, compiled once,
   reported and treated as x if it fails). `/global` carries knob, response and formula.
+- **A group's own globals:** a global with `group` set (`/global/add <name> <groupId>`, `/global/set <id> group <groupId>`)
+  is the same object, shown on that group's header; removing the group sets it back to 0 (performance-wide).
 - Surface (`surface/globals.js`): a sidebar row per global (name, slider, Knob, Map, ▸ mappings, ×);
   Map mode makes setting names on cards clickable targets. CLI: `global add|set|remove|map|unmap`;
   `state` lists globals and each generator's `follows`.

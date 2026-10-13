@@ -35,8 +35,9 @@
 //   /gen/map          <id> <genId> <param> [<from> <to> <curve> <amount>]   a generator that maps (lfo)
 //                                                drives that setting; like /global/map
 //   /gen/unmap        <id> <genId> <param>
-//   /global/add       [<name>]                   a global parameter ("Meta n" by default); core/globals.scd
-//   /global/set       <id> name|value|response|formula <v>   value 0–1 moves every mapped setting;
+//   /global/add       [<name>] [<groupId>]       a global parameter ("Meta n" by default, or for an empty name);
+//                                                with a group, it lives on that group's header; core/globals.scd
+//   /global/set       <id> name|value|response|formula|group <v>   value 0–1 moves every mapped setting;
 //                                                response (linear|invert|exp|log|formula) shapes its knob
 //   /global/remove    <id>
 //   /global/map       <id> <genId> <param> [<from> <to> <curve> <amount>]   add or update a mapping
@@ -101,7 +102,7 @@
 //                                                none; order: its place among the generators
 //   /group            <id> <name> <on> <solo> <collapsed> <key>
 //   /group/removed    <id>
-//   /global           <id> <name> <value> <knobChannel> <knobCC> <response> <formula>   knob channel 0 = none
+//   /global           <id> <name> <value> <knobChannel> <knobCC> <response> <formula> <groupId>   knob channel 0, group 0 = none
 //   /global/learn     <id> 1|0                   learning a knob started / ended
 //   /global/mappings  <id> (<genId> <param> <from> <to> <curve> <amount>)...   amount -1 = default
 //   /global/removed   <id>
@@ -224,7 +225,7 @@
 	OSCdef(\liveTracks, { |msg| ~setLiveTracks.(msg[1..].collect { |x| if(x.isKindOf(Symbol)) { x.asString } { x } }) }, '/live/tracks');
 	OSCdef(\liveTracksClear, { ~setLiveTracks.(nil) }, '/live/tracks/clear');
 
-	OSCdef(\globalAdd, { |msg| ~addGlobal.(msg[1]) }, '/global/add');
+	OSCdef(\globalAdd, { |msg| ~addGlobal.(msg[1], nil, msg[2] ? 0) }, '/global/add');
 	OSCdef(\globalRemove, { |msg| ~removeGlobal.(msg[1].asInteger) }, '/global/remove');
 	~onObject.('/global/set', \globals, \setGlobal);
 	~onObject.('/global/map', \globals, \map);

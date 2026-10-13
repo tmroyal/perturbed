@@ -195,6 +195,7 @@ class Brain {
           knob: a[3] ? { channel: a[3], cc: a[4] } : null,
           response: a[5] ?? 'linear', // how it answers its knob; `formula` (in x) when response is formula
           ...(a[5] === 'formula' ? { formula: a[6] } : {}),
+          ...(a[7] ? { group: a[7] } : {}), // on that group's header; without, performance-wide
           mappings: m.globals.get(a[0])?.mappings ?? [],
         });
         break;
@@ -584,15 +585,23 @@ class Brain {
     return Object.keys(settings).length ? this.setGlobal(id, settings) : this.model.globals.get(id);
   }
 
-  // settings: name, value (0–1), response (to its knob: linear|invert|exp|log|formula), formula (in x)
+  // settings: name, value (0–1), response (to its knob: linear|invert|exp|log|formula), formula (in x),
+  // group (a group's name or id: the global lives on its header; none: performance-wide)
   async setGlobal(v, settings) {
     const id = this.global(v) || fail('which global?');
     for (const [k, val] of Object.entries(settings)) {
       if (k === 'value' && !(+val >= 0 && +val <= 1)) fail("a global's value is 0 to 1");
-      if (!['name', 'value', 'response', 'formula'].includes(k)) fail(`globals have name, value, response and formula, not "${k}"`);
+      if (!['name', 'value', 'response', 'formula', 'group'].includes(k))
+        fail(`globals have name, value, response, formula and group, not "${k}"`);
       if (k === 'response' && !['linear', 'invert', 'exp', 'log', 'formula'].includes(val))
         fail('response is linear, invert, exp, log or formula');
-      await this.request('/global/set', [id, k, k === 'value' ? +val : String(val)], '/global', (gid) => gid === id);
+      const group = k === 'group' && (['none', '0', ''].includes(String(val)) ? 0 : this.group(val) || fail(`no group "${val}"`));
+      await this.request(
+        '/global/set',
+        [id, k, k === 'value' ? +val : k === 'group' ? group : String(val)],
+        '/global',
+        (gid) => gid === id,
+      );
     }
     return this.model.globals.get(id);
   }

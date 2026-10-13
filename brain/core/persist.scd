@@ -101,7 +101,7 @@
 		}.select { |m| ~gens[m[\gen]].notNil };
 	};
 	(perf["globals"] ? []).do { |saved|
-		var gl = ~addGlobal.(saved["name"], saved["id"].asInteger);
+		var gl = ~addGlobal.(saved["name"], saved["id"].asInteger, (saved["group"] ? 0).asInteger);
 		gl[\value] = saved["value"].asFloat;
 		gl[\knob] = saved["knob"] !? { |k| k.collect(_.asInteger) };
 		gl[\response] = (saved["response"] ? \linear).asSymbol;

@@ -280,6 +280,18 @@ try {
       .indexOf(copyId) === 1,
     'a duplicate sits right after its original',
   );
+  // a group's own global: on its header; back to performance-wide when asked, or when the group goes
+  run('group', 'add', 'Shelf 2');
+  const shelfId = json('state').groups.find((x) => x.name === 'Shelf').id;
+  check(json('global', 'add', 'layer', 'group=Shelf').group === shelfId, "global add group=: a group's own global");
+  check(json('global', 'set', 'layer', 'group=none').group === undefined, 'global set group=none: performance-wide again');
+  json('global', 'add', 'gone with it', 'group=Shelf 2');
+  run('group', 'remove', 'Shelf 2');
+  check(
+    json('state').globals.find((x) => x.name === 'gone with it')?.group === undefined,
+    'removing a group keeps its globals, performance-wide',
+  );
+  json('global', 'set', 'layer', 'group=Shelf');
   const orderFile = path.join(os.tmpdir(), `perturbed-cli-order-${process.pid}.json`);
   json('move', String(m3), `before=${m1}`);
   const wanted = json('state')
@@ -293,6 +305,7 @@ try {
       .join() === wanted,
     `the order survives save and open (${wanted})`,
   );
+  check(json('state').globals.find((x) => x.name === 'layer')?.group === shelfId, "a group's global survives save and open");
   fs.unlinkSync(orderFile);
   run('new');
   check(json('state').unsaved === false, 'a new performance has nothing to save');

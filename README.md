@@ -91,6 +91,10 @@ later is found with **Rescan** in the sidebar's Keyboard section. The first run 
   header with a light per generator. Click the name to rename; **+** in the header adds a
   generator straight into the group. Right-click a setting's name → *Pin* puts it on the group's header (◆ marks it), so it
   stays at hand when the group is folded.
+- **A group's own globals:** **+** in a group's header → *Global* (or right-click the header) puts a
+  global on the header itself: name, Knob, Map, ▸ mappings and its value, just like the ones in Setup,
+  but there with the layer and still at hand when the group is folded. Removing the group moves them
+  to Setup.
 - **Passthrough:** *+ Passthrough* plays the keyboard into an output: transposed, zoned, delayed.
 - **LFOs:** *+ Lfo* is a slow wave (synced to the beat or free) that moves things. **Settings:**
   press **Map** on its card, click setting names on other cards, press **Done**; each target gets

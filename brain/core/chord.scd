@@ -6,7 +6,7 @@
 // the main chord: the first chord strip in the rack.
 //
 // ~chord is always the main chord (MIDI pitches, sorted; empty: rest), for types that read it
-// directly. With no chord strip at all it is whatever /chord/set last put there.
+// directly. With no chord strip there is no chord: it's empty and generators that read one rest.
 (
 ~chord = [];
 ~held = Set[];  // the keys down now (chord strips build their gestures from it)
@@ -51,19 +51,25 @@
 	if(g.notNil and: { g[\typeName] == \chord }) { ~chordOf.(g) } { ~chord };
 };
 
-// Keeps ~chord the main chord and tells everyone; called whenever a chord strip changes, comes or goes.
+// Keeps ~chord the main chord (empty when the last chord strip is gone) and tells everyone; called
+// whenever a chord strip changes, comes or goes.
 ~syncChord = {
-	~mainChordGen.() !? { |g| ~chord = ~chordOf.(g) };
+	~chord = ~mainChordGen.() !? { |g| ~chordOf.(g) } ? [];
 	~sendChord.();
 };
 ~sendChord = { ~send.('/chord', *~chord) };
 
 // Sets the main chord from outside (/chord/set: the CLI, Claude auditioning a chord): on the main
-// chord strip if there is one (its transposition still applies on top).
+// chord strip (its transposition still applies on top), adding one if there is none, so the chord is
+// always somewhere it can be seen. Clearing with no chord strip adds nothing.
 ~setChord = { |pitches|
 	var notes = pitches.collect(_.asInteger).asSet.asArray.sort;
 	var g = ~mainChordGen.();
-	if(g.notNil) { ~setGen.(g, \notes, notes.collect(~noteName).join(" ")) } { ~chord = notes };
+	if(g.isNil and: { notes.notEmpty }) {
+		if(~types[\chord].isNil) { ~loadType.(\chord) };
+		g = ~addGen.(\chord) !? { |id| ~gens[id] };
+	};
+	g !? { ~setGen.(g, \notes, notes.collect(~noteName).join(" ")) };
 	~syncChord.();  // answered even when nothing changed
 };
 )

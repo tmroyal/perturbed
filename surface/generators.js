@@ -67,14 +67,22 @@ function paramControl(spec, genId) {
       };
     }
     case 'chord': {
-      // which chord strip its pitches come from: the main one (the first in the rack), or one by name
+      // which chord strip its pitches come from: the first in the rack (named, so it's clear which), or one by name
       const chords = () =>
         new Map([...model.gens.values()].filter((g) => g.type === 'chord').map((g) => [g.id, { id: g.id, name: genName(g) }]));
       const sel = el('select');
       sel.addEventListener('change', () => send(parseInt(sel.value, 10)));
       let value = 0;
       const refresh = () => {
-        sel.replaceChildren(new Option('main', 0), ...[...chords().values()].map((x) => new Option(x.name, x.id)));
+        const all = [...chords().values()];
+        const first = [...model.gens.values()].filter((g) => g.type === 'chord').sort((a, b) => a.order - b.order)[0];
+        sel.replaceChildren(
+          new Option(first ? `first (${genName(first)})` : 'no chord strip', 0),
+          ...all.map((x) => new Option(x.name, x.id)),
+        );
+        sel.title = first
+          ? 'Which chord strip it reads: the first in the rack, or one by name'
+          : 'There is no chord strip: add one (+ Chord) for it to play';
         sel.value = chords().has(value) ? value : 0;
       };
       refresh();

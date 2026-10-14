@@ -23,6 +23,7 @@ const check = (ok, what) => {
 };
 
 try {
+  run('new'); // whatever ran before (run.sh picks suites per change), start from a new performance
   const schema = json('schema');
   check(
     schema.basic && schema.lfo && schema.lfo.output === false && schema.lfo.actions.includes('Send'),
@@ -178,6 +179,15 @@ try {
   check(json('set', String(g.id), `clock=${c.name}`).params.clock === c.id, 'generator onto the clock by name');
 
   check(json('chord', 'C4', 'E4', 'G4').pitches.join() === '60,64,67', 'chord by note names');
+  // with no chord strip there is no chord; setting one from here adds a strip to hold it
+  for (const c of json('state').generators.filter((x) => x.type === 'chord')) run('remove', String(c.id));
+  check(json('state').chord.pitches.length === 0, 'the last chord strip removed: no chord');
+  json('chord', 'D4', 'A4');
+  const made = json('state').generators.filter((x) => x.type === 'chord');
+  check(
+    made.length === 1 && made[0].params.notes === 'D4 A4' && json('state').chord.pitches.join() === '62,69',
+    'chord with no chord strip adds one',
+  );
 
   // MIDI inputs (the test brain's keyboard is IAC Bus 2)
   const bus2 = json('inputs').find((i) => /Bus 2/.test(i.name));

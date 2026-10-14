@@ -200,6 +200,8 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   The chord strip is one chord provider among others: any type with a `chord` function (`{ |g, p| pitches }`,
   flagged to clients by `/gen/chords <type>`) can be picked and can be the main chord; `adhoc/progression.scd`
   and `adhoc/tonnetz-drift.scd` are AdHoc ones.
+- **Loops:** `brain/types/loop.scd` records keyboard notes (times in beats of its clock) into a text setting,
+  `data`, saved with the performance, and plays them back on the grid, scaled in time (num/den) and transposed.
 - **Generators:** a type + params + an output. Types (`brain/types/`) declare `params` and `run`
   (clock-driven) and/or `key` (keyboard-driven), plus optional `showWhen`, `labels`, `sections`,
   `restartOn`, `sliders` (lin/log per param), `actions` (card buttons, `/gen/do`), `output: false`

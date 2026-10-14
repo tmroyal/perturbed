@@ -20,7 +20,8 @@
 //   restartOn: params whose change restarts `run` (re-quantizes to the new grid)
 //   onChange:  (param: { |g, p, old, new| }) called when that setting changes (from anywhere: card,
 //              pin, global, Claude), after it's stored; may call ~restart.(g). Errors are reported.
-//   actions:   (Name: { |g, p| }) buttons on the card; pressing one runs it (/gen/do)
+//   actions:   (Name: { |g, p| }) buttons on the card; pressing one runs it (/gen/do); shown in
+//              alphabetical order, or in `actionOrder: [\Record, \Done]` if given
 //   sliders:   (param: \lin | \log) range params shown as a slider (+ field); by default a range
 //              wider than 32 is a slider, others a number field, and num/den always fields
 //   output:    false for types that don't play into an output (lfo); the surface hides the menu
@@ -94,6 +95,9 @@
 	g[\task].stop;
 	g[\task] = nil;
 	~release.(g);
+	// notes a run holds itself (several at once: a loop, a strum) end with it; keys a key-driven
+	// type holds (passthrough) are the player's and stay
+	if(g[\type][\run].notNil) { ~releaseHeld.(g) };
 };
 
 // The generators in the performer's order (g[\order]; new ones go last): how they're sent, saved
@@ -211,7 +215,7 @@
 		if(type[\maps] == true) { ~send.('/gen/maps', name) };
 		if(type[\chord].notNil) { ~send.('/gen/chords', name) };
 		(type[\sliders] ? ()).keysValuesDo { |param, scale| ~send.('/gen/slider', name, param, scale) };
-		(type[\actions] ? ()).keys.asArray.sort.do { |a| ~send.('/gen/action', name, a) };
+		(type[\actionOrder] ?? { (type[\actions] ? ()).keys.asArray.sort }).do { |a| ~send.('/gen/action', name, a) };
 	};
 };
 )

@@ -104,6 +104,12 @@ later is found with **Rescan** in the sidebar's Keyboard section. The first run 
   global on the header itself: name, Knob, Map, ▸ mappings and its value, just like the ones in Setup,
   but there with the layer and still at hand when the group is folded. Removing the group moves them
   to Setup.
+- **Loops:** *+ Loop* is a loop recorder. Pick an output, press **Record**, play, press **Done**: the
+  loop is everything from your first note to Done, its length rounded to the nearest *length to
+  nearest* beats (4 by default), and it plays while it's On and the transport runs. Recorded while the
+  transport plays, it keeps its place in the bar. *snap* tidies the timing when the loop is made.
+  Playback is transformed without changing the recording: *time ×* 1/2 is diminution (twice as fast,
+  twice as often), 2/1 augmentation; *octaves* and *semitones* transpose. **Clear** empties it.
 - **Passthrough:** *+ Passthrough* plays the keyboard into an output: transposed, zoned, delayed.
 - **LFOs:** *+ Lfo* is a slow wave (synced to the beat or free) that moves things. **Settings:**
   press **Map** on its card, click setting names on other cards, press **Done**; each target gets

@@ -20,6 +20,7 @@ sections: (chords: "Progression", num: "Time", octave: "Transpose", clock: "Cloc
 output: false,
 on: true,
 restartOn: [\num, \den, \clock],
+actionOrder: [\Record, \Done],
 actions: (
 	// start over and take chords from the keyboard: each chord played (until all keys are up) is the next one
 	Record: { |g, p| ~setGen.(g, \chords, ""); g[\at] = 0; ~setGen.(g, \record, "on"); ~setGen.(g, \now, "play the chords, then Done") },

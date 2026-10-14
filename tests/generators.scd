@@ -241,6 +241,35 @@ Routine {
 	check.(~midi.isEmpty, "passthrough delay: nothing yet after 0.1 s");
 	0.25.wait;
 	check.(~midi.asArray == [[\on, 74], [\off, 74]], "passthrough delay: note and note-off after 1 beat (%)".format(~midi));
+
+	// loop recorder: two notes a beat apart, recorded with the transport stopped; played back as a
+	// loop, then transposed and in diminution
+	OSCdef(\loopStatus, { |msg| if(msg[2] == 'status') { ~loopStatus = msg[3].asString } }, '/gen/param');
+	~pass = genId;
+	brain.sendMsg('/gen/add', "loop");
+	0.1.wait;
+	[[\dest, ~destId], [\round, 2]].do { |m| brain.sendMsg('/gen/set', genId, *m) };
+	brain.sendMsg('/gen/do', genId, \Record);
+	0.1.wait;
+	out.noteOn(0, 60, 90); 0.1.wait; out.noteOff(0, 60, 0); 0.15.wait;  // beat 0
+	out.noteOn(0, 64, 90); 0.1.wait; out.noteOff(0, 64, 0); 0.2.wait;   // beat 1 (240 bpm)
+	brain.sendMsg('/gen/do', genId, \Done);                             // after 2.2 beats: a 2-beat loop
+	0.1.wait;
+	check.(~loopStatus == "2 notes, 2.0 beats", "loop: recorded, its length rounded to the beat (%)".format(~loopStatus));
+	notes.clear;
+	brain.sendMsg('/transport/play', 1); 1.05.wait; brain.sendMsg('/transport/play', 0); 0.1.wait;
+	check.(notes.asArray.keep(4) == [60, 64, 60, 64] and: { notes.size.inclusivelyBetween(4, 5) }, "loop: plays back, looping every 2 beats (%)".format(notes));
+	[[\semitone, 2], [\num, 1], [\den, 2]].do { |m| brain.sendMsg('/gen/set', genId, *m) };
+	notes.clear;
+	brain.sendMsg('/transport/play', 1); 1.05.wait; brain.sendMsg('/transport/play', 0); 0.1.wait;
+	check.(notes.asArray.keep(4) == [62, 66, 62, 66] and: { notes.size.inclusivelyBetween(8, 10) }, "loop: transposed, and twice as fast in diminution (% notes: %)".format(notes.size, notes));
+	brain.sendMsg('/gen/do', genId, \Clear);
+	0.1.wait;
+	notes.clear;
+	brain.sendMsg('/transport/play', 1); 0.3.wait; brain.sendMsg('/transport/play', 0); 0.1.wait;
+	check.(notes.isEmpty and: { ~loopStatus == "empty" }, "loop: Clear empties it");
+	brain.sendMsg('/gen/remove', genId);
+	genId = ~pass;
 	brain.sendMsg('/dest/remove', ~destId);
 	brain.sendMsg('/gen/remove', genId);
 	brain.sendMsg('/gen/set', 1, \take, "every chord");

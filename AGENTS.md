@@ -187,6 +187,21 @@ or the same playing at different transpositions (`add chord semitone=7`, then `s
 
 On = listening; off, it keeps its chord.
 
+**loop** — a loop recorder: records what the performer plays and plays it back as a loop, transformed.
+Recording is the performer's (the strip's **Record** and **Done**; `tools/perturbed do <id> Record`); you
+set it up with an output and its playback settings, or copy a recorded loop by copying its `data`.
+
+| param | values (default) | meaning |
+|---|---|---|
+| `round` | 0.25–64 beats (4) | the loop's length is rounded to the nearest multiple of this |
+| `snap` | 0–12 per beat (0) | at Done, each note moves to the nearest of this many points per beat; 0 = as played |
+| `thru` | on, off (on) | whether what's played while recording goes to its output |
+| `num`, `den` | 1–32 (1, 1) | playback time × num/den: 1/2 = diminution (twice as fast), 2/1 = augmentation |
+| `octave`, `semitone` | −4–4, −12–12 (0, 0) | transpose the playback |
+| `status` | text | what it holds (written by the loop) |
+| `data` | text | the loop itself: `length;beat note velocity length;...` in beats (not shown on the strip) |
+| `clock` | clock id (0) | which clock it records and plays on |
+
 **passthrough** — plays the keyboard into its output while on (transport running or not).
 
 | param | values (default) | meaning |

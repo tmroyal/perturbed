@@ -53,7 +53,9 @@ later is found with **Rescan** in the sidebar's Keyboard section. The first run 
   shows the chord and can be typed (`A2 C3 E3`); **Clear** empties it. *octaves* and *semitones*
   transpose what the generators hear. *from* and the key range make it listen to one keyboard or one
   part of it. Off, it keeps its chord. Generators read the **main** chord (the first chord strip) unless
-  their *chord* setting picks another.
+  their *chord* setting picks another. Other types can hold chords too and show in the same menu: the
+  library has *Progression* (a list of chords it steps through in time) and *Tonnetz-drift* (a triad that
+  wanders by itself), and Claude can write more.
 - **Outputs:** Live's tracks on the IAC buses are listed under *In Live*; **+** (or *Add all*)
   makes them outputs. A **!** marks an output no Live track listens to.
 - **Keyboard:** the sidebar lists the keyboards and controllers Perturbed hears (keys and knobs).

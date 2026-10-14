@@ -197,6 +197,9 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
   semitone transpose what generators hear. Generators pick one with their `chord` setting (a `chord` param);
   0 = the main chord, the first chord strip in the rack, which is also `~chord` and `/chord`. A new performance
   has one. Files from before (top-level `chord`, `chordMode`) get a chord strip made from them on load.
+  The chord strip is one chord provider among others: any type with a `chord` function (`{ |g, p| pitches }`,
+  flagged to clients by `/gen/chords <type>`) can be picked and can be the main chord; `adhoc/progression.scd`
+  and `adhoc/tonnetz-drift.scd` are AdHoc ones.
 - **Generators:** a type + params + an output. Types (`brain/types/`) declare `params` and `run`
   (clock-driven) and/or `key` (keyboard-driven), plus optional `showWhen`, `labels`, `sections`,
   `restartOn`, `sliders` (lin/log per param), `actions` (card buttons, `/gen/do`), `output: false`

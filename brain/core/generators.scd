@@ -25,6 +25,9 @@
 //              wider than 32 is a slider, others a number field, and num/den always fields
 //   output:    false for types that don't play into an output (lfo); the surface hides the menu
 //   on:        true for types that are switched on when added (chord: it listens at once)
+//   chord:     { |g, p| pitches } for types that provide a chord (core/chord.scd): generators can
+//              pick it with their `chord` setting, and first in the rack it is the main chord; a
+//              type whose chord changes by itself calls ~syncChord.() when it does
 //   maps:      true for types that drive other generators' settings (lfo): the card gets a Map
 //              button and a list of targets; the type calls ~drive.(g, x) with x in 0–1 (core/globals.scd)
 // Shared building blocks: core/pitch.scd (which note), core/rhythm.scd (which grid steps play),
@@ -121,7 +124,7 @@
 		~gens[id] = g;
 		~sendGen.(g);
 		~sendParams.(g);
-		if(typeName.asSymbol == \chord) { ~syncChord.() };
+		if(~providesChord.(g)) { ~syncChord.() };
 		id;
 	};
 };
@@ -137,7 +140,7 @@
 
 ~removeGen = { |id|
 	~gens.removeAt(id) !? { |g| ~stopGen.(g); ~releaseHeld.(g); ~dropPins.(id); ~dropGenMappings.(id); ~send.('/gen/removed', id);
-		if(g[\typeName] == \chord) { ~syncChord.() } };
+		if(~providesChord.(g)) { ~syncChord.() } };
 };
 
 // A type's params: kept from `old` (a generator's settings) where the param exists, else defaults.
@@ -206,6 +209,7 @@
 		(type[\sections] ? ()).keysValuesDo { |param, title| ~send.('/gen/section', name, param, title) };
 		if(type[\output] == false) { ~send.('/gen/nooutput', name) };
 		if(type[\maps] == true) { ~send.('/gen/maps', name) };
+		if(type[\chord].notNil) { ~send.('/gen/chords', name) };
 		(type[\sliders] ? ()).keysValuesDo { |param, scale| ~send.('/gen/slider', name, param, scale) };
 		(type[\actions] ? ()).keys.asArray.sort.do { |a| ~send.('/gen/action', name, a) };
 	};

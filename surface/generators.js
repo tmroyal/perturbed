@@ -1,6 +1,9 @@
 // generators.js — generator strips (one per generator, in a rack), built entirely from the type schema the brain sends
 // (params, labels, sections, showWhen), so new types need no surface code.
 
+// Whether a generator provides a chord (the chord strip, or an AdHoc type with a `chord` function).
+const providesChord = (gen) => !!model.types.get(gen.type)?.chords;
+
 // One param of generator genId as a control: { control, update(value), learning?(on), refresh?() }.
 // Changes go straight to the brain; a note's Set asks it for the next key played (/gen/learn).
 function paramControl(spec, genId) {
@@ -68,14 +71,13 @@ function paramControl(spec, genId) {
     }
     case 'chord': {
       // which chord strip its pitches come from: the first in the rack (named, so it's clear which), or one by name
-      const chords = () =>
-        new Map([...model.gens.values()].filter((g) => g.type === 'chord').map((g) => [g.id, { id: g.id, name: genName(g) }]));
+      const chords = () => new Map([...model.gens.values()].filter(providesChord).map((g) => [g.id, { id: g.id, name: genName(g) }]));
       const sel = el('select');
       sel.addEventListener('change', () => send(parseInt(sel.value, 10)));
       let value = 0;
       const refresh = () => {
         const all = [...chords().values()];
-        const first = [...model.gens.values()].filter((g) => g.type === 'chord').sort((a, b) => a.order - b.order)[0];
+        const first = [...model.gens.values()].filter(providesChord).sort((a, b) => a.order - b.order)[0];
         sel.replaceChildren(
           new Option(first ? `first (${genName(first)})` : 'no chord strip', 0),
           ...all.map((x) => new Option(x.name, x.id)),

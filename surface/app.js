@@ -143,6 +143,10 @@ const handlers = {
     const specs = model.types.get(type);
     if (specs) specs.actions = [...(specs.actions ?? []), name];
   },
+  '/gen/chords': (type) => {
+    const specs = model.types.get(type);
+    if (specs) specs.chords = true; // it provides a chord: generators' chord menus list it
+  },
   '/gen/maps': (type) => {
     const specs = model.types.get(type);
     if (specs) specs.maps = true;
@@ -204,7 +208,7 @@ const handlers = {
     Object.assign(gen, { dest, active: !!active, group, collapsed: !!collapsed, key: key < 0 ? null : key, order });
     return () => {
       updateGen(gen, moved);
-      if (type === 'chord' && (added || moved)) renderCards(); // the others' chord menus list it; the first is "main"
+      if (providesChord(gen) && (added || moved)) renderCards(); // the others' chord menus list it, the first one first
     };
   },
   '/group': (id, name, on, solo, collapsed, key = -1) => {
@@ -286,7 +290,7 @@ const handlers = {
     model.gens.delete(id);
     return () => {
       unmountCard(gen);
-      if (gen?.type === 'chord') renderCards();
+      if (gen && providesChord(gen)) renderCards();
       if (isMapping('gen', id)) toggleMapMode('gen', id); // it was in Map mode: leave it
     };
   },

@@ -75,6 +75,7 @@
 //   /inputs           (<name> <on> <role>)...    the MIDI inputs that can be listened to
 //   /key/learn        gen|group <id> 1|0         learning a switch key started / ended
 //   /chord            <pitch>...                 the main chord, as generators hear it
+//   /gen/chords       <type>                     (schema) the type provides a chord: generators can pick it
 //   /library/type     <name> <builtin> <favorite> <loaded> <onBar> <changed> <description> <mtime>
 //                                                every library type (changed: the file differs from
 //                                                what's loaded: reload to update)

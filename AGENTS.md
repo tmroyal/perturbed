@@ -290,7 +290,8 @@ run: { |g, p|
 - **params:** `[name, default, kind, ...]`, kind `range` (min max [step]), `note`, `choice`
   (options...), `text`, `clock` (`~clockParam`). Optional keys: `showWhen`, `labels`, `sections`,
   `restartOn`, `onChange` (`(x: { |g, p, old, new| ... })`, may call `~restart.(g)`), `sliders`,
-  `actions` (card buttons), `globals`, `output: false`.
+  `actions` (card buttons), `globals`, `output: false`, `on: true` (switched on when added), `chord`
+  (below).
 - **run** `{ |g, p| }` is a routine on its clock while the transport plays (waits in beats); play
   on the grid with `~grid.(beats, { |k| ... })` so it lines up with every other generator;
   **key** `{ |g, p, note, vel, src| }` gets keyboard notes (vel 0 = up; src: the input's name) whether or not it plays.
@@ -298,6 +299,15 @@ run: { |g, p|
   mutes) and `~release.(g)`. Several at once: `~noteOn.(dest, note, vel)` / `~noteOff.(dest, note)`
   with `dest = ~dests[g[\dest]]`, check `~sounds.(g)` first, and keep what you hold in
   `g[\held][key] = [dest, note]` so stopping or muting releases it.
+- **Types that provide a chord (your own pitch containers):** give the type a `chord` function,
+  `chord: { |g, p| pitches }` (MIDI numbers; called whenever a generator needs the chord), and it shows in
+  every generator's *chord* menu like a chord strip; first in the rack it is the main chord. It needs no
+  `run` or `key`, but can have them: a `run` that moves through a progression on `~grid`, a `key` that
+  listens. When its chord changes by itself, call `~syncChord.()`. Use `output: false` and `on: true`.
+  `~parseNotes.("A2 C3 E3")` and `~noteName.(57)` convert note names. The library has two to read and
+  reuse: `progression` (a list of chords stepped through in time) and `tonnetz-drift` (a triad that
+  wanders by P, L and R moves). Point generators at one with `set <gen> chord=<its id>`, or `move <its
+  id> before=<the first strip>` to make it the main chord.
 - **Types that move settings (your own LFOs):** `maps: true` gives the card a Map button and
   targets, like the built-in lfo; the type calls `~drive.(g, x)` with x in 0–1 (it does nothing
   while muted), from `~tick.({ |seconds, beats| ... })` (about 50 times a second) or from `~grid`.

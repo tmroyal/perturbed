@@ -1,12 +1,14 @@
 // chord.scd — chords: what the generators' pitch sources read (core/pitch.scd).
 //
-// A chord is held by a chord strip, a generator of type `chord` (types/chord.scd): it listens to the
-// keyboard, keeps the last chord played and offers it, transposed, to the generators. There can be
-// several; a generator picks one with its `chord` setting (a `chord` param: ~chordParam), 0 meaning
-// the main chord: the first chord strip in the rack.
+// A chord is provided by a generator whose type has a `chord` function ({ |g, p| pitches }): the
+// built-in chord strip (types/chord.scd: it listens to the keyboard and holds what was played), or
+// any AdHoc type (a progression, a chord that drifts by itself). There can be several; a generator
+// picks one with its `chord` setting (a `chord` param: ~chordParam), 0 meaning the main chord: the
+// first chord provider in the rack.
 //
-// ~chord is always the main chord (MIDI pitches, sorted; empty: rest), for types that read it
-// directly. With no chord strip there is no chord: it's empty and generators that read one rest.
+// ~chord is the main chord (MIDI pitches, sorted; empty: rest), for types that read it directly;
+// a provider whose chord changes by itself calls ~syncChord.() to keep it (and /chord) current.
+// With no provider there is no chord: it's empty and generators that read one rest.
 (
 ~chord = [];
 ~held = Set[];  // the keys down now (chord strips build their gestures from it)
@@ -33,22 +35,32 @@
 		.collect(~parseNote).reject(_.isNil).select(_.inclusivelyBetween(0, 127)).asSet.asArray.sort;
 };
 
-// --- chord strips ---
-~chordGens = { ~gensInOrder.().select { |g| g[\typeName] == \chord } };
+// --- chord providers ---
+~providesChord = { |g| g[\type][\chord].notNil };
+~chordGens = { ~gensInOrder.().select(~providesChord) };
 ~mainChordGen = { ~chordGens.().first };
 
-// A chord strip's chord as generators hear it: its notes, transposed.
+// A provider's chord as generators hear it: what its type's `chord` function returns, as MIDI
+// pitches in range, sorted, each once. A failing function stops that generator and gives no chord.
 ~chordOf = { |g|
-	var p = g[\p], str = p[\notes].asString, shift = (12 * p[\octave].asInteger) + p[\semitone].asInteger;
-	if(g[\parsed].isNil or: { g[\parsed][0] != str }) { g[\parsed] = [str, ~parseNotes.(str)] };
-	(g[\parsed][1] + shift).select(_.inclusivelyBetween(0, 127));
+	var notes = try { g[\type][\chord].(g, g[\p]) } { |e| ~genFailed.(g, e); [] };
+	(notes ? []).asArray.select(_.isNumber).collect(_.asInteger).select(_.inclusivelyBetween(0, 127)).asSet.asArray.sort;
 };
 
-// The chord a generator reads: its `chord` setting's strip, or the main chord (0, or a strip that's gone).
+// For the built-in chord strip (and any type built like it): the chord in a text setting of note
+// names, cached while the text stays the same, moved by its octave and semitone settings.
+~heldChord = { |g, p|
+	var str = p[\notes].asString;
+	if(g[\parsed].isNil or: { g[\parsed][0] != str }) { g[\parsed] = [str, ~parseNotes.(str)] };
+	g[\parsed][1] + (12 * (p[\octave] ? 0).asInteger) + (p[\semitone] ? 0).asInteger;
+};
+
+// The chord a generator reads, now: its `chord` setting's provider, or the main one (0, or one that's gone).
 ~chordParam = [\chord, 0, \chord];
 ~chordFor = { |p|
 	var g = ~gens[(p[\chord] ? 0).asInteger];
-	if(g.notNil and: { g[\typeName] == \chord }) { ~chordOf.(g) } { ~chord };
+	if(g.isNil or: { ~providesChord.(g).not }) { g = ~mainChordGen.() };
+	g !? ~chordOf ? [];
 };
 
 // Keeps ~chord the main chord (empty when the last chord strip is gone) and tells everyone; called
@@ -61,7 +73,8 @@
 
 // Sets the main chord from outside (/chord/set: the CLI, Claude auditioning a chord): on the main
 // chord strip (its transposition still applies on top), adding one if there is none, so the chord is
-// always somewhere it can be seen. Clearing with no chord strip adds nothing.
+// always somewhere it can be seen. Clearing with no chord strip adds nothing. If the main chord comes
+// from a type that makes its own (no `notes` setting), it can't be set: that is reported.
 ~setChord = { |pitches|
 	var notes = pitches.collect(_.asInteger).asSet.asArray.sort;
 	var g = ~mainChordGen.();
@@ -69,7 +82,11 @@
 		if(~types[\chord].isNil) { ~loadType.(\chord) };
 		g = ~addGen.(\chord) !? { |id| ~gens[id] };
 	};
-	g !? { ~setGen.(g, \notes, notes.collect(~noteName).join(" ")) };
+	g !? {
+		if(g[\p].includesKey(\notes)) { ~setGen.(g, \notes, notes.collect(~noteName).join(" ")) } {
+			~report.("the main chord comes from % (%), which makes its own: set it there, or put a chord strip first".format(g[\id], g[\typeName]));
+		};
+	};
 	~syncChord.();  // answered even when nothing changed
 };
 )

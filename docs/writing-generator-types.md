@@ -124,6 +124,8 @@ A type needs at least one of them. It can have both.
 | `sections` | `(spread: "Strum")` | a titled divider on the card, above that setting |
 | `showWhen` | `(steps: [\mode, "random"])` | show `steps` only when `mode` is `random` |
 | `sliders` | `(speed: \log)` | force a slider (`\lin` or `\log`) for a number setting |
+| `on` | `true` | the generator is switched on when added (for types that listen or hold something) |
+| `chord` | `{ \|g, p\| [57, 60, 64] }` | the type provides a chord: see *Types that hold a chord* |
 | `restartOn` | `[\every, \clock]` | restart `run` when these change (needed for anything `run` reads only once, like the grid step) |
 | `onChange` | `(scale: { \|g, p, old, new\| ... })` | a function called when that setting changes (see §6) |
 | `actions` | `(Reset: { \|g, p\| ... })` | buttons on the card that run a function |
@@ -132,6 +134,35 @@ A type needs at least one of them. It can have both.
 | `maps: true` | | the type drives other generators' settings (like `lfo`): its card gets a **Map** button and a list of targets, and `run` calls `~drive.(g, x)` with `x` from 0 to 1 to move them |
 
 ---
+
+
+## Types that hold a chord
+
+A type with a `chord` function is a chord provider, like the built-in chord strip: it appears in
+every generator's *chord* menu, and if it is the first provider in the rack it is the main chord
+(`~chord`). The function is called whenever a generator needs the chord, and returns MIDI numbers
+(any order; out-of-range notes are dropped). It needs no `run` or `key`.
+
+```supercollider
+// triad — holds a major triad on a root.
+(
+params: [[\root, 48, \note]],
+output: false,
+on: true,
+onChange: (root: { |g| ~syncChord.() }),
+chord: { |g, p| p[\root].asInteger + [0, 4, 7] },
+)
+```
+
+- Call `~syncChord.()` whenever the chord changes by itself (from `run`, `key` or `onChange`): it
+  keeps the main chord and the display current. Generators that picked this one by name read it
+  live either way.
+- Keep what the chord depends on in `g` (`g[\at]`, the step of a progression) and in settings, so the
+  function is a quick lookup.
+- `~parseNotes.("A2 C3 E3")` gives `[45, 48, 52]`; `~noteName.(45)` gives `"A2"`. A text setting the
+  type writes with `~setGen.(g, \now, "...")` is a simple display.
+- Two types in the library show the rest: `adhoc/progression.scd` steps through a list of chords on
+  `~grid`, and `adhoc/tonnetz-drift.scd` moves a triad by P, L and R, one voice at a time.
 
 ## 4. Time: playing on the grid
 

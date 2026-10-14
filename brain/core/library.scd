@@ -79,7 +79,7 @@
 		err = err ? "it has a syntax error (tools/perturbed adhoc check % shows where)".format(name);
 	}
 	{ type.isKindOf(Event).not or: { type[\params].isNil } } { err = "it must evaluate to an Event with params" }
-	{ type[\run].isNil and: { type[\key].isNil } } { err = "it needs a run or a key function" };
+	{ type[\run].isNil and: { type[\key].isNil } and: { type[\chord].isNil } } { err = "it needs a run, key or chord function" };
 	if(err.notNil) { ~report.("type % didn't load: %".format(name, err)); false } {
 		// keep the AdHoc version being replaced
 		if((entry.isNil or: { entry[\builtin].not }) and: { ~typeSource[name].notNil } and: { ~typeSource[name] != source }) {

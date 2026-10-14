@@ -267,6 +267,9 @@ class Brain {
       case '/gen/maps':
         type(a[0]).maps = true;
         break;
+      case '/gen/chords':
+        type(a[0]).chord = true; // it provides a chord
+        break;
       case '/gen/action':
         type(a[0]).actions.push(a[1]);
         break;
@@ -378,7 +381,9 @@ class Brain {
       case 'chord': {
         // which chord strip: main (the first in the rack), or one by id
         if (['main', '0'].includes(String(value).toLowerCase())) return 0;
-        return this.model.gens.get(+value)?.type === 'chord' ? +value : fail(`${param} is main or a chord strip's id, not "${value}"`);
+        return this.model.types.get(this.model.gens.get(+value)?.type)?.chord
+          ? +value
+          : fail(`${param} is main or the id of a generator that provides a chord (a chord strip), not "${value}"`);
       }
       case 'range': {
         const [min, max, step = 1] = s.args,

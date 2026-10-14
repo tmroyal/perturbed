@@ -26,6 +26,7 @@ labels: (build: "taken", notes: "holding", octave: "octaves", semitone: "semiton
 sections: (take: "Chord", octave: "Transpose", input: "Listens to"),
 output: false,
 on: true,  // listening from the start
+chord: { |g, p| ~heldChord.(g, p) },  // what generators hear: its notes, transposed
 
 actions: (
 	Arm: { |g, p| ~setGen.(g, \take, "next chord") },

@@ -178,6 +178,39 @@ sock.bind(0, async () => {
     send('/gen/remove', wander);
     send('/gen/remove', target);
 
+    // an AdHoc type that provides a chord (a `chord` function): generators can pick it, and first in the rack it's the main chord
+    loaded = next('/adhoc/loaded');
+    send('/adhoc/load', 'triad');
+    await loaded;
+    check(
+      inbox.some((m) => m.addr === '/gen/chords' && m.args[0] === 'triad') &&
+        inbox.some((m) => m.addr === '/gen/chords' && m.args[0] === 'chord'),
+      'an AdHoc type can declare that it provides a chord, like the chord strip',
+    );
+    const tr = next('/gen', (_id, t) => t === 'triad');
+    send('/gen/add', 'triad');
+    const [triad] = await tr;
+    const reader = next('/gen', (_id, t) => t === 'basic');
+    send('/gen/add', 'basic');
+    const [readerId] = await reader;
+    const picked = next('/gen/param', (id, name, v) => id === readerId && name === 'chord' && v === triad);
+    send('/gen/set', readerId, 'chord', triad);
+    await picked;
+    check(true, 'a generator can pick it as its chord');
+    const first = next('/chord', (...ps) => ps.join() === '48,52,55');
+    send('/gen/move', triad, 1); // before generator 1, the chord strip a brain starts with
+    await first;
+    check(true, 'first in the rack, it is the main chord');
+    const moved = next('/chord', (...ps) => ps.join() === '50,54,57');
+    send('/gen/set', triad, 'root', 50);
+    await moved;
+    check(true, 'and the main chord follows it');
+    const back = next('/chord', (...ps) => ps.length === 0);
+    send('/gen/remove', triad);
+    await back;
+    check(true, "removed, the main chord is the chord strip's again");
+    send('/gen/remove', readerId);
+
     // onChange: called with old and new values when a setting changes; a failing one is reported, the change stands
     loaded = next('/adhoc/loaded');
     send('/adhoc/load', 'on-change');

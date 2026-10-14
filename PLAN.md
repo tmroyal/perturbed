@@ -81,9 +81,9 @@ so the Live API can create audio clips from files).
 - JavaScript is linted and formatted with Biome (`biome.jsonc`: 2 spaces, single quotes, 140
   columns; `npm run lint`, `npm run format`); `tests/run.sh` checks it first. The renderer scripts
   share globals through `<script>` tags, so Biome's unused-variable rule is off for them.
-- `./tests/run.sh` (~45 s) starts a test brain on port 57140 and runs the timing, generator, CLI and
-  protocol tests; it plays MIDI on IAC Bus 1 channels 1–2 and sends CCs on Bus 2. Keep it green
-  and short.
+- `./tests/run.sh` (~65 s) starts a test brain on port 57140 and runs the timing, generator, protocol,
+  CLI and AdHoc tests; it plays MIDI on IAC Bus 1 channels 1–2 and sends CCs on Bus 2. Keep it green.
+  It is too slow and too real-time: see the test plan (§4.1).
 - The OSC protocol's authoritative list is the header of `brain/core/osc.scd`.
 - **Gotchas:**
   - SuperCollider 3.14 on macOS creates no virtual MIDI ports; the brain uses IAC buses and must
@@ -106,6 +106,58 @@ so the Live API can create audio clips from files).
   - Max's `[udpsend]` sends from a random port: the bridge names its reply port in `/hello 57150`.
   - The Live API is usable only after `[live.thisdevice]` bangs; `bridge.js` also starts itself
     after an autowatch reload. `DEBUG = 1` in `bridge.js` traces every Live API step.
+
+### 4.1 Test plan: stop testing music in real time
+
+**The problem (measured 2026-10-13).** `tests/run.sh` takes 65 s, and 46 s of that is two suites that
+play real notes at a real tempo through IAC and listen for them: `timing.scd` (9 s) and
+`generators.scd` (37 s, 93 waits). Every new musical feature adds seconds, and nothing checks that a
+*piece* still sounds the same, so that is still checked by ear. The rest: CLI 14 s (a process per
+command), AdHoc 3 s, protocol 1 s, lint 1 s.
+
+**The idea.** Almost nothing musical needs real time. What a generator plays is decided by
+functions of (settings, chord, step) and by waits in beats. Run those on a clock the test advances
+by hand, catch the notes before they reach MIDI, and a minute of music is checked in milliseconds.
+
+**Four layers, fastest first:**
+
+1. **Logic tests (new; no clock, no MIDI, no OSC).** Load `brain/core` and the types into one
+   sclang and call functions directly: `~pitch`, `~rhythmGate`, `~velocity`, mapping curves and
+   knob responses, `~parseNotes`, chord strips fed `~key` calls, groups and solo (`~sounds`), save →
+   load round trips on in-memory state. Most of today's `generators.scd` moves here.
+2. **Virtual-time tests (new).** Generators run on a clock the test steps (`~clockOf` returns a
+   test clock when `~testClock` is set; SuperCollider's `Scheduler` can be advanced by hand) and
+   `~noteOn`/`~noteOff`/`~cc` append to a list (a recording sink behind the MIDI layer). Checks:
+   the grid, polyrhythm meetings, clocks B/C, restarts, note lengths, LFO values at given beats.
+   This replaces `timing.scd` and the rest of `generators.scd`.
+3. **Golden pieces (new).** For each file in `tests/pieces/` (and `performances/example.json`):
+   load it, set a fixed chord and random seed, run N beats in virtual time, and compare the list
+   of (beat, output, note, velocity, length) with a stored `.golden` file. A change in what a piece
+   plays shows up as a diff to read, not something to listen for; `tests/run.sh --bless` accepts
+   a deliberate change. AdHoc types in the library get the same treatment, one golden each.
+4. **Real-time smoke test (kept, small).** One 5-second test that real MIDI leaves on the IAC bus
+   on the grid and Link follows: the only things that need wall-clock time. Run before a push
+   (`tests/run.sh --all`), not on every change.
+
+**Around that:**
+
+- **Protocol and CLI tests stay,** but the CLI suite reuses one connection instead of a process per
+  command where it only needs the model (14 s → about 3 s).
+- **Surface smoke test (new).** Start the app against the test brain, load a piece, and assert on
+  the DOM (a strip per generator, cells per setting, a group's globals) and that there are no
+  console errors: what is done by hand with screenshots now. Seconds, and optional (`--surface`).
+- **Random needs a seed.** `~seed.(n)` at the start of a run (and per generator on restart), so
+  random rhythm, drift and humanize are repeatable in tests and goldens.
+
+**Target.** `tests/run.sh` under 10 s for the default run (lint, logic, virtual time, goldens,
+protocol, CLI); `--all` adds the real-time smoke test and the surface.
+
+**Order to build it.** (1) the recording sink and the test clock in the brain, with `timing.scd`
+ported as proof; (2) logic tests, emptying `generators.scd`; (3) seeds and golden pieces; (4) the
+CLI speed-up; (5) the surface smoke test.
+
+**What it will not catch.** Latency and jitter of the real MIDI path beyond the smoke test, Live's
+side (tracks, the bridge), how it feels to play, and whether a new idea is musically good.
 
 ---
 

@@ -178,7 +178,7 @@ sock.bind(0, async () => {
     send('/gen/set', savedGen, 'num', 5);
     send('/gen/set', savedGen, 'rate', 0.25); // fractional value of a float param
     send('/gen/set', savedGen, 'source', 'arpeggio');
-    send('/chord/mode', 'arm');
+    send('/gen/set', 1, 'take', 'hold'); // generator 1 is the chord strip a brain starts with
     send('/chord/set', 62, 65, 69);
     const tempo2 = next('/transport', (_p, bpm) => bpm === 111);
     send('/transport/tempo', 111);
@@ -218,7 +218,7 @@ sock.bind(0, async () => {
     send('/group/remove', groupId);
     send('/dest/remove', savedDest);
     send('/chord/clear');
-    send('/chord/mode', 'auto');
+    send('/gen/set', 1, 'take', 'every chord');
     send('/transport/tempo', 90);
     await new Promise((r) => setTimeout(r, 200));
     inbox.length = 0;
@@ -235,8 +235,8 @@ sock.bind(0, async () => {
       'load restores clocks',
     );
     check(
-      has('/chord', (mode, _armed, ...ps) => mode === 'arm' && ps.join() === '62,65,69'),
-      'load restores chord and mode',
+      has('/chord', (...ps) => ps.join() === '62,65,69') && has('/gen/param', (id, name, v) => id === 1 && name === 'take' && v === 'hold'),
+      'load restores the chord strip: its chord and how it takes chords',
     );
     check(
       has('/dest', (id, name, _port, ch, inst) => id === savedDest && name === 'saved' && ch === 3 && inst === 'Pianoteq 9'),

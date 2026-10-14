@@ -257,19 +257,21 @@ try {
   check(run('new').ok, 'new');
   const fresh = json('state');
   check(
-    !fresh.generators.length &&
+    fresh.generators.length === 1 &&
+      fresh.generators[0].type === 'chord' &&
       !fresh.outputs.length &&
       !fresh.groups.length &&
       !fresh.globals.length &&
       fresh.clocks.length === 1 &&
       !fresh.chord.pitches.length &&
       fresh.tempo === tempo,
-    'new: no outputs, generators, groups, globals, extra clocks or chord; tempo kept',
+    'new: one empty chord strip; no outputs, other generators, groups, globals or extra clocks; tempo kept',
   );
   // the order of the cards: move before another, to the end, into a group; saved
   const [m1, m2, m3] = ['basic', 'lfo', 'passthrough'].map((t) => json('add', t).id);
-  check(json('move', String(m3), `before=${m1}`).join() === [m3, m1, m2].join(), 'move a generator before another');
-  check(json('move', String(m3)).join() === [m1, m2, m3].join(), 'move it to the end');
+  const chordStrip = fresh.generators[0].id;
+  check(json('move', String(m3), `before=${m1}`).join() === [chordStrip, m3, m1, m2].join(), 'move a generator before another');
+  check(json('move', String(m3)).join() === [chordStrip, m1, m2, m3].join(), 'move it to the end');
   run('group', 'add', 'Shelf');
   json('move', String(m2), 'group=Shelf');
   check(json('state').generators.find((x) => x.id === m2).group?.name === 'Shelf', 'move into a group');
@@ -277,7 +279,7 @@ try {
   check(
     json('state')
       .generators.map((x) => x.id)
-      .indexOf(copyId) === 1,
+      .indexOf(copyId) === 2,
     'a duplicate sits right after its original',
   );
   // a group's own global: on its header; back to performance-wide when asked, or when the group goes
@@ -310,7 +312,7 @@ try {
   run('new');
   check(json('state').unsaved === false, 'a new performance has nothing to save');
   check(fresh.file === null && !run('save').ok, 'a new performance has no file: save needs a name');
-  check(json('add', 'basic').id === 1, 'ids start over in a new performance');
+  check(json('add', 'basic').id === 2, 'ids start over in a new performance (1 is its chord strip)');
   check(json('state').unsaved === true, 'a change makes it unsaved');
   const kept = path.join(os.tmpdir(), `perturbed-cli-unsaved-${process.pid}.json`);
   run('save', kept);
@@ -318,7 +320,7 @@ try {
   check(json('state').file === kept, 'the performance knows its file');
   run('add', 'lfo');
   check(
-    run('save').ok && json('state').unsaved === false && JSON.parse(fs.readFileSync(kept, 'utf8')).generators.length === 2,
+    run('save').ok && json('state').unsaved === false && JSON.parse(fs.readFileSync(kept, 'utf8')).generators.length === 3,
     'save with no name goes to that file',
   );
   run('tempo', String(tempo));

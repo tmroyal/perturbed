@@ -1,4 +1,4 @@
-// persist.scd — save/load a performance as JSON: tempo, clocks, chord, destinations, groups,
+// persist.scd — save/load a performance as JSON: tempo, clocks, destinations, groups,
 // generators, and a copy of every AdHoc type it uses (`adhoc`), so the piece sounds the same even
 // if the library's version changes later (the surface then offers the library's version).
 // Plugin state lives in the Live Set, not here. Loading replaces everything and stops the
@@ -7,8 +7,6 @@
 ~savePerformance = { |path|
 	~writeJSON.(path.standardizePath, (
 		tempo: ~bpm,
-		chord: ~chord,
-		chordMode: ~chordMode,
 		clocks: ~inOrder.(~clocks).collect { |c|
 			(id: c[\id], mode: c[\mode], num: c[\num], den: c[\den], factor: c[\factor], bpm: c[\bpm])
 		},
@@ -37,13 +35,13 @@
 	~nextIds = ();
 };
 
-// A new, empty performance: no outputs, generators, groups, globals or extra clocks, no chord.
-// The tempo stays (it's shared with Live).
+// A new performance: one chord strip, listening, and nothing else (no outputs, generators, groups,
+// globals or extra clocks). The tempo stays (it's shared with Live).
 ~newPerformance = {
 	~clearPerformance.();
-	~chordMode = \auto;
-	~armed = false;
 	~chord = [];
+	if(~types[\chord].isNil) { ~loadType.(\chord) };  // built in, but perhaps not a favorite: not loaded yet
+	~addGen.(\chord);
 	~dirty = false;
 	~file = "";
 	~sendState.();
@@ -58,9 +56,7 @@
 		var c = ~addClock.(saved["id"].asInteger);
 		[\mode, \num, \den, \factor, \bpm].do { |k| saved[k.asString] !? { |v| ~setClock.(c, k, v) } };
 	};
-	~chordMode = if(perf["chordMode"] == "arm") { \arm } { \auto };
-	~armed = false;
-	~chord = (perf["chord"] ? []).collect(_.asInteger);
+	~chord = [];
 	perf["destinations"].do { |d| ~addDest.(d["name"], d["port"], d["channel"], d["instrument"], d["id"].asInteger) };
 	(perf["groups"] ? []).do { |saved|
 		var gr = ~addGroup.(saved["name"], saved["id"].asInteger);
@@ -109,6 +105,17 @@
 		gl[\mappings] = readMappings.(saved);
 	};
 	perf["generators"].do { |saved| ~gens[saved["id"].asInteger] !? { |g| g[\mappings] = readMappings.(saved) } };
+	// a file from before chord strips: its chord becomes one, first in the rack
+	if(~chordGens.().isEmpty and: { perf["chord"].notNil }) {
+		if(~types[\chord].isNil) { ~loadType.(\chord) };
+		~addGen.(\chord) !? { |id|
+			var g = ~gens[id];
+			g[\p][\notes] = perf["chord"].collect { |n| ~noteName.(n.asInteger) }.join(" ");
+			if(perf["chordMode"] == "arm") { g[\p][\take] = "hold" };
+			g[\order] = 0;
+		};
+	};
+	~syncChord.();
 	~dirty = false;
 	~file = path.standardizePath;
 	~sendState.();

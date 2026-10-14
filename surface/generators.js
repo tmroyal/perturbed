@@ -66,6 +66,47 @@ function paramControl(spec, genId) {
         refresh: () => menu.refresh(value),
       };
     }
+    case 'chord': {
+      // which chord strip its pitches come from: the main one (the first in the rack), or one by name
+      const chords = () =>
+        new Map([...model.gens.values()].filter((g) => g.type === 'chord').map((g) => [g.id, { id: g.id, name: genName(g) }]));
+      const sel = el('select');
+      sel.addEventListener('change', () => send(parseInt(sel.value, 10)));
+      let value = 0;
+      const refresh = () => {
+        sel.replaceChildren(new Option('main', 0), ...[...chords().values()].map((x) => new Option(x.name, x.id)));
+        sel.value = chords().has(value) ? value : 0;
+      };
+      refresh();
+      return {
+        control: sel,
+        update: (v) => {
+          value = v;
+          refresh();
+        },
+        refresh,
+      };
+    }
+    case 'input': {
+      // a MIDI input by name, or any of them
+      const sel = el('select');
+      sel.addEventListener('change', () => send(sel.value));
+      let value = 'any';
+      const refresh = () => {
+        const names = [...new Set([...(model.inputs ?? []).map((i) => i.name), ...(value === 'any' ? [] : [value])])];
+        sel.replaceChildren(new Option('any input', 'any'), ...names.map((n) => new Option(n, n)));
+        sel.value = value;
+      };
+      refresh();
+      return {
+        control: sel,
+        update: (v) => {
+          value = String(v);
+          refresh();
+        },
+        refresh,
+      };
+    }
     case 'choice': {
       const sel = selectInput(
         spec.args.map((o) => [o, o]),
@@ -166,7 +207,7 @@ function buildCard(gen) {
   const specs = model.types.get(gen.type) ?? [];
   const updaters = {},
     learners = {},
-    refreshers = [], // menus of clocks
+    refreshers = [], // menus that follow the model: clocks, chord strips, inputs
     mappable = {}; // param -> { label, control, cell, mark }: locked and outlined while it follows a driver
   const conditional = []; // cells shown only for some values of another param
   const secs = el('div', { className: 'secs' });

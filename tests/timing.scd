@@ -29,14 +29,15 @@ Routine {
 	brain.sendMsg('/gen/add', "basic");
 	brain.sendMsg('/transport/tempo', 120);
 	0.3.wait;
-	[[1, \dest, 1], [1, \note, 60], [2, \dest, 2], [2, \note, 64], [2, \num, 3], [2, \den, 4],
-		[1, \active, 1], [2, \active, 1]].do { |m| brain.sendMsg('/gen/set', *m) };
+	// (generator 1 is the chord strip a brain starts with)
+	[[2, \dest, 1], [2, \note, 60], [3, \dest, 2], [3, \note, 64], [3, \num, 3], [3, \den, 4],
+		[2, \active, 1], [3, \active, 1]].do { |m| brain.sendMsg('/gen/set', *m) };
 	0.2.wait;
 	brain.sendMsg('/transport/play', 1);
 	4.1.wait;
 	changeAt = Main.elapsedTime;
-	brain.sendMsg('/gen/set', 2, \num, 1);
-	brain.sendMsg('/gen/set', 2, \den, 3);
+	brain.sendMsg('/gen/set', 3, \num, 1);
+	brain.sendMsg('/gen/set', 3, \den, 3);
 	3.wait;
 	brain.sendMsg('/transport/play', 0);
 	0.5.wait;

@@ -102,6 +102,8 @@ Each setting is `[name, default, kind, ...]`:
 | menu | `[\mode, "up", \choice, "up", "down", "random"]` | a menu | the chosen option, **as a Symbol** (compare with `p[\mode].asString == "up"`) |
 | text | `[\pattern, "1 0 1 1", \text]` | a text field | a String |
 | clock | `~clockParam` | a menu of clocks (A, B, …) | which clock `run` plays on |
+| chord | `~chordParam` | a menu of chord strips (main, Chord 3, …) | read its chord with `~chordFor.(p)` |
+| input | `[\from, "any", \input]` | a menu of MIDI inputs | the input's name, or `"any"` |
 
 Settings are read live: every time your code reads `p[\speed]` it gets the current value.
 
@@ -218,7 +220,8 @@ keyboard doesn't wait): `~noteOn.(d, note, vel, true)`, `~noteOff.(d, note, true
 
 | | |
 |---|---|
-| `~chord` | the current chord: MIDI numbers, low to high. **It can be empty**: rest (`~release.(g)`) rather than fail. |
+| `~chord` | the main chord (the first chord strip's): MIDI numbers, low to high. **It can be empty**: rest (`~release.(g)`) rather than fail. |
+| `~chordFor.(p)` | the chord of the strip the generator's `chord` setting picks (add `~chordParam` to `params`; `~pitchParams` has it); the main chord otherwise. |
 | `p[\name]` | this generator's settings, live |
 | `~global.(\density)` | a global parameter's value, 0–1 (0 if there's none). List it in `globals: [\density]` and it's created when the type loads. |
 | `~gens` | every generator, by id. `~gens[3][\sounding]` is `[output, note]` for what generator 3 is playing now, or nil. |

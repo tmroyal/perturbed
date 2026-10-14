@@ -104,8 +104,6 @@ stops the transport; generators keep their on/off state, so Play starts the piec
 ```json
 {
   "tempo": 96,                        // main clock (A), bpm 20–400
-  "chordMode": "auto",                // "auto" | "arm"
-  "chord": [57, 60, 64, 67],          // starting chord, MIDI pitches (the performer's playing replaces it)
   "clocks": [                         // extra clocks B (id 1), C (id 2), ...
     {"id": 1, "mode": "factor", "factor": 1.01, "num": 1, "den": 1, "bpm": 96}
   ],
@@ -121,7 +119,8 @@ stops the transport; generators keep their on/off state, so Play starts the piec
      "pins": [[1, "velocity"]]}            // [generator id, setting] shown on the folded header
   ],
   "generators": [
-    {"id": 1, "type": "basic", "dest": 1, "group": 1, "active": true, "params": {"source": "arpeggio"}}
+    {"id": 1, "type": "chord", "dest": 0, "active": true, "params": {"notes": "A3 C4 E4 G4"}},   // the main chord
+    {"id": 2, "type": "basic", "dest": 1, "group": 1, "active": true, "params": {"source": "arpeggio"}}
   ]
 }
 ```
@@ -169,7 +168,24 @@ after its own `duration`).
 | `attack`, `decay` | 0–64 beats (4, 4) | `ramp`: rise and fall times |
 | `pattern` | text ("110 60 80 60") | `pattern`: velocities per grid step, cycling |
 | `humanize` | 0–32 (0) | random ± on top of any mode |
+| `chord` | main, or a chord strip's id (main) | which chord strip the chord sources read; main = the first in the rack |
 | `clock` | 0 = A (main), or a clock id (0) | which clock's beats it runs on |
+
+**chord** — a chord strip: listens to the keyboard and holds a chord for generators to read. It makes
+no sound. A new performance has one (the main chord); add more so layers can follow different chords,
+or the same playing at different transpositions (`add chord semitone=7`, then `set 3 chord=<its id>`).
+`tools/perturbed chord C3 G3 E4` sets the main one.
+
+| param | values (default) | meaning |
+|---|---|---|
+| `take` | every chord, next chord, hold (every chord) | which chords it takes; `next chord` takes one, then holds (the strip's **Arm**) |
+| `build` | on release, as played (on release) | on release: replaced when the last key comes up; as played: built key by key until the last key comes up |
+| `notes` | text ("") | the chord it holds, as note names (`"A2 C3 E3"`); set it to give a starting chord |
+| `octave`, `semitone` | −4–4, −12–12 (0, 0) | transpose what generators hear |
+| `input` | any, or an input's name (any) | listen to one keyboard only |
+| `lo`, `hi` | 0–127 (0, 127) | listen to this key range only |
+
+On = listening; off, it keeps its chord.
 
 **passthrough** — plays the keyboard into its output while on (transport running or not).
 
@@ -277,7 +293,7 @@ run: { |g, p|
   `actions` (card buttons), `globals`, `output: false`.
 - **run** `{ |g, p| }` is a routine on its clock while the transport plays (waits in beats); play
   on the grid with `~grid.(beats, { |k| ... })` so it lines up with every other generator;
-  **key** `{ |g, p, note, vel| }` gets keyboard notes (vel 0 = up) whether or not it plays.
+  **key** `{ |g, p, note, vel, src| }` gets keyboard notes (vel 0 = up; src: the input's name) whether or not it plays.
 - **Playing notes:** one at a time: `~strike.(g, note, vel)` (releases the previous, respects
   mutes) and `~release.(g)`. Several at once: `~noteOn.(dest, note, vel)` / `~noteOff.(dest, note)`
   with `dest = ~dests[g[\dest]]`, check `~sounds.(g)` first, and keep what you hold in
@@ -289,7 +305,8 @@ run: { |g, p|
   missing when the type loads) and read them live with `~global.(\\density)` (0–1). This lets a
   type give a global a meaning no single setting has (denser = more notes in the strum *and* a
   wider spread).
-- **Reading the world:** `~chord` (current chord, MIDI, sorted; may be empty: rest), `~beats.()`
+- **Reading the world:** `~chordFor.(p)` (the chord its `chord` setting picks: add `~chordParam` to the
+  params; `~pitchParams` includes it), or `~chord` (the main chord); MIDI, sorted; may be empty: rest), `~beats.()`
   (beats since the grid origin), `p[\name]` (its settings, read live), `~gens` (other generators,
   e.g. for a canon: `~gens[id][\sounding]` is `[dest, note]` or nil). Shared building blocks:
   `~pitchParams`/`~pitch.(p, step)`, `~rhythmParams`/`~rhythmGate.(p, k)`,

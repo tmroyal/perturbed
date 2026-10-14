@@ -42,6 +42,7 @@ MIDIdef.noteOff(\passOff, { |vel, note, ch| if(ch == 2) { ~midi.add([\off, note]
 ~timed = List[];
 MIDIdef.noteOn(\timedOn, { |vel, note, ch| if(ch == 2) { ~timed.add([Main.elapsedTime, \on]) } });
 MIDIdef.noteOff(\timedOff, { |vel, note, ch| if(ch == 2) { ~timed.add([Main.elapsedTime, \off]) } });
+OSCdef(\take, { |msg| if(msg[1] == 1 and: { msg[2] == 'take' }) { ~take = msg[3] } }, '/gen/param');  // the chord strip (generator 1)
 OSCdef(\param, { |msg| if(msg[1] == genId and: { msg[2] == 'note' }) { ~noteParam = msg[3] } }, '/gen/param');
 OSCdef(\note, { |msg| if(msg[1] == genId) { notes.add(msg[2]); vels.add(msg[3]); times.add(Main.elapsedTime) } }, '/note');
 // plays n quarter-beat grid steps with the given params; returns the grid steps that played.
@@ -73,28 +74,50 @@ Routine {
 	brain.sendMsg('/hello');
 	brain.sendMsg('/transport/tempo', 240);
 	0.3.wait;
-	check.(chord == ['auto', 0], "starts empty in auto mode (%)".format(chord));
+	check.(chord == [] and: { ~take == 'every chord' }, "starts with a chord strip: empty, taking every chord (% %)".format(chord, ~take));
 
 	// overlapping presses and releases are one chord, taken when the last key is released
 	[64, 60].do { |n| out.noteOn(0, n, 90); 0.02.wait };
 	out.noteOff(0, 60, 0); out.noteOn(0, 67, 90); 0.1.wait;
-	check.(chord == ['auto', 0], "auto: unchanged while keys are down");
+	check.(chord == [], "auto: unchanged while keys are down");
 	[64, 67].do { |n| out.noteOff(0, n, 0) }; 0.1.wait;
-	check.(chord == ['auto', 0, 60, 64, 67], "auto: chord taken on release (%)".format(chord));
+	check.(chord == [60, 64, 67], "auto: chord taken on release (%)".format(chord));
 	play.([62, 65, 69, 57], [62, 65, 69, 57]);
-	check.(chord == ['auto', 0, 57, 62, 65, 69], "auto: next chord replaces (%)".format(chord));
+	check.(chord == [57, 62, 65, 69], "auto: next chord replaces (%)".format(chord));
 
-	brain.sendMsg('/chord/mode', "arm");
+	brain.sendMsg('/gen/set', 1, \take, "hold");
 	0.1.wait;
 	play.([48, 52], [48, 52]);
-	check.(chord == ['arm', 0, 57, 62, 65, 69], "arm: disarmed playing ignored");
-	brain.sendMsg('/chord/arm', 1);
+	check.(chord == [57, 62, 65, 69], "hold: playing ignored");
+	brain.sendMsg('/gen/do', 1, \Arm);
 	0.1.wait;
-	check.(chord[1] == 1, "arm: armed");
+	check.(~take == 'next chord', "Arm: takes the next chord");
 	play.([50, 53], [50, 53]);
-	check.(chord == ['arm', 0, 50, 53], "arm: chord taken, disarmed (%)".format(chord));
+	check.(chord == [50, 53] and: { ~take == 'hold' }, "arm: chord taken, then it holds (% %)".format(chord, ~take));
 	play.([60], [60]);
-	check.(chord == ['arm', 0, 50, 53], "arm: next chord ignored");
+	check.(chord == [50, 53], "arm: next chord ignored");
+
+	// as played: the chord builds as keys go down, until the last one comes up
+	[[\take, "every chord"], [\build, "as played"]].do { |m| brain.sendMsg('/gen/set', 1, *m) };
+	0.1.wait;
+	out.noteOn(0, 60, 90); 0.1.wait;
+	check.(chord == [60], "as played: the first key starts a new chord (%)".format(chord));
+	out.noteOn(0, 64, 90); 0.1.wait;
+	check.(chord == [60, 64], "as played: each key adds (%)".format(chord));
+	out.noteOff(0, 60, 0); out.noteOn(0, 67, 90); 0.1.wait;
+	check.(chord == [60, 64, 67], "as played: still the same chord while a key is down (%)".format(chord));
+	[64, 67].do { |n| out.noteOff(0, n, 0) }; 0.1.wait;
+	check.(chord == [60, 64, 67], "as played: kept when the keys come up");
+	brain.sendMsg('/gen/set', 1, \octave, 1); 0.1.wait;
+	check.(chord == [72, 76, 79], "transposed: generators hear it an octave up (%)".format(chord));
+	[[\octave, 0], [\lo, 60], [\build, "on release"]].do { |m| brain.sendMsg('/gen/set', 1, *m) };
+	0.1.wait;
+	play.([48, 62], [48, 62]);
+	check.(chord == [62], "a key range: keys below it aren't heard (%)".format(chord));
+	brain.sendMsg('/gen/set', 1, \active, 0); 0.1.wait;
+	play.([65], [65]);
+	check.(chord == [62], "off: it keeps what it has");
+	[[\active, 1], [\lo, 0], [\take, "hold"]].do { |m| brain.sendMsg('/gen/set', 1, *m) };
 	brain.sendMsg('/chord/set', 57, 62, 65, 69);
 	0.1.wait;
 
@@ -102,17 +125,33 @@ Routine {
 	0.1.wait;
 	[[\num, 1], [\den, 4], [\note, 48], [\active, 1]].do { |m| brain.sendMsg('/gen/set', genId, *m) };
 	check.(run.(\note).every(_ == 48), "note plays its note");
-	brain.sendMsg('/chord/mode', "auto");  // where a key would otherwise replace the chord
+	brain.sendMsg('/gen/set', 1, \take, "every chord");  // where a key would otherwise replace the chord
 	brain.sendMsg('/gen/learn', genId, \note, 1);
 	0.1.wait;
 	play.([61], [61]);
-	check.(~noteParam == 61 and: { chord == ['auto', 0, 57, 62, 65, 69] }, "Set: next key sets the note, chord untouched");
-	brain.sendMsg('/chord/mode', "arm");
+	check.(~noteParam == 61 and: { chord == [57, 62, 65, 69] }, "Set: next key sets the note, chord untouched");
+	brain.sendMsg('/gen/set', 1, \take, "hold");
 	brain.sendMsg('/gen/set', genId, \note, 48);
 	check.(run.(\index, -1).every(_ == 69), "index -1 plays the highest");
 	check.(run.(\index, 5).every(_ == 62), "index wraps (5 of 4 → 1)");
 	check.(run.(\lowest).every(_ == 57), "lowest");
 	check.(run.(\highest).every(_ == 69), "highest");
+	// a second chord strip: a generator reads the one it picks; gone, it's back on the main chord
+	~basic = genId;
+	brain.sendMsg('/gen/add', "chord");
+	0.1.wait;
+	~c2 = genId; genId = ~basic;
+	brain.sendMsg('/gen/set', ~c2, \notes, "C2 G2");
+	brain.sendMsg('/gen/set', genId, \chord, ~c2);
+	check.(run.(\lowest).every(_ == 36), "a generator reads the chord strip it picks (%)".format(notes));
+	brain.sendMsg('/gen/set', ~c2, \semitone, 2);
+	check.(run.(\lowest).every(_ == 38), "and hears its transposition");
+	check.(chord == [57, 62, 65, 69], "the main chord is still the first strip's");
+	brain.sendMsg('/gen/remove', ~c2);
+	0.1.wait;
+	genId = ~basic;
+	check.(run.(\lowest).every(_ == 57), "its chord strip removed: back to the main chord");
+	brain.sendMsg('/gen/set', genId, \chord, 0);
 	check.(run.(\arpeggio) == [57, 62, 65, 69, 57, 62], "arpeggio up (%)".format(notes));
 	brain.sendMsg('/gen/set', genId, \direction, "down");
 	check.(run.(\arpeggio) == [69, 65, 62, 57, 69, 65], "arpeggio down (%)".format(notes));
@@ -171,7 +210,7 @@ Routine {
 
 	brain.sendMsg('/chord/clear');
 	0.1.wait;
-	check.(chord == ['arm', 0], "clear");
+	check.(chord == [], "clear");
 	check.(run.(\lowest).isEmpty, "empty chord rests");
 
 	brain.sendMsg('/gen/remove', genId);
@@ -204,7 +243,7 @@ Routine {
 	check.(~midi.asArray == [[\on, 74], [\off, 74]], "passthrough delay: note and note-off after 1 beat (%)".format(~midi));
 	brain.sendMsg('/dest/remove', ~destId);
 	brain.sendMsg('/gen/remove', genId);
-	brain.sendMsg('/chord/mode', "auto");
+	brain.sendMsg('/gen/set', 1, \take, "every chord");
 	0.1.wait;
 
 	// --- groups: off and soloed-out mute (no notes); two solos both sound; removing ungroups ---
@@ -317,16 +356,16 @@ Routine {
 	brain.sendMsg('/inputs/rescan');
 	0.2.wait;
 	check.(~inputsMsg.size == 3 and: { ~inputsMsg[1] == 1 }, "inputs listed, on (%)".format(~inputsMsg));
-	brain.sendMsg('/chord/mode', "auto");
+	brain.sendMsg('/gen/set', 1, \take, "every chord");
 	brain.sendMsg('/chord/clear');
 	brain.sendMsg('/inputs/set', ~inputsMsg[0], 0);
 	0.1.wait;
 	play.([60, 64], [60, 64]);
-	check.(~inputsMsg[1] == 0 and: { chord.size <= 2 }, "an input switched off is ignored (chord %)".format(chord));
+	check.(~inputsMsg[1] == 0 and: { chord.isEmpty }, "an input switched off is ignored (chord %)".format(chord));
 	brain.sendMsg('/inputs/set', ~inputsMsg[0], 1);
 	0.1.wait;
 	play.([62, 65], [62, 65]);
-	check.(chord.asArray.drop(2) == [62, 65], "switched back on, it plays (chord %)".format(chord));
+	check.(chord.asArray == [62, 65], "switched back on, it plays (chord %)".format(chord));
 	brain.sendMsg('/chord/clear');
 	0.1.wait;
 
@@ -338,7 +377,7 @@ Routine {
 	brain.sendMsg('/key/set', \gen, genId, 36);
 	0.05.wait;
 	play.([36], [36]);
-	check.(~genMsg[0] == genId and: { ~genMsg[3] == 1 } and: { ~genMsg[6] == 36 } and: { chord.size <= 2 },
+	check.(~genMsg[0] == genId and: { ~genMsg[3] == 1 } and: { ~genMsg[6] == 36 } and: { chord.isEmpty },
 		"a switch key turns its generator on and leaves the chord alone (gen %, chord %)".format(~genMsg, chord));
 	play.([36], [36]);
 	check.(~genMsg[3] == 0, "and off again");
@@ -355,7 +394,7 @@ Routine {
 	0.1.wait;
 	play.([60, 64], [60, 64]);
 	play.([36], [36]);
-	check.(chord.size <= 2 and: { ~genMsg[3] == 1 }, "a control surface's keys don't reach the chord, its switch keys work (chord %)".format(chord));
+	check.(chord.isEmpty and: { ~genMsg[3] == 1 }, "a control surface's keys don't reach the chord, its switch keys work (chord %)".format(chord));
 	brain.sendMsg('/inputs/role', ~inputsMsg[0], \all);
 	brain.sendMsg('/group/remove', ~kg);
 	brain.sendMsg('/gen/remove', genId);

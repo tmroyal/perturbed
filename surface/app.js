@@ -6,7 +6,6 @@ const model = {
   bpm: 120,
   ports: [],
   types: new Map(), // name -> [{ name, kind, def, args, label?, section?, show?: { param, values } }]
-  chord: { mode: 'auto', armed: false, pitches: [] },
   clocks: new Map(), // id -> { id, name, mode, num, den, factor, bpm, tempo }  (A = main, implicit)
   dests: new Map(), // id -> { id, name, port, channel, instrument }
   live: null, // Live's tracks on the brain's buses [{ name, port, channel, instrument }]; null = no bridge
@@ -53,7 +52,6 @@ function renderAll() {
   renderLibrary();
   renderPorts();
   renderInputs();
-  renderChord();
   renderClocks();
   renderGlobals();
   renderOutputs();
@@ -102,11 +100,10 @@ const handlers = {
   },
   '/inputs': (...a) => {
     model.inputs = chunks(a, 3).map(([name, on, role]) => ({ name, on: !!on, role }));
-    return renderInputs;
-  },
-  '/chord': (mode, armed, ...pitches) => {
-    model.chord = { mode, armed: !!armed, pitches };
-    return renderChord;
+    return () => {
+      renderInputs();
+      renderCards(); // chord strips list the inputs
+    };
   },
 
   '/library/type': (name, builtin, favorite, loaded, bar, changed, description, mtime) => {
@@ -198,13 +195,17 @@ const handlers = {
 
   '/gen': (id, type, dest, active, group = 0, collapsed = 0, key = -1, order = 0) => {
     let gen = model.gens.get(id);
+    const added = !gen;
     if (!gen) {
       gen = { id, type, params: {}, card: null };
       model.gens.set(id, gen);
     }
     const moved = gen.group !== group || gen.order !== order;
     Object.assign(gen, { dest, active: !!active, group, collapsed: !!collapsed, key: key < 0 ? null : key, order });
-    return () => updateGen(gen, moved);
+    return () => {
+      updateGen(gen, moved);
+      if (type === 'chord' && (added || moved)) renderCards(); // the others' chord menus list it; the first is "main"
+    };
   },
   '/group': (id, name, on, solo, collapsed, key = -1) => {
     model.groups.set(id, {
@@ -285,6 +286,7 @@ const handlers = {
     model.gens.delete(id);
     return () => {
       unmountCard(gen);
+      if (gen?.type === 'chord') renderCards();
       if (isMapping('gen', id)) toggleMapMode('gen', id); // it was in Map mode: leave it
     };
   },

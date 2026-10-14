@@ -61,8 +61,8 @@ input:focus, select:focus { outline: none; border-color: var(--nord8); }
 button.power { min-width: 30px; padding: 0 4px; text-transform: uppercase; }
 button.solo { text-transform: uppercase; color: var(--nord13); }
 button.solo.on { background: var(--nord13); border-color: var(--nord13); color: var(--nord0); }
-/* waiting for something: learning a note or a knob, an armed chord, Map mode, a changed file to reload */
-button.learn.on, #chord-arm.on, .lib-row .reload, button.map.on, button.knob.on { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
+/* waiting for something: learning a note or a knob, Map mode, a changed file to reload */
+button.learn.on, .lib-row .reload, button.map.on, button.knob.on { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
 .hint { color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .unit, .pane-head h1, .lib-section { color: var(--dim); text-transform: uppercase; letter-spacing: .1em; font-size: 10px; font-weight: 400; }
 .led { width: 8px; height: 8px; border-radius: 50%; background: var(--nord2); flex: none; }
@@ -70,7 +70,7 @@ button.learn.on, #chord-arm.on, .lib-row .reload, button.map.on, button.knob.on 
 .key-tag { flex: none; font-size: 9px; line-height: 13px; padding: 0 4px; border: 1px solid var(--nord3); color: var(--nord8); }
 .key-tag.learning { background: var(--nord12); border-color: var(--nord12); color: var(--nord0); }
 
-/* --- the top bar: transport, chord, file --- */
+/* --- the top bar: transport, file --- */
 #transport { display: flex; align-items: center; gap: 14px; padding: 5px 10px; background: var(--panel); border-bottom: 1px solid var(--line); flex: none; }
 #transport .group { display: flex; align-items: center; gap: 4px; }
 #play { width: 60px; }
@@ -79,8 +79,6 @@ button.learn.on, #chord-arm.on, .lib-row .reload, button.map.on, button.knob.on 
 #mod-apply { font-variant-numeric: tabular-nums; }
 #pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--nord2); }
 #beat { min-width: 30px; color: var(--nord6); font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
-#chord-notes { color: var(--nord6); font-weight: 700; font-size: 12px; padding: 0 4px; white-space: nowrap; }
-#chord-notes:empty::before { content: 'no chord: play one'; color: var(--dim); font-weight: 400; font-size: 11px; }
 .spacer { flex: 1; }
 #status { color: var(--nord12); min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

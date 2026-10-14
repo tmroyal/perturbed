@@ -137,8 +137,12 @@ architectures don't provide that, but DAWs are good at hosting, mixing and savin
 
 ### 5.2 Concepts
 
-- **Chord:** one current chord, latched. Auto: every chord played replaces it on release. Arm:
-  only the next chord after pressing Arm. Clear empties it.
+- **Chords:** held by chord strips: generators of type `chord` (`brain/types/chord.scd`, `core/chord.scd`). Each
+  listens to the keyboard (optionally one input, one key range) and holds a chord: `take` every chord / next
+  chord (Arm) / hold; `build` on release / as played; `notes` (the chord, note names, typeable); octave and
+  semitone transpose what generators hear. Generators pick one with their `chord` setting (a `chord` param);
+  0 = the main chord, the first chord strip in the rack, which is also `~chord` and `/chord`. A new performance
+  has one. Files from before (top-level `chord`, `chordMode`) get a chord strip made from them on load.
 - **Generators:** a type + params + an output. Types (`brain/types/`) declare `params` and `run`
   (clock-driven) and/or `key` (keyboard-driven), plus optional `showWhen`, `labels`, `sections`,
   `restartOn`, `sliders` (lin/log per param), `actions` (card buttons, `/gen/do`), `output: false`

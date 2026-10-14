@@ -1,21 +1,8 @@
-// sidebar.js — the chord (in the top bar), the Setup panel (clocks, keyboard, outputs: the brain calls
-// outputs "destinations") and the dock that holds it.
+// sidebar.js — the Setup panel (clocks, keyboard, outputs: the brain calls outputs "destinations")
+// and the dock that holds it.
 
 // A sidebar row: a name, then its controls.
 const namedRow = (className, name, ...rest) => el('div', { className }, el('span', { className: 'name', textContent: name }), ...rest);
-
-// --- chord ---
-function renderChord() {
-  for (const b of $('chord-mode').children) setOn(b, b.dataset.mode === model.chord.mode);
-  $('chord-arm').hidden = model.chord.mode !== 'arm';
-  setOn($('chord-arm'), model.chord.armed, model.chord.armed ? 'Play a chord…' : 'Arm');
-  $('chord-notes').textContent = model.chord.pitches.map(noteName).join('  ');
-}
-$('chord-arm').onclick = () => osc.send('/chord/arm', model.chord.armed ? 0 : 1);
-[...$('chord-mode').children].forEach((b) => {
-  b.onclick = () => osc.send('/chord/mode', b.dataset.mode);
-});
-$('chord-clear').onclick = () => osc.send('/chord/clear');
 
 // --- clocks: A is the main clock; B, C, ... run at a ratio or factor of it, or free. Rows update
 // in place (so a dial keeps its drag); the list is rebuilt only when clocks come and go or a mode
@@ -170,7 +157,7 @@ function renderInputs() {
       );
       role.value = i.role;
       role.title =
-        'keys: its notes play the chord. control: a control surface, its notes only switch things (on/off keys) and its knobs drive globals.';
+        'keys: its notes play (chord strips, passthrough). control: a control surface, its notes only switch things (on/off keys) and its knobs drive globals.';
       return el(
         'div',
         { className: `input${i.on ? '' : ' off'}` },

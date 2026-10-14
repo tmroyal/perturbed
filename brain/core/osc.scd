@@ -10,9 +10,7 @@
 //   /transport/play   1|0                        play restarts at beat 0
 //   /transport/tempo  <bpm>
 //   /transport/scale  <num> <den>                tempo × num/den (metric modulation)
-//   /chord/mode       auto|arm                   see core/chord.scd
-//   /chord/arm        1|0                        in arm mode: the next chord played replaces the current one
-//   /chord/set        <pitch>...                 set the current chord directly
+//   /chord/set        <pitch>...                 set the main chord (the first chord strip's; core/chord.scd)
 //   /chord/clear
 //   /gen/add          <type> [<group>]           brain assigns the id; optionally into a group
 //   /gen/duplicate    <id>                       a copy (settings, output, group), off
@@ -76,7 +74,7 @@
 //   /ports            <name>...                  MIDI outputs; destination port n = nth name
 //   /inputs           (<name> <on> <role>)...    the MIDI inputs that can be listened to
 //   /key/learn        gen|group <id> 1|0         learning a switch key started / ended
-//   /chord            <mode> <armed> <pitch>...
+//   /chord            <pitch>...                 the main chord, as generators hear it
 //   /library/type     <name> <builtin> <favorite> <loaded> <onBar> <changed> <description> <mtime>
 //                                                every library type (changed: the file differs from
 //                                                what's loaded: reload to update)
@@ -133,7 +131,7 @@
 ~changing = ['/gen/add', '/gen/duplicate', '/gen/move', '/gen/remove', '/gen/set', '/gen/map', '/gen/unmap',
 	'/group/add', '/group/set', '/group/remove', '/group/pin', '/group/unpin',
 	'/clock/add', '/clock/set', '/clock/remove', '/dest/add', '/dest/remove',
-	'/chord/set', '/chord/clear', '/chord/mode', '/transport/tempo', '/transport/scale',
+	'/chord/set', '/chord/clear', '/transport/tempo', '/transport/scale',
 	'/global/add', '/global/remove', '/global/set', '/global/map', '/global/unmap', '/global/knob'];
 
 // Where to answer: the sender, or the port named in msg[1].
@@ -189,8 +187,6 @@
 	OSCdef(\tempo, { |msg| ~setTempo.(msg[1]) }, '/transport/tempo');
 	OSCdef(\scale, { |msg| ~scaleTempo.(msg[1], msg[2]) }, '/transport/scale');
 
-	OSCdef(\chordMode, { |msg| ~setChordMode.(msg[1]) }, '/chord/mode');
-	OSCdef(\chordArm, { |msg| ~arm.(msg[1].asInteger == 1) }, '/chord/arm');
 	OSCdef(\chordSet, { |msg| ~setChord.(msg[1..]) }, '/chord/set');
 	OSCdef(\chordClear, { ~setChord.([]) }, '/chord/clear');
 

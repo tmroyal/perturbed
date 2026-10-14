@@ -20,6 +20,7 @@ if(~testMode) { ~config[\inputs] = [["IAC Driver", "Bus 2"]]; ~config[\control] 
 ~linkInit.();
 ~keyboardInit.();
 ~oscInit.();
+~newPerformance.();  // starts as a new performance: one chord strip, listening
 
 "brain ready: % types, OSC on %".format(~types.size, ~port).postln;
 )

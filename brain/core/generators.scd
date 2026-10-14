@@ -4,12 +4,15 @@
 // task, sounding, held). Whether it sounds also depends on its group (core/groups.scd: ~sounds).
 // Types live in brain/types/, one file each (filename = type name), evaluating to:
 //   params:    [[name, default, kind, ...kind args], ...]  also the surface's schema;
-//              kind = range (min max [step]) | note | choice (options...) | text | clock
+//              kind = range (min max [step]) | note | choice (options...) | text | clock | chord
+//              (which chord strip its pitches come from: ~chordParam, core/chord.scd) | input (a
+//              MIDI input by name, or "any")
 //              (a `clock` param picks the clock `run` plays on; 0 = main, see core/clock.scd)
 // and one or both of:
 //   run:       { |g, p| } routine body on the transport clock; waits are in beats
-//   key:       { |g, p, note, vel| } called for each keyboard note while active (vel 0 = up),
-//              whether or not the transport runs; notes it holds go in g[\held] (see passthrough)
+//   key:       { |g, p, note, vel, src| } called for each keyboard note while active (vel 0 = up),
+//              whether or not the transport runs; src is the input's name (nil when not from a
+//              device); notes it holds go in g[\held] (see passthrough)
 // and optionally:
 //   showWhen:  (param: [otherParam, value...]) the surface shows param only for those values
 //   labels:    (param: "label") display names; the param name is shown otherwise
@@ -21,6 +24,7 @@
 //   sliders:   (param: \lin | \log) range params shown as a slider (+ field); by default a range
 //              wider than 32 is a slider, others a number field, and num/den always fields
 //   output:    false for types that don't play into an output (lfo); the surface hides the menu
+//   on:        true for types that are switched on when added (chord: it listens at once)
 //   maps:      true for types that drive other generators' settings (lfo): the card gets a Map
 //              button and a list of targets; the type calls ~drive.(g, x) with x in 0–1 (core/globals.scd)
 // Shared building blocks: core/pitch.scd (which note), core/rhythm.scd (which grid steps play),
@@ -63,8 +67,8 @@
 // Lets go of everything it plays: its note and the keys it holds.
 ~silence = { |g| ~release.(g); ~releaseHeld.(g) };
 
-~genKey = { |note, vel|
-	~gens.do { |g| if(g[\active]) { g[\type][\key] !? { |fn| try { fn.(g, g[\p], note, vel) } { |e| ~genFailed.(g, e) } } } };
+~genKey = { |note, vel, src|
+	~gens.do { |g| if(g[\active]) { g[\type][\key] !? { |fn| try { fn.(g, g[\p], note, vel, src) } { |e| ~genFailed.(g, e) } } } };
 };
 
 // (Re)starts the routine if it should be running. A sounding note rings until the next
@@ -102,6 +106,7 @@
 	list = list.insert(at, g);
 	list.do { |x, i| x[\order] = i + 1 };
 	list.do(~sendGen);
+	~syncChord.();  // the main chord is the first chord strip
 };
 
 // `like`: a generator to copy the settings, output and folding from (~duplicateGen).
@@ -109,13 +114,14 @@
 	var type = ~types[typeName.asSymbol], g;
 	if(type.isNil) { "unknown generator type %".format(typeName).warn; nil } {
 		id = ~newId.(\gen, id);
-		g = (id: id, typeName: typeName.asSymbol, type: type, p: ~paramsFor.(type, like !? (_[\p])), active: false,
+		g = (id: id, typeName: typeName.asSymbol, type: type, p: ~paramsFor.(type, like !? (_[\p])), active: like.isNil and: { type[\on] == true },
 			dest: like !? (_[\dest]) ? 0, held: (), group: ~groupOrNone.(group),
 			collapsed: like !? (_[\collapsed]) ? false, mappings: [],
 			order: (~gens.values.collect(_[\order]).maxItem ? 0) + 1);
 		~gens[id] = g;
 		~sendGen.(g);
 		~sendParams.(g);
+		if(typeName.asSymbol == \chord) { ~syncChord.() };
 		id;
 	};
 };
@@ -130,7 +136,8 @@
 };
 
 ~removeGen = { |id|
-	~gens.removeAt(id) !? { |g| ~stopGen.(g); ~releaseHeld.(g); ~dropPins.(id); ~dropGenMappings.(id); ~send.('/gen/removed', id) };
+	~gens.removeAt(id) !? { |g| ~stopGen.(g); ~releaseHeld.(g); ~dropPins.(id); ~dropGenMappings.(id); ~send.('/gen/removed', id);
+		if(g[\typeName] == \chord) { ~syncChord.() } };
 };
 
 // A type's params: kept from `old` (a generator's settings) where the param exists, else defaults.

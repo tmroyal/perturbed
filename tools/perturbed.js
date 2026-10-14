@@ -55,8 +55,8 @@ const HELP = `perturbed — change the running performance
 
   tempo <bpm>                        main clock (A)
   scale <num> <den>                  metric modulation: tempo × num/den
-  chord <note ...>                   set the chord (MIDI numbers or names: C4 E4 G4)
-  chord clear | chord mode auto|arm
+  chord <note ...>                   set the main chord (MIDI numbers or names: C4 E4 G4): the first chord strip's
+  chord clear                        chords live in chord strips: add chord, set <id> notes="C3 E3 G3" take=...
   cc <bus> <channel> <cc> <value>    one MIDI CC on a control bus (1 = Perturbed CTL 1)
   inputs | inputs rescan             the keyboards and controllers the brain listens to
   inputs on|off <name>               listen to one, or ignore it (remembered)
@@ -212,14 +212,6 @@ const COMMANDS = {
     async (b) => {
       await b.chordClear();
       return 'chord cleared';
-    },
-  ],
-  'chord mode': [
-    1,
-    'auto|arm',
-    async (b, [mode]) => {
-      await b.chordMode(mode);
-      return `chord mode ${mode}`;
     },
   ],
   inputs: [0, '', (b) => b.inputs()],

@@ -1,6 +1,7 @@
 // pitch.scd — where a generator's note comes from; shared by generator types. A type adds
 // ~pitchParams to its params (with ~pitchShow and ~pitchLabels), then calls ~pitch.(p, step) for each
 // note (step counts the generator's notes since it started). nil means rest: the chord is empty.
+// The chord is the one its `chord` setting picks (a chord strip; 0 = the main chord: core/chord.scd).
 //   note      the `note` param
 //   index     chord[index], wrapping; -1 = highest
 //   lowest, highest
@@ -15,6 +16,7 @@
 	[\direction, "up", \choice, "up", "down", "up-down"],
 	[\permutation, 0, \range, 0, 719],
 	[\advance, 1, \range, 0, 32],
+	~chordParam,
 ];
 
 ~pitchShow = (
@@ -23,12 +25,13 @@
 	direction: [\source, "arpeggio"],
 	permutation: [\source, "permute"],
 	advance: [\source, "permute"],
+	chord: [\source, "index", "lowest", "highest", "arpeggio", "permute"],
 );
 
 ~pitchLabels = (source: "from", index: "chord note", permutation: "start at", advance: "advance by");
 
 ~pitch = { |p, step|
-	var c = ~chord, n = ~chord.size, source = p[\source].asSymbol;
+	var c = ~chordFor.(p), n = c.size, source = p[\source].asSymbol;
 	case
 	{ source == \note } { p[\note].asInteger.clip(0, 127) }
 	{ n == 0 } { nil }

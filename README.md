@@ -46,8 +46,14 @@ later is found with **Rescan** in the sidebar's Keyboard section. The first run 
 
 ## Playing
 
-- **Chord:** play a chord; it stays until the next one (*Auto*), or only changes after you press
-  *Arm* (*Arm* mode). *Clear* empties it.
+- **Chords:** a chord lives in a **chord strip** in the rack (a new performance has one; *+ Chord* adds
+  more). It listens to the keyboard and holds the last chord for the generators. *take*: every chord,
+  only the next one (**Arm**), or hold. *taken*: *on release* (the chord replaces the old one when the
+  last key comes up) or *as played* (it builds up key by key until the last key comes up). *holding*
+  shows the chord and can be typed (`A2 C3 E3`); **Clear** empties it. *octaves* and *semitones*
+  transpose what the generators hear. *from* and the key range make it listen to one keyboard or one
+  part of it. Off, it keeps its chord. Generators read the **main** chord (the first chord strip) unless
+  their *chord* setting picks another.
 - **Outputs:** Live's tracks on the IAC buses are listed under *In Live*; **+** (or *Add all*)
   makes them outputs. A **!** marks an output no Live track listens to.
 - **Keyboard:** the sidebar lists the keyboards and controllers Perturbed hears (keys and knobs).

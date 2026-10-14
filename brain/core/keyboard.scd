@@ -19,6 +19,8 @@
 ~inputsPath = { ~root.dirname +/+ "local" +/+ "inputs.json" };
 ~inputKey = { |e| if(e.device == e.name) { e.name } { e.device + e.name } };  // "MiniLab", or "IAC Driver Bus 2"
 
+~inputName = { |uid| MIDIClient.sources.detect { |e| e.uid == uid } !? ~inputKey };  // of a source, by its uid
+
 ~inputCandidates = {
 	var own = (~config[\ports] ++ (~config[\control] ? [])).collect(_[0]);
 	MIDIClient.sources.select { |e|
@@ -74,8 +76,8 @@
 		~inputsControl = (saved["control"] ? []).asSet;
 	};
 	MIDIIn.connectAll;
-	MIDIdef.noteOn(\keyOn, { |vel, note, ch, src| if(~inputUids.includes(src)) { ~key.(note, vel, ~controlUids.includes(src)) } });
-	MIDIdef.noteOff(\keyOff, { |vel, note, ch, src| if(~inputUids.includes(src)) { ~key.(note, 0, ~controlUids.includes(src)) } });
+	MIDIdef.noteOn(\keyOn, { |vel, note, ch, src| if(~inputUids.includes(src)) { ~key.(note, vel, ~controlUids.includes(src), ~inputName.(src)) } });
+	MIDIdef.noteOff(\keyOff, { |vel, note, ch, src| if(~inputUids.includes(src)) { ~key.(note, 0, ~controlUids.includes(src), ~inputName.(src)) } });
 	// knobs and faders: control changes from the same inputs drive globals (core/globals.scd)
 	MIDIdef.cc(\knob, { |val, num, ch, src| if(~inputUids.includes(src)) { ~knob.(ch + 1, num, val) } });
 	~applyInputs.();
@@ -84,14 +86,14 @@
 
 // Keyboard input (vel 0 = key up). A key pressed while a param is learning only sets that param;
 // a switch key (or one being learned) only switches; a control surface's other keys do nothing;
-// the rest go to the chord (core/chord.scd) and to key-driven generators (passthrough).
-~key = { |note, vel, controlOnly = false|
+// the rest go to key-driven generators (chord strips, passthrough), with the input's name (`src`).
+~key = { |note, vel, controlOnly = false, src|
 	case
 	{ vel > 0 and: { ~learning.notNil } } { ~learnNote.(note) }
 	{ ~switchKey.(note, vel) } { nil }
 	{ controlOnly } { nil }
-	{ vel > 0 } { ~keyDown.(note); ~genKey.(note, vel) }
-	{ ~keyUp.(note); ~genKey.(note, 0) };
+	{ vel > 0 } { ~keyDown.(note); ~genKey.(note, vel, src) }
+	{ ~keyUp.(note); ~genKey.(note, 0, src) };
 };
 
 // --- switch keys ---

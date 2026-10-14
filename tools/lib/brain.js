@@ -46,7 +46,7 @@ class Brain {
       playing: false,
       tempo: 0,
       ports: [],
-      chord: { mode: 'auto', armed: false, pitches: [] },
+      chord: { pitches: [] }, // the main chord, as generators hear it
       types: new Map(), // name -> { params: [spec], output: bool, actions: [] }
       clocks: new Map(),
       dests: new Map(),
@@ -241,7 +241,7 @@ class Brain {
         for (let i = 0; i + 2 < a.length; i += 3) m.inputs.push({ name: a[i], on: !!a[i + 1], role: a[i + 2] });
         break;
       case '/chord':
-        m.chord = { mode: a[0], armed: !!a[1], pitches: a.slice(2) };
+        m.chord = { pitches: a };
         break;
       case '/gen/schema':
         type(a[0]).params.push({ name: a[1], kind: a[2], default: a[3], args: a.slice(4) });
@@ -375,6 +375,11 @@ class Brain {
       }
       case 'clock':
         return this.clock(value);
+      case 'chord': {
+        // which chord strip: main (the first in the rack), or one by id
+        if (['main', '0'].includes(String(value).toLowerCase())) return 0;
+        return this.model.gens.get(+value)?.type === 'chord' ? +value : fail(`${param} is main or a chord strip's id, not "${value}"`);
+      }
       case 'range': {
         const [min, max, step = 1] = s.args,
           n = Number(value);
@@ -396,7 +401,7 @@ class Brain {
       file: m.file ?? null, // the performance's file (where save without a name goes)
       unsaved: !!m.unsaved, // changes since it was saved, opened or started new
       tempo: +m.tempo.toFixed(3),
-      chord: { mode: m.chord.mode, armed: m.chord.armed, pitches: m.chord.pitches, names: m.chord.pitches.map(noteName) },
+      chord: { pitches: m.chord.pitches, names: m.chord.pitches.map(noteName) }, // the main chord (the first chord strip's)
       clocks: [
         { id: 0, name: 'A', mode: 'main', tempo: +m.tempo.toFixed(3) },
         ...[...m.clocks.values()].map((c) => ({ ...c, tempo: +c.tempo.toFixed(3) })),
@@ -788,10 +793,6 @@ class Brain {
   }
   async chordClear() {
     await this.request('/chord/clear', [], '/chord');
-  }
-  async chordMode(mode) {
-    if (!['auto', 'arm'].includes(mode)) fail('chord mode is auto or arm');
-    await this.request('/chord/mode', [mode], '/chord');
   }
   cc(bus, channel, cc, value) {
     for (const [n, v, lo, hi] of [

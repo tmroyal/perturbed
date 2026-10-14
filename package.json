@@ -1,5 +1,6 @@
 {
   "name": "perturbed-dev",
+  "license": "MIT",
   "private": true,
   "description": "Developer tools for the repo (lint and format the JavaScript); the app itself is in surface/",
   "scripts": {

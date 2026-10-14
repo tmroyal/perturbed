@@ -7,6 +7,18 @@ layers, and send the MIDI to instruments in Ableton Live. You shape it all live 
 **Claude** (the button, or ⌘`) opens a drawer running Claude Code as a performance assistant:
 describe the piece and it sets up the performance ([AGENTS.md](AGENTS.md)).
 
+## AI Disclosure
+
+This code base was written by AI. The developer merely designed the software. 
+
+## Post-Mortem
+
+This was an experiement in using AI to facilitate new methods for musical creation and improvisation. 
+
+The notion of adding a Claude terminal embedded was a smart idea. 
+
+The vibe coded approach where the developer only provided 
+
 ## Requirements
 
 - macOS, [SuperCollider](https://supercollider.github.io/) 3.14 in `/Applications`
@@ -153,3 +165,5 @@ Rig settings (IAC ports, control buses, MIDI inputs, latency) are in `brain/conf
 **Writing your own generator types:** [docs/writing-generator-types.md](docs/writing-generator-types.md).
 Architecture, protocol, plans and gotchas: [PLAN.md](PLAN.md). Rules for coding agents and for
 Claude as performance assistant: [AGENTS.md](AGENTS.md).
+
+Licensed under the [MIT License](LICENSE).

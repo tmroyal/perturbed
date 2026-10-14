@@ -1,14 +1,12 @@
 // progression — holds a chord progression and steps through it in time: a chord for generators to read (pick it in their `chord` menu, or put it first in the rack).
-// made 2026-10-13. Three ways to give it chords:
+// made 2026-10-13. Two ways to give it chords:
 //   play them   press Record and play the chords one after another; press Done
-//   symbols     Am F C G7   (m, 7, m7, maj7, 6, m6, 9, m9, maj9, add9, sus2, sus4, dim, dim7, m7b5, aug;
-//               voiced upward from octave 3)
-//   notes       A2 C3 E3 | F2 A2 C3   (chords separated by |; a symbol can stand for a chord here too)
+//   type them   A2 C3 E3 | F2 A2 C3   (note names, chords separated by |)
 // It moves to the next chord every num/den beats while it's on and the transport plays; `now` shows
 // the chord it's on. Generators hear it moved by octaves + semitones.
 (
 params: [
-	[\chords, "Am F C G", \text],
+	[\chords, "A2 C3 E3 | F2 A2 C3 | C3 E3 G3 | G2 B2 D3", \text],
 	[\record, "off", \choice, "off", "on"],
 	[\num, 4, \range, 1, 64], [\den, 1, \range, 1, 32],
 	[\order, "forward", \choice, "forward", "backward", "back and forth", "random"],
@@ -36,31 +34,8 @@ onChange: (
 // the progression as a list of chords (pitches), from the text; kept until the text changes
 list: { |g, p|
 	var text = p[\chords].asString;
-	var steps = [0, 2, 4, 5, 7, 9, 11];
-	var shapes = (maj: [0, 4, 7], m: [0, 3, 7], '7': [0, 4, 7, 10], m7: [0, 3, 7, 10], maj7: [0, 4, 7, 11],
-		'6': [0, 4, 7, 9], m6: [0, 3, 7, 9], '9': [0, 4, 7, 10, 14], m9: [0, 3, 7, 10, 14], maj9: [0, 4, 7, 11, 14],
-		add9: [0, 4, 7, 14], sus2: [0, 2, 7], sus4: [0, 5, 7], dim: [0, 3, 6], dim7: [0, 3, 6, 9], m7b5: [0, 3, 6, 10],
-		aug: [0, 4, 8]);
-	// "Am7" -> pitches, or nil if it isn't a chord symbol
-	var symbol = { |tok|
-		var m = tok.asString.findRegexp("^([A-G])([#b]?)(maj7|maj9|m7b5|dim7|sus2|sus4|add9|dim|aug|m7|m9|m6|m|7|9|6)?$");
-		if(m.isEmpty) { nil } {
-			var acc = (m[2] !? (_[1])) ? "", kind = (m[3] !? (_[1])) ? "";
-			var root = steps["CDEFGAB".indexOf(m[1][1][0])] + (if(acc == "#") { 1 } { if(acc == "b") { -1 } { 0 } }) + 48;
-			root + shapes[if(kind.isEmpty) { \maj } { kind.asSymbol }];
-		};
-	};
-	var words = { |s| s.asString.split($ ).reject(_.isEmpty) };
-	var parts;
 	if(g[\cache].isNil or: { g[\cache][0] != text }) {
-		parts = if(text.includes($|)) { text.split($|) } {
-			// no bars: a row of symbols is a chord each; anything else is one chord of notes
-			if(words.(text).notEmpty and: { words.(text).every { |t| symbol.(t).notNil } }) { words.(text) } { [text] };
-		};
-		g[\cache] = [text, parts.collect { |s|
-			var w = words.(s);
-			if(w.size == 1 and: { symbol.(w[0]).notNil }) { symbol.(w[0]) } { ~parseNotes.(s) };
-		}.reject(_.isEmpty)];
+		g[\cache] = [text, text.split($|).collect(~parseNotes).reject(_.isEmpty)];
 	};
 	g[\cache][1];
 },

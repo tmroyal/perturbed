@@ -119,7 +119,8 @@ body.drawer-open { padding-bottom: var(--drawer-h); }
 .cell { display: flex; align-items: center; gap: 3px; height: var(--h); padding-left: 5px; background: var(--nord0); border: 1px solid var(--nord3); }
 .cell label { color: color-mix(in srgb, var(--sc, var(--nord9)) 70%, var(--dim)); font-size: 10px; white-space: nowrap; }
 .cell input, .cell select { background-color: transparent; border-color: transparent; height: 16px; }
-.cell input[type=text] { field-sizing: content; min-width: 5ch; max-width: 30ch; width: auto; }
+/* text grows with what's typed, up to most of a row (a progression, a phrase) */
+.cell input[type=text] { field-sizing: content; min-width: 5ch; max-width: min(90ch, 60vw); width: auto; }
 .cell .valuebar { height: 16px; }
 .cell button { height: 16px; padding: 0 5px; }
 .cell .unit { letter-spacing: 0; }

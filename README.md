@@ -46,8 +46,8 @@ later is found with **Rescan** in the sidebar's Keyboard section. The first run 
 
 ## Playing
 
-- **Chords:** a chord lives in a **chord strip** in the rack (a new performance has one; *+ Chord* adds
-  more). It listens to the keyboard and holds the last chord for the generators. *take*: every chord,
+- **Chords:** a chord lives in a **chord strip** in the rack (a new performance has one, in a group called *Chords* that you can
+  fold away; *+ Chord* adds more). It listens to the keyboard and holds the last chord for the generators. *take*: every chord,
   only the next one (**Arm**), or hold. *taken*: *on release* (the chord replaces the old one when the
   last key comes up) or *as played* (it builds up key by key until the last key comes up). *holding*
   shows the chord and can be typed (`A2 C3 E3`); **Clear** empties it. *octaves* and *semitones*

@@ -270,12 +270,14 @@ try {
     fresh.generators.length === 1 &&
       fresh.generators[0].type === 'chord' &&
       !fresh.outputs.length &&
-      !fresh.groups.length &&
+      fresh.groups.length === 1 &&
+      fresh.groups[0].name === 'Chords' &&
+      fresh.generators[0].group?.name === 'Chords' &&
       !fresh.globals.length &&
       fresh.clocks.length === 1 &&
       !fresh.chord.pitches.length &&
       fresh.tempo === tempo,
-    'new: one empty chord strip; no outputs, other generators, groups, globals or extra clocks; tempo kept',
+    'new: one empty chord strip in a group, Chords; no outputs, other generators, globals or extra clocks; tempo kept',
   );
   // the order of the cards: move before another, to the end, into a group; saved
   const [m1, m2, m3] = ['basic', 'lfo', 'passthrough'].map((t) => json('add', t).id);

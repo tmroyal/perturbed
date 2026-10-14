@@ -35,13 +35,14 @@
 	~nextIds = ();
 };
 
-// A new performance: one chord strip, listening, and nothing else (no outputs, generators, groups,
-// globals or extra clocks). The tempo stays (it's shared with Live).
+// A new performance: one chord strip, listening, in a group of its own ("Chords", open: fold it to
+// put the chords out of the way), and nothing else (no outputs, other generators, globals or extra
+// clocks). The tempo stays (it's shared with Live).
 ~newPerformance = {
 	~clearPerformance.();
 	~chord = [];
 	if(~types[\chord].isNil) { ~loadType.(\chord) };  // built in, but perhaps not a favorite: not loaded yet
-	~addGen.(\chord);
+	~addGen.(\chord, ~addGroup.("Chords")[\id]);
 	~dirty = false;
 	~file = "";
 	~sendState.();

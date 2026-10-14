@@ -321,7 +321,10 @@ run: { |g, p|
 
 Read [PLAN.md](PLAN.md): what's next, the backlog, the system reference and the gotchas.
 
-- Run `./tests/run.sh` (~45 s) after changes; keep it green and short. It starts with a lint and
+- Run `./tests/run.sh` after a change: it runs only the suites the changed files can break (seconds for
+  the surface, the CLI or the protocol; the slow real-time suites only when a change can alter which
+  notes play or when), and prints what it picked. Run `./tests/run.sh --all` (~65 s) before a push, not
+  between small changes. It starts with a lint and
   format check of the JavaScript (Biome, `biome.jsonc`; `npm install` at the repo root once):
   `npm run format` fixes formatting. SuperCollider has no linter; the tests load every brain file. It uses its own brain on
   port 57140, so it doesn't touch a running performance.

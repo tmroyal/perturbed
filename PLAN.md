@@ -81,9 +81,11 @@ so the Live API can create audio clips from files).
 - JavaScript is linted and formatted with Biome (`biome.jsonc`: 2 spaces, single quotes, 140
   columns; `npm run lint`, `npm run format`); `tests/run.sh` checks it first. The renderer scripts
   share globals through `<script>` tags, so Biome's unused-variable rule is off for them.
-- `./tests/run.sh` (~65 s) starts a test brain on port 57140 and runs the timing, generator, protocol,
-  CLI and AdHoc tests; it plays MIDI on IAC Bus 1 channels 1–2 and sends CCs on Bus 2. Keep it green.
-  It is too slow and too real-time: see the test plan (§4.1).
+- `./tests/run.sh` runs the suites a change needs, picked from the files changed since the last commit
+  (the table is `suites_for` at the top of the script; it prints what it chose). `--all` runs everything
+  (~65 s: timing 9, generators 37, protocol 1, CLI 14, AdHoc 3) and is for before a push; suite names run
+  just those. The suites use a test brain on port 57140 and play MIDI on IAC Bus 1 channels 1–2 and CCs on
+  Bus 2. Making the slow suites fast is the test plan (§4.1).
 - The OSC protocol's authoritative list is the header of `brain/core/osc.scd`.
 - **Gotchas:**
   - SuperCollider 3.14 on macOS creates no virtual MIDI ports; the brain uses IAC buses and must

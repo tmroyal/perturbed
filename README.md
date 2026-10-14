@@ -4,6 +4,8 @@ An algorithmic performance instrument. You play chords on a MIDI keyboard; gener
 shared clocks turn them into arpeggios, permutations, euclidean rhythms, phasing and polytempo
 layers, and send the MIDI to instruments in Ableton Live. You shape it all live from the Perturbed app.
 
+![The Perturbed app: a chord strip, a group of two phasing pianos with an LFO and a group global, a loop recorder, and the Setup panel](docs/screenshot.png)
+
 **Claude** (the button, or ⌘`) opens a drawer running Claude Code as a performance assistant:
 describe the piece and it sets up the performance ([AGENTS.md](AGENTS.md)).
 
@@ -13,11 +15,19 @@ This code base was written by AI. The developer merely designed the software.
 
 ## Post-Mortem
 
-This was an experiement in using AI to facilitate new methods for musical creation and improvisation. 
+(In this section, AI only fixed spelling.)
+
+This was an experiment in using AI to facilitate new methods for musical creation and improvisation. 
 
 The notion of adding a Claude terminal embedded was a smart idea. 
 
-The vibe coded approach where the developer only provided 
+The vibe coded approach where the developer only provided high level ideas and feedback led to 
+an architecture that was not only overly reliant on the early decisions for a POC, but it also
+led to a static approach, which didn't allow for any kind of sense of form or phrase. As such,
+this could be more quickly implemented in SC directly, or Strudel. 
+
+The lesson learned here is that architecture and design needs to be refined before we get to the point of
+implementation, at least as much as it would lead to future capabilities.
 
 ## Requirements
 
@@ -75,10 +85,10 @@ later is found with **Rescan** in the sidebar's Keyboard section. The first run 
   Untick one to ignore it; **Rescan** finds one plugged in after starting. Set a pad controller
   to **control**: its notes then never reach the chord, only switch things. The choices are
   remembered on this machine.
-- **On/off keys:** right-click a card or a group's header → *Learn on/off key…*, then play a key
+- **On/off keys:** right-click a generator's strip or a group's header → *Learn on/off key…*, then play a key
   or hit a pad: that note now switches it on and off, and the chord ignores it (on any keyboard).
 - **Globals:** *+ Global* adds a global parameter (Meta 1, …; click the name to rename): one slider
-  for many settings. Press its **Map**, click setting names on cards, press **Done**; ▸ shows the
+  for many settings. Press its **Map**, click setting names on strips, press **Done**; ▸ shows the
   mappings: *from → to* in the setting's units (from > to inverts it) and a curve (linear, exp,
   steps, threshold). A mapped setting is locked and outlined in purple (hover it to see what it follows).
   **Knob**: press it, turn a knob or fader on your controller, and the global follows it (× forgets it).
@@ -93,14 +103,14 @@ later is found with **Rescan** in the sidebar's Keyboard section. The first run 
   (with a search box),
   built-in and AdHoc (written by Claude for a piece, kept in `adhoc/`), with ☆ to star one for the
   bar, *+ Add*, and × to delete an AdHoc type (its file moves to `adhoc/old/`). Errors from a type show at the top right.
-- **Moving cards:** drag a card by its header onto another card to put it before or after that
+- **Moving strips:** drag a strip by its header onto another strip to put it before or after that
   one; onto a group (its area, or its header when folded) to put it in the group; onto the top
   area to take it out. The order is saved with the performance.
-- **Right-click** a generator card for *Duplicate* (a copy with the same settings, output and
-  group, switched off), Fold and Remove; right-click a group's header for *Rename*, Fold, Solo
+- **Right-click** a generator's strip for *Duplicate* (a copy with the same settings, output and
+  group, switched off), *Move to* a group, Fold and Remove; right-click a group's header for *Rename*, Fold, Solo
   and Remove.
-- **Folding:** ▾ (or a click on a card's name) folds a generator down to one line: light, name,
-  output, On/Off. Folded cards stay folded when you save and reopen.
+- **Folding:** ▾ (or a click on a strip's name) folds a generator down to its header: On/Off, light,
+  name, output. Folded strips stay folded when you save and reopen.
 - **Generators:** *+ Basic* adds a generator. Pick an output, turn it *On*, press *Play* (or
   space). Set where its pitch comes from (a note or the chord: index, lowest, highest, arpeggio,
   permute), its rhythm (every, euclid, random, phrase on a num/den grid, with a *chance* per note
@@ -124,17 +134,18 @@ later is found with **Rescan** in the sidebar's Keyboard section. The first run 
   twice as often), 2/1 augmentation; *octaves* and *semitones* transpose. **Clear** empties it.
 - **Passthrough:** *+ Passthrough* plays the keyboard into an output: transposed, zoned, delayed.
 - **LFOs:** *+ Lfo* is a slow wave (synced to the beat or free) that moves things. **Settings:**
-  press **Map** on its card, click setting names on other cards, press **Done**; each target gets
+  press **Map** on its strip, click setting names on other strips, press **Done**; each target gets
   its own *from → to* at the end of the LFO's strip, and is locked and outlined while driven (another LFO's
   Hz or phase can be a target). *scale* and *add* shape everything an LFO moves; map a global to
   *scale* to fade its effect in and out. **MIDI CC** to Live (*send CC*): ⌘M in Live, click the parameter,
-  press the card's **Send** (or let the LFO run) until Live learns it, ⌘M; the range of each
+  press the strip's **Send** (or let the LFO run) until Live learns it, ⌘M; the range of each
   mapping is set in Live's mapping browser.
 - **Tempo:** the dial (drag, shift for fine, scroll, double-click to type); *Modulate* multiplies
   the tempo by a fraction and ⇅ flips it back.
 - **Clocks:** A is the main clock. Add B, C… at a ratio or factor of it (1.01 phases slowly), or
   at their own tempo, and put generators on them.
-- **New** (⌘N) starts an empty performance (no outputs: add them from *In Live*). **Save** (⌘S)
+- **New** (⌘N) starts a new performance: one chord strip in a *Chords* group, and nothing else (no
+  outputs: add them from *In Live*). **Save** (⌘S)
   writes the performance to its file, asking for a name the first time; **Save As…** (⌘⇧S) always
   asks; **Open…** (⌘O). Performances live in `performances/` (`example.json` is a demo). The
   window title shows the file's name, with a dot while there are unsaved changes; closing the
@@ -144,19 +155,21 @@ later is found with **Rescan** in the sidebar's Keyboard section. The first run 
 
 ```
 npm install         # once, at the repo root: the JavaScript linter/formatter (Biome)
-./tests/run.sh      # ~45 s: lint, then timing, generator, protocol, CLI and library tests on a separate test brain
+./tests/run.sh      # lint, then the test suites the changed files can break (it prints which), on a separate test brain
+./tests/run.sh --all   # every suite (~65 s: timing and generators play in real time); before a push
 npm run format      # fix formatting and safe lint findings in the JavaScript (biome.jsonc)
 ```
 
 ```
-brain/     SuperCollider: clocks, chord, generators, MIDI, OSC protocol (the authority)
-  types/     generator types (basic, passthrough); a new file here is a new generator
-surface/   the Perturbed app (Electron): ui, transport, generators, sidebar, app (state + protocol),
-           terminal (the Claude drawer)
+brain/     SuperCollider: clocks, chords, generators, groups, globals, MIDI, OSC protocol (the authority)
+  types/     built-in generator types (basic, chord, lfo, loop, passthrough); a new file here is a new type
+surface/   the Perturbed app (Electron): ui, transport, generators (strips), groups, globals, library,
+           sidebar (Setup and the dock), app (state + protocol), terminal (the Claude drawer)
 tools/     perturbed: change the running performance from the shell (tools/perturbed help)
-adhoc/     the AdHoc type library (written by Claude), favorites.json, old/ (replaced versions)
+adhoc/     the AdHoc type library (written by Claude: progression, tonnetz-drift, …), favorites.json,
+           old/ (replaced versions)
 ableton/   the Live set and the Perturbed Bridge (Max for Live: bridge.js)
-tests/     run.sh and the tests it runs
+tests/     run.sh (picks suites by what changed) and the tests it runs
 performances/  saved performances
 archive/   the first proof of concept
 ```
@@ -165,5 +178,3 @@ Rig settings (IAC ports, control buses, MIDI inputs, latency) are in `brain/conf
 **Writing your own generator types:** [docs/writing-generator-types.md](docs/writing-generator-types.md).
 Architecture, protocol, plans and gotchas: [PLAN.md](PLAN.md). Rules for coding agents and for
 Claude as performance assistant: [AGENTS.md](AGENTS.md).
-
-Licensed under the [MIT License](LICENSE).
